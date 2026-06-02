@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply bg-cosmos-800 text-ivory font-sans antialiased; }
+  ::selection { background: rgba(212,175,55,0.3); color: #F0D060; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #06070F; }
+  ::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 3px; }
+}
+
+@layer components {
+  .btn-gold {
+    @apply bg-gold-gradient text-cosmos-900 font-semibold px-6 py-3 rounded-sm
+           hover:shadow-gold transition-all duration-300 hover:scale-105
+           active:scale-95 cursor-pointer select-none;
+  }
+  .btn-outline-gold {
+    @apply border border-gold text-gold px-6 py-3 rounded-sm
+           hover:bg-gold hover:text-cosmos-900 transition-all duration-300;
+  }
+  .card-royal {
+    @apply bg-cosmos-700/60 backdrop-blur-md border border-gold/20
+           rounded-sm shadow-cosmos hover:border-gold/40 transition-all duration-300;
+  }
+  .input-royal {
+    @apply w-full bg-cosmos-700/50 border border-gold/30 text-ivory
+           px-4 py-3 rounded-sm placeholder-ivory/30 focus:outline-none
+           focus:border-gold/70 transition-colors;
+  }
+  .section-title {
+    @apply font-serif text-3xl md:text-4xl text-gold font-bold;
+  }
+  .divider-gold {
+    @apply border-t border-gold/20 my-8;
+  }
+  /* Starfield canvas */
+  .starfield-bg {
+    background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%);
+  }
+  /* Glass card */
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #D4AF37, #F0D060, #A88B20);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glow-gold { text-shadow: 0 0 20px rgba(212,175,55,0.8); }
+  .shadow-glow { box-shadow: 0 0 30px rgba(212,175,55,0.3); }
+}

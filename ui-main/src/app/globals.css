@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+@layer base {
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply antialiased;
+    background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%);
+    color: #F5F0E8;
+    min-height: 100vh;
+  }
+
+  ::selection      { background: rgba(212,175,55,0.25); color: #F0D060; }
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #06070F; }
+  ::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.5); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+}
+
+/* ── Reusable components ──────────────────────────────────────────────────── */
+@layer components {
+
+  /* Buttons */
+  .btn-gold {
+    display: inline-block;
+    background: linear-gradient(135deg, #D4AF37 0%, #F0D060 50%, #A88B20 100%);
+    color: #06070F;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: box-shadow 0.25s, transform 0.15s;
+    @apply px-6 py-2.5;
+  }
+  .btn-gold:hover   { box-shadow: 0 0 22px rgba(212,175,55,0.55); transform: translateY(-1px); }
+  .btn-gold:active  { transform: translateY(0); }
+
+  .btn-outline-gold {
+    display: inline-block;
+    border: 1px solid rgba(212,175,55,0.5);
+    color: #D4AF37;
+    background: transparent;
+    font-weight: 500;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    @apply px-6 py-2.5;
+  }
+  .btn-outline-gold:hover { background: rgba(212,175,55,0.1); border-color: #D4AF37; color: #F0D060; }
+
+  /* Cards */
+  .card-royal {
+    background: rgba(17,20,40,0.65);
+    border: 1px solid rgba(212,175,55,0.18);
+    border-radius: 8px;
+    backdrop-filter: blur(12px);
+    transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+  }
+  .card-royal:hover { border-color: rgba(212,175,55,0.38); }
+
+  /* Form input */
+  .input-royal {
+    @apply w-full px-4 py-3 rounded;
+    background: rgba(17,20,40,0.6);
+    border: 1px solid rgba(212,175,55,0.22);
+    color: #F5F0E8;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  .input-royal::placeholder { color: rgba(245,240,232,0.28); }
+  .input-royal:focus        { border-color: rgba(212,175,55,0.6); }
+
+  /* Section headings */
+  .section-title {
+    font-family: var(--font-playfair), Georgia, serif;
+    font-weight: 700;
+    color: #D4AF37;
+    @apply text-3xl md:text-4xl;
+  }
+
+  /* Divider */
+  .divider-gold { border-color: rgba(212,175,55,0.18); @apply border-t my-8; }
+
+  /* Admin-specific */
+  .admin-card   { background: #111428; border: 1px solid rgba(212,175,55,0.18); border-radius: 8px; padding: 20px; }
+  .admin-btn    { display: inline-block; background: linear-gradient(135deg,#D4AF37,#F0D060,#A88B20); color: #0B0D1A; font-size: 13px; font-weight: 700; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; }
+  .admin-btn-danger  { display: inline-block; background: #8B0000; color: #fff; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; }
+  .admin-btn-outline { display: inline-block; border: 1px solid rgba(212,175,55,0.35); color: #D4AF37; font-size: 13px; padding: 8px 18px; border-radius: 6px; background: transparent; cursor: pointer; }
+  .admin-input       { width: 100%; box-sizing: border-box; background: #181C35; border: 1px solid rgba(212,175,55,0.2); color: #F5F0E8; padding: 9px 13px; border-radius: 6px; font-size: 13px; outline: none; }
+
+  /* Status badges */
+  .badge-active   { display: inline-block; background: rgba(16,185,129,0.14); color: #34d399; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+  .badge-inactive { display: inline-block; background: rgba(239,68,68,0.14);  color: #f87171; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+  .badge-pending  { display: inline-block; background: rgba(245,158,11,0.14); color: #fbbf24; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+}
+
+/* ── Utilities ────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #D4AF37 0%, #F0D060 50%, #A88B20 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glow-gold { text-shadow: 0 0 22px rgba(212,175,55,0.7); }
+
+  .bg-gold-8   { background: rgba(212,175,55,0.08); }
+  .glass       { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
+  .starfield-bg { background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%); }
+}

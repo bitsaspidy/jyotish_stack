@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply bg-cosmos-800 text-ivory font-sans antialiased; font-family: 'Inter', sans-serif; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 3px; }
+}
+
+@layer components {
+  .admin-card { @apply bg-cosmos-700 border border-gold/15 rounded p-5; }
+  .admin-btn  { @apply bg-gold text-cosmos-900 text-sm font-semibold px-4 py-2 rounded hover:bg-gold-light transition-colors cursor-pointer; }
+  .admin-btn-danger { @apply bg-crimson text-ivory text-sm font-semibold px-4 py-2 rounded hover:bg-crimson-light transition-colors cursor-pointer; }
+  .admin-btn-outline { @apply border border-gold/40 text-gold text-sm px-4 py-2 rounded hover:border-gold transition-colors cursor-pointer; }
+  .admin-input { @apply bg-cosmos-600 border border-gold/20 text-ivory px-3 py-2 rounded text-sm placeholder-ivory/30 focus:outline-none focus:border-gold/50 w-full; }
+  .admin-table { @apply w-full text-sm; }
+  .admin-table th { @apply text-gold/70 text-xs uppercase tracking-wider pb-3 text-left font-medium; }
+  .admin-table td { @apply py-3 border-t border-white/5 text-ivory/80; }
+  .badge-active   { @apply inline-block bg-emerald-900/60 text-emerald-400 text-xs px-2 py-0.5 rounded-full; }
+  .badge-inactive { @apply inline-block bg-red-900/60 text-red-400 text-xs px-2 py-0.5 rounded-full; }
+  .badge-pending  { @apply inline-block bg-amber-900/60 text-amber-400 text-xs px-2 py-0.5 rounded-full; }
+}
