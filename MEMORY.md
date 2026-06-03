@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-03 (Session 13)
+> Last updated: 2026-06-03 (Session 16)
 
 ---
 
@@ -266,7 +266,8 @@ chart = {
   bhav_karak:      { H1..H12: { karakas[], signification_en/hi, karaka_positions[] } },
   digbala:         { Sun/Moon/..: { has_digbala, has_digbala_loss, strength_percent } },
   panchang:        { masa, tithi, vara, yoga, karana, pahar, moon_phase, sunrise, sunset },
-  astro_details:   { varna, vashya, yoni, gana, nadi, tatva, yunja, naam_akshar, paya, ... }
+  astro_details:   { varna, vashya, yoni, gana, nadi, tatva, yunja, naam_akshar, paya, ... },
+  reports:         { general_report, planet_report, varga_matrix, planet_details, cusp_details }
 }
 ```
 
@@ -377,7 +378,8 @@ npm run build:main
 - **Yogas & Doshas** — `calculateVedicChart()` wires in `detectYogasAndDoshas(chart)` and returns `chart.yogas_doshas`. Reference data stored in `yogas_library` + `doshas_library` tables.
 - **PDF reports** — `report.service.js` generates lightweight PDFKit reports. No external binary required. Routes: `GET /:id/report.pdf` and `GET /matchmaking/:id/report.pdf`.
 - **Stale `.next` cache** — after major multi-file changes, delete `ui-main/.next` before `npm run build:main`.
-- **Test runner** — Node built-in (`node --test`). Run `npm run test:server`. Currently 12/12 passing.
+- **Detailed reports** — `calculateVedicChart()` returns `chart.reports` with Graha-Rashi-Bhav general report, planet report, Varga rashi matrix, KP-style Nakshatra sub/sub-sub lord rows, and equal-house cusp rows. Older saved Kundlis are auto-refreshed by `GET /api/kundli/:id` when report data is missing.
+- **Test runner** — Node built-in (`node --test`). Run `npm run test:server`. Currently 14/14 passing.
 
 ---
 
@@ -398,7 +400,9 @@ Auth, admin panel, main UI, subscription/payments, email, maintenance mode, desi
 - [x] Nakshatra detailed report (characteristics, professions, health EN+HI from DB)
 - [x] Life Portrait panel (Lagna, Moon, Nakshatra soul, Dasha period)
 - [x] Yogas & Doshas detection (12 yogas, 13 dosha types)
-- [x] North Indian + South Indian chart toggle (D1 and D9)
+- [x] Graha-Rashi-Bhav detailed reports: General Report, Planet Report, Varga Matrix, Planet Detail table, Cusp table
+- [x] North Indian + South Indian chart toggle (D1, D9, and selected Varga panel)
+- [x] Varga reference API + KundliDetail Varga panel (seeded D1-D60 reference, relationship/family maps, EN/HI UI fallback)
 - [x] Edit birth details modal with Nominatim geocoding
 
 ### Phase 3 — Matchmaking ✅ DONE
@@ -493,7 +497,44 @@ Pitru (karmic), Surya-Shani Vish (vish), Mangal-Shani Vish (vish), Moon-Shani Vi
 
 ---
 
-## 17. KundliDetail UI Panels (ui-main/src/views/KundliDetail.jsx)
+## 17. Varga Reference UI (Session 14)
+
+**Seed status:** Existing seed is already present at `server/src/seeds/007_varga_reference_data.js`; no duplicate seed was created. It loads `server/src/data/varga-reference.js` into:
+- `varga_charts` (18 rows)
+- `varga_family_references` (15 rows)
+- `varga_chart_relationships` (62 rows)
+
+**API:** `GET /api/kundli/reference/varga` returns normalized seeded Varga reference data through `server/src/services/varga-reference.service.js`.
+
+**UI:** `KundliDetail.jsx` now renders `VargaChartsPanel` below the main Kundli detail grid. It provides D1-D60 selector pills, selected divisional chart rendering in the current North/South style, Lagna/planet placements, description, key uses, calculation rule, precision note, relationship reading references, and family reference map.
+
+**Hindi support:** `ui-main/src/lib/vargaI18n.js` adds Hindi fallback names/domains/descriptions/key uses/topics because the canonical seed source currently has nullable Hindi fields but no Hindi values in `server/src/data/varga-reference.js`.
+
+**Verification:** `npm.cmd run test:server` passed 13/13 tests; `npm.cmd run build:main` passed with 25/25 pages generated.
+
+---
+
+## 18. Graha Rashi Bhav Reports (Session 15)
+
+**Engine:** `calculateDetailedReports(chart)` in `server/src/services/vedic-calc.service.js` builds `chart.reports`:
+- `general_report` — Lagna, Moon, Sun, and current Dasha narrative in EN+HI
+- `planet_report` — 9 planet interpretations using Graha karakatva + Rashi + Bhav
+- `varga_matrix` — sample-style rashi-number matrix for Birth, Navamsha, Chalit, Sun, Moon, Hora, Drekkana, D4, D5, D7, D8, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
+- `planet_assessments` — positive/mixed/negative score for each Navagraha using dignity, house, natural nature, retrograde state, and current Dasha activation
+- `yoga_dasha_report` — detected Yoga/Dosha activation language through current Mahadasha and Antardasha lords
+- `event_timing` — rule-based timing windows from current Vimshottari Dasha plus Gochar highlights
+- `planet_details` — Sun through Ketu plus Ascendant with degree, retrograde, normalized degree, house, zodiac sign, sign lord, nakshatra, nakshatra lord, charan, sub lord, sub-sub lord
+- `cusp_details` — 12 equal-house cusps from exact Lahiri Lagna degree with sign/nakshatra/sub-lord fields
+
+**Compatibility:** `ensureCalculatedChart()` now refreshes older saved Kundli JSON when `reports`, the Varga matrix, planet assessments, Yoga+Dasha report, or event timing windows are missing.
+
+**UI:** `DetailedReportsPanel` in `KundliDetail.jsx` renders tabs: Yoga + Dasha, Event Timing, General Report, Planet Report, Varga Matrix, Planet Details, Cusps. Planet cards show EN/HI positive/mixed/negative advice and the technical planet-details table includes the assessment score.
+
+**Verification:** `npm.cmd run test:server` passed 14/14 tests; `npm.cmd run build:main` passed with 25/25 pages generated; fresh `ui-main` dev smoke on `http://localhost:3008` returned 200 for `/login` and `/kundli`.
+
+---
+
+## 19. KundliDetail UI Panels (ui-main/src/views/KundliDetail.jsx)
 
 Current panels in render order:
 1. Header (name, birth details, edit button, PDF export, recalculate)
@@ -508,12 +549,14 @@ Current panels in render order:
 10. Life Portrait Panel (tabbed: Who You Are / Current Period)
 11. Mangal Dosha card
 12. Gochar (transit) card
-13. Digbala panel
-14. Bhav Karak panel
-15. Graha Drishti panel
-16. **Yogas & Doshas panel** (tabbed: Yogas / Doshas — from detectYogasAndDoshas; expanded detail cards with formation/result/guidance in EN+HI)
-17. Bottom navigation
+13. **Graha Rashi Bhav Detailed Report panel** (Yoga + Dasha, Event Timing, General Report, Planet Report, Varga Matrix, Planet Details, Cusps)
+14. **Varga / Divisional Charts panel** (D1-D60 selector, selected chart, seeded reference details, relationship/family maps, EN/HI fallback text)
+15. Digbala panel
+16. Bhav Karak panel
+17. Graha Drishti panel
+18. **Yogas & Doshas panel** (tabbed: Yogas / Doshas — from detectYogasAndDoshas; expanded detail cards with formation/result/guidance in EN+HI)
+19. Bottom navigation
 
 ---
 
-*Last updated: 2026-06-03 (Session 13) | Agent: Alex (Codex GPT-5)*
+*Last updated: 2026-06-03 (Session 16) | Agent: Alex (Codex GPT-5)*

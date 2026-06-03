@@ -2,7 +2,7 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-03 (Session 13)
+> Last updated: 2026-06-03 (Session 16)
 
 ---
 
@@ -14,7 +14,7 @@ Bootstrap the complete Jyotish Stack AI monorepo from scratch.
 ---
 
 ### ✅ TASK-001 — Monorepo Setup
-**Status:** Done  
+**Status:** Done
 **Files:**
 - `package.json` — npm workspaces root defining 6 packages: `server`, `ui-main`, `ui-in`, `ui-ai-com`, `ui-ai-in`, `ui-admin`
 - Root-level scripts: `dev:server`, `dev:main`, `dev:admin`, `migrate`, `seed`
@@ -1409,3 +1409,171 @@ npm.cmd run build:main    # Next.js production build passed, 25/25 pages generat
 - Playwright smoke check reached the protected `/kundli` route and redirected to `/login` as expected.
 - Fresh browser console on port 3005 showed only `favicon.ico` 404; no runtime errors from changed UI code were observed before auth.
 - Default documented admin login returned `403` in the current local DB, so protected Kundli detail visual inspection was not completed through the browser.
+
+---
+
+## Session 14 — 2026-06-03 | Varga Reference API + Kundli UI Integration
+
+### ✅ TASK-042 — Seeded Varga Reference Implemented in Kundli UI
+**Status:** Done
+**Agent:** Alex (Codex GPT-5)
+
+**Objective:** Check whether `server/src/data/varga-reference.js` already has seed support, create it if missing, and properly implement the Varga reference in the Kundli UI with Hindi coverage.
+
+**Seed finding:**
+- Existing seed already present: `server/src/seeds/007_varga_reference_data.js`
+- Existing migration already present: `server/src/migrations/007_varga_reference_data.js`
+- Existing seed loads `server/src/data/varga-reference.js` into `varga_charts`, `varga_family_references`, and `varga_chart_relationships`
+- No duplicate seed was created
+
+**Files created/updated:**
+- `server/src/services/varga-reference.service.js` — normalizes Varga chart, relationship, and family reference rows for UI consumption
+- `server/src/routes/kundli.routes.js` — added authenticated `GET /api/kundli/reference/varga`
+- `server/tests/vedic-calc.test.js` — added Varga reference normalization test
+- `ui-main/src/lib/vargaI18n.js` — Hindi fallback names, domains, descriptions, key uses, relationship topics, and common reference text localization
+- `ui-main/src/views/KundliDetail.jsx` — added non-blocking Varga reference fetch and `VargaChartsPanel`
+- `MEMORY.md` — updated Session 14 memory notes
+- `ACTIVITY.md` — this entry
+
+#### A — Backend API
+Added `fetchVargaReferenceData(knex)` and `normalizeVargaReferenceRows()` so the API returns:
+- 18 Varga chart definitions
+- Parsed `key_uses_en` / `key_uses_hi` arrays
+- Per-chart relationship reading references grouped under each chart
+- Family reference map rows
+
+The endpoint returns `404` if the seed tables exist but have no Varga rows, and `500` on DB/runtime failure with server-side logging.
+
+#### B — Kundli UI
+Added a full Varga panel below the main Kundli detail grid:
+- D1-D60 selector pills
+- Selected Varga chart rendered using the current North/South chart style
+- Selected chart Lagna and planet sign placements
+- Description, signifies, key uses, division note, calculation rule, and precision note
+- Relationship reading reference cards
+- Family reference map
+- Graceful fallback for older saved Kundlis that need recalculation to populate the complete Varga chart set
+
+#### C — Hindi Coverage
+Added `vargaI18n.js` because the canonical Varga seed source currently has nullable Hindi fields but no Hindi values. The UI now has Hindi fallback text for:
+- Varga chart names
+- Primary domains
+- Signifies text
+- Descriptions
+- Key uses
+- Relationship/family topics
+- Common reference phrases
+
+**Verification:**
+```bash
+npm.cmd run test:server   # 13/13 tests passed
+npm.cmd run build:main    # Next.js production build passed, 25/25 pages generated
+```
+
+*Last updated: 2026-06-03 | Agent: Alex (Codex GPT-5)*
+
+---
+
+## Session 15 — 2026-06-03 | Graha Rashi Bhav Reports + Matrix Tables
+
+### ✅ TASK-043 — Detailed General, Planet, Varga Matrix, Planet Detail, and Cusp Reports
+**Status:** Done
+**Agent:** Alex (Codex GPT-5)
+
+**Objective:** Implement detailed General Report and Planet Report using Graha, Rashi, and Bhav, plus sample-style Varga matrix, planet detail table, and cusp table.
+
+**Files created/updated:**
+- `server/src/services/vedic-calc.service.js` — added `chart.reports` derivation and exports
+- `server/src/routes/kundli.routes.js` — auto-refreshes older saved Kundli JSON when new report payload is missing
+- `server/tests/vedic-calc.test.js` — added report matrix/detail/cusp/sub-lord coverage
+- `ui-main/src/views/KundliDetail.jsx` — added `DetailedReportsPanel` with report tabs and tables
+- `MEMORY.md` — updated Session 15 memory notes
+- `ACTIVITY.md` — this entry
+
+#### A — Backend Report Payload
+`calculateVedicChart()` now returns:
+- `reports.general_report` — Lagna, Moon, Sun, current Dasha narrative in EN+HI
+- `reports.planet_report` — 9 planet interpretations using Graha karakatva + Rashi + Bhav
+- `reports.varga_matrix` — rashi-number matrix for Birth, Navamsha, Chalit, Sun, Moon, Hora, Drekkana, D4, D5, D7, D8, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60
+- `reports.planet_details` — Sun through Ketu plus Ascendant with degree, retrograde, normalized degree, house, zodiac sign, sign lord, nakshatra, nakshatra lord, charan, sub lord, sub-sub lord
+- `reports.cusp_details` — 12 cusp rows with sign/nakshatra/sub-lord fields
+
+#### B — Calculation Notes
+- Natal report houses use existing whole-sign house logic.
+- Chalit matrix row and cusp rows use equal-house cusps from the exact Lahiri Lagna degree.
+- Sub lord and sub-sub lord use KP-style Vimshottari proportional subdivision inside each Nakshatra.
+- Older stored Kundli JSON is recalculated automatically by `GET /api/kundli/:id` if `reports.planet_details` or `reports.varga_matrix` is missing.
+
+#### C — Kundli UI
+Added `DetailedReportsPanel` below the main Kundli detail grid with tabs:
+- General Report
+- Planet Report
+- Varga Matrix
+- Planet Details
+- Cusps
+
+The tables follow the provided sample structure while preserving the existing North/South chart UI and Varga reference panel.
+
+**Verification:**
+```bash
+npm.cmd run test:server   # 14/14 tests passed
+npm.cmd run build:main    # Next.js production build passed, 25/25 pages generated
+```
+
+*Last updated: 2026-06-03 | Agent: Alex (Codex GPT-5)*
+
+---
+
+## Session 16 — 2026-06-03 | Planet Assessment + Yoga/Dasha Language + Dasha/Gochar Event Timing
+
+### ✅ TASK-044 — Positive/Negative Planet Assessment and Timing Reports
+**Status:** Done
+**Agent:** Alex (Codex GPT-5)
+
+**Objective:** Add planet positive/negative checks, improve Yoga+Dasha language, and derive event timing from Dasha plus Gochar.
+
+**Files updated:**
+- `server/src/services/vedic-calc.service.js` — added structured planet assessment, Yoga+Dasha activation report, and Dasha+Gochar event timing windows
+- `server/src/routes/kundli.routes.js` — auto-refreshes older saved Kundli JSON when new report fields are missing
+- `server/tests/vedic-calc.test.js` — added assertions for planet assessment, Yoga+Dasha, and event timing report fields
+- `ui-main/src/views/KundliDetail.jsx` — added report tabs, badges, cards, and technical-table assessment column
+- `MEMORY.md` — updated Session 16 memory notes
+- `ACTIVITY.md` — this entry
+
+#### A — Planet Positive/Negative
+`reports.planet_assessments` now scores each Navagraha with:
+- dignity strength
+- house placement from Lagna
+- natural benefic/malefic nature
+- retrograde handling
+- current Dasha/Antardasha activation flag
+
+The Kundli UI shows this in the Planet Report cards and the Planet Details table as Positive, Mixed, or Negative/needs care, with EN+HI advice and reasons.
+
+#### B — Yoga + Dasha Language
+`reports.yoga_dasha_report` now explains which detected Yogas/Doshas are directly activated by the running Mahadasha/Antardasha lords. The report includes EN+HI summary, guidance, active/background labels, activated planets, and timing language.
+
+#### C — Dasha + Gochar Event Timing
+`reports.event_timing` now creates rule-based timing windows for:
+- career/authority
+- money/gains/assets
+- relationships/family
+- health/routine/recovery
+- education/dharma/spiritual growth
+
+Each window combines current Vimshottari Dasha, natal house placement of running lords, current Jupiter support, Sade Sati state, and Rahu-Ketu axis. The UI renders current window, event cards, triggers, and upcoming Antardasha signals.
+
+**Verification:**
+```bash
+npm.cmd run test:server   # 14/14 tests passed
+npm.cmd run build:main    # Next.js production build passed, 25/25 pages generated
+git diff --check          # clean except LF->CRLF warnings
+```
+
+**Smoke:**
+- Old `localhost:3007` dev server returned stale 500 after build.
+- Started fresh `ui-main` dev server on `http://localhost:3008`.
+- `GET /login` returned 200.
+- `GET /kundli` returned 200.
+
+*Last updated: 2026-06-03 | Agent: Alex (Codex GPT-5)*

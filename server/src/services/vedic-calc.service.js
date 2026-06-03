@@ -946,10 +946,15 @@ function generateRuleBasedPredictions(chart) {
     ? `You are running ${dashaLord}–${dashaLord} — the purest and most concentrated expression of ${dashaLord} energy. All qualities of ${dashaLord} — both its gifts and its challenges — are amplified at this time.`
     : `You are running ${dashaLord} Mahadasha with ${antarLord} Antardasha. The broad ${dashaLord} themes (${dm.nature}) are currently colored by ${antarLord} energy (${am.nature}). This combination creates a unique blend — ${dashaLord} sets the overarching direction, while ${antarLord} influences the texture and events of day-to-day life right now.`;
 
+  const periodCombinedHi = isSameLord
+    ? `आप ${planetNameHi(dashaLord)}-${planetNameHi(dashaLord)} की अवधि में हैं। यह ${planetNameHi(dashaLord)} ग्रह की ऊर्जा को बहुत केंद्रित रूप से सक्रिय करता है, इसलिए इसी ग्रह के शुभ और चुनौतीपूर्ण दोनों फल अधिक स्पष्ट हो सकते हैं।`
+    : `आप ${planetNameHi(dashaLord)} महादशा और ${planetNameHi(antarLord)} अंतर्दशा में हैं। महादशा जीवन की बड़ी दिशा देती है, जबकि अंतर्दशा दैनिक घटनाओं, निर्णयों और अनुभवों का रंग बदलती है। इस समय ${planetNameHi(dashaLord)} के मुख्य विषयों में ${planetNameHi(antarLord)} की सूक्ष्म भूमिका भी जुड़ रही है।`;
+
   const current_period = {
     mahadasha: { lord: dashaLord, end: dashaEnd, nature: dm.nature },
     antardasha: { lord: antarLord, end: antarEnd, nature: am.nature },
     combined_en: periodCombined,
+    combined_hi: periodCombinedHi,
   };
 
   // Life areas — primary dasha meanings, with antardasha modifier notes
@@ -1054,8 +1059,11 @@ function generateRuleBasedPredictions(chart) {
     remedies: base_remedies,
     summary_en,
     summary_hi: [
-      `${chart.ascendant?.rashi_en || ''} lagna aur ${chart.nakshatra?.en || ''} nakshatra vyakti ke mool swabhav ko dikhate hain.`,
-      `Vartaman dasha: ${dashaLord} mahadasha (${dashaEnd} tak), ${antarLord} antardasha.`,
+      `${chart.ascendant?.rashi_hi || chart.ascendant?.rashi_en || ''} लग्न और ${chart.nakshatra?.hi || chart.nakshatra?.en || ''} नक्षत्र जातक के मूल स्वभाव, निर्णय शैली और जीवन दिशा को दिखाते हैं।`,
+      `वर्तमान दशा: ${planetNameHi(dashaLord)} महादशा (${dashaEnd} तक) और ${planetNameHi(antarLord)} अंतर्दशा (${antarEnd} तक)।`,
+      periodCombinedHi,
+      sadeSati?.active ? `चंद्र से साढ़ेसाती सक्रिय है (${sadeSatiPhase} चरण)। इसलिए अनुशासन, धैर्य, नियमित दिनचर्या और जिम्मेदार निर्णय बहुत महत्वपूर्ण हैं।` : 'चंद्र से साढ़ेसाती सक्रिय नहीं है, इसलिए शनि का अतिरिक्त गोचर दबाव अभी कम है।',
+      mangal?.has_dosha ? `मंगल दोष (${mangal.severity}) दिखता है। संबंध, विवाह और संपत्ति से जुड़े निर्णयों में शांत समीक्षा लाभदायक रहेगी।` : 'लग्न, चंद्र और शुक्र से प्रमुख मंगल दोष नहीं दिखता।',
     ],
     categories: {
       career: life_areas.career.description_en,
@@ -1586,6 +1594,716 @@ function calculateAstroDetails(moonPlanet, moonNakshatra, ascendant, sunSidLon, 
  * @param {number} p.latitude    – decimal degrees (N positive)
  * @param {number} p.longitude   – decimal degrees (E positive)
  */
+const REPORT_PLANET_ORDER = ['Sun', 'Mercury', 'Rahu', 'Mars', 'Jupiter', 'Moon', 'Ketu', 'Venus', 'Saturn'];
+
+const VARGA_MATRIX_ROWS = [
+  { key: 'birth', label_en: 'Birth', label_hi: 'जन्म', type: 'birth' },
+  { key: 'navamsha', label_en: 'Navamsha', label_hi: 'नवांश', slug: 'd9' },
+  { key: 'chalit', label_en: 'Chalit', label_hi: 'चलित', type: 'chalit' },
+  { key: 'sun', label_en: 'Sun', label_hi: 'सूर्य', type: 'birth', reference_lagna: 'Sun' },
+  { key: 'moon', label_en: 'Moon', label_hi: 'चंद्र', type: 'birth', reference_lagna: 'Moon' },
+  { key: 'hora', label_en: 'Hora', label_hi: 'होरा', slug: 'd2' },
+  { key: 'drekkana', label_en: 'Drekkana', label_hi: 'द्रेष्काण', slug: 'd3' },
+  { key: 'chaturthamsha', label_en: 'Chaturthamsha', label_hi: 'चतुर्थांश', slug: 'd4' },
+  { key: 'panchamsha', label_en: 'Panchamsha', label_hi: 'पंचमांश', slug: 'd5' },
+  { key: 'saptamsha', label_en: 'Saptamsha', label_hi: 'सप्तमांश', slug: 'd7' },
+  { key: 'ashtamsha', label_en: 'Ashtamsha', label_hi: 'अष्टमांश', slug: 'd8' },
+  { key: 'dashamsha', label_en: 'Dashamsha', label_hi: 'दशमांश', slug: 'd10' },
+  { key: 'dwadashamsha', label_en: 'Dwadashamsha', label_hi: 'द्वादशांश', slug: 'd12' },
+  { key: 'shodashamsha', label_en: 'Shodashamsha', label_hi: 'षोडशांश', slug: 'd16' },
+  { key: 'vimshamsha', label_en: 'Vimshamsha', label_hi: 'विंशांश', slug: 'd20' },
+  { key: 'chaturvimshamsha', label_en: 'Chaturvimshamsha', label_hi: 'चतुर्विंशांश', slug: 'd24' },
+  { key: 'bhamsha', label_en: 'Bhamsha', label_hi: 'भांश', slug: 'd27' },
+  { key: 'trimshamsha', label_en: 'Trimshamsha', label_hi: 'त्रिंशांश', slug: 'd30' },
+  { key: 'khavedamsha', label_en: 'Khavedamsha', label_hi: 'खवेदांश', slug: 'd40' },
+  { key: 'akshavedamsha', label_en: 'Akshavedamsha', label_hi: 'अक्षवेदांश', slug: 'd45' },
+  { key: 'shashtiamsha', label_en: 'Shashtiamsha', label_hi: 'षष्ट्यंश', slug: 'd60' },
+];
+
+const HOUSE_REPORT = {
+  1: { en: 'identity, body, vitality, confidence, and life direction', hi: 'स्वभाव, शरीर, आत्मविश्वास और जीवन दिशा' },
+  2: { en: 'speech, family values, food habits, savings, and accumulated wealth', hi: 'वाणी, परिवार, भोजन, बचत और संचित धन' },
+  3: { en: 'courage, effort, communication, skills, siblings, and short journeys', hi: 'साहस, प्रयास, संचार, कौशल, सहोदर और छोटी यात्रा' },
+  4: { en: 'home, mother, property, education, inner peace, and emotional security', hi: 'घर, माता, संपत्ति, शिक्षा, मन की शांति और सुरक्षा' },
+  5: { en: 'intelligence, creativity, children, mantra, romance, and past merit', hi: 'बुद्धि, रचनात्मकता, संतान, मंत्र, प्रेम और पूर्व पुण्य' },
+  6: { en: 'debts, disease, service, competition, enemies, and daily discipline', hi: 'ऋण, रोग, सेवा, प्रतियोगिता, शत्रु और दैनिक अनुशासन' },
+  7: { en: 'marriage, partnerships, contracts, public dealings, and direct relationships', hi: 'विवाह, साझेदारी, अनुबंध, जनसंपर्क और सीधे संबंध' },
+  8: { en: 'longevity, transformation, secrets, sudden events, inheritance, and research', hi: 'आयु, परिवर्तन, रहस्य, अचानक घटना, विरासत और शोध' },
+  9: { en: 'fortune, dharma, father, teachers, higher learning, and long journeys', hi: 'भाग्य, धर्म, पिता, गुरु, उच्च शिक्षा और लंबी यात्रा' },
+  10: { en: 'career, karma, authority, status, leadership, and public responsibility', hi: 'करियर, कर्म, अधिकार, पद, नेतृत्व और सार्वजनिक जिम्मेदारी' },
+  11: { en: 'income, gains, networks, elder siblings, ambitions, and fulfilment of desires', hi: 'आय, लाभ, नेटवर्क, बड़े सहोदर, महत्वाकांक्षा और इच्छा पूर्ति' },
+  12: { en: 'foreign places, sleep, expenses, losses, moksha, isolation, and retreat', hi: 'विदेश, नींद, खर्च, हानि, मोक्ष, एकांत और विश्राम' },
+};
+
+const PLANET_REPORT = {
+  Sun: { en: 'soul, authority, father, confidence, leadership, government, and visibility', hi: 'आत्मबल, अधिकार, पिता, आत्मविश्वास, नेतृत्व, शासन और प्रतिष्ठा' },
+  Moon: { en: 'mind, emotions, mother, comfort, public response, memory, and nourishment', hi: 'मन, भावनाएं, माता, सुख, जन प्रतिक्रिया, स्मृति और पोषण' },
+  Mars: { en: 'courage, action, property, siblings, engineering, discipline, and conflict response', hi: 'साहस, कर्म, संपत्ति, सहोदर, तकनीक, अनुशासन और संघर्ष प्रतिक्रिया' },
+  Mercury: { en: 'intellect, speech, trade, analytics, writing, learning, and adaptability', hi: 'बुद्धि, वाणी, व्यापार, विश्लेषण, लेखन, शिक्षा और अनुकूलन' },
+  Jupiter: { en: 'wisdom, teachers, dharma, children, wealth counsel, protection, and expansion', hi: 'ज्ञान, गुरु, धर्म, संतान, धन सलाह, संरक्षण और विस्तार' },
+  Venus: { en: 'relationships, spouse, art, luxury, comfort, beauty, vehicles, and pleasures', hi: 'संबंध, जीवनसाथी, कला, विलास, सुख, सौंदर्य, वाहन और आनंद' },
+  Saturn: { en: 'discipline, delay, karma, service, endurance, structure, and long-term results', hi: 'अनुशासन, विलंब, कर्म, सेवा, धैर्य, संरचना और दीर्घकालिक फल' },
+  Rahu: { en: 'ambition, unconventional growth, foreign influence, technology, obsession, and breakthroughs', hi: 'महत्वाकांक्षा, असामान्य विकास, विदेशी प्रभाव, तकनीक, आसक्ति और असाधारण उपलब्धि' },
+  Ketu: { en: 'detachment, moksha, past-life mastery, intuition, separation, and spiritual insight', hi: 'वैराग्य, मोक्ष, पूर्व जन्म कौशल, अंतर्ज्ञान, अलगाव और आध्यात्मिक दृष्टि' },
+};
+
+const PLANET_NAME_HI = {
+  Sun: 'सूर्य',
+  Moon: 'चंद्र',
+  Mars: 'मंगल',
+  Mercury: 'बुध',
+  Jupiter: 'गुरु',
+  Venus: 'शुक्र',
+  Saturn: 'शनि',
+  Rahu: 'राहु',
+  Ketu: 'केतु',
+  Ascendant: 'लग्न',
+};
+
+const NATURAL_PLANET_NATURE = {
+  Sun: 'firm',
+  Moon: 'benefic',
+  Mars: 'sharp',
+  Mercury: 'benefic',
+  Jupiter: 'benefic',
+  Venus: 'benefic',
+  Saturn: 'slow',
+  Rahu: 'shadow',
+  Ketu: 'shadow',
+};
+
+const EVENT_AREA_CONFIG = {
+  career: {
+    title_en: 'Career, role, authority',
+    title_hi: 'करियर, पद और अधिकार',
+    houses: [6, 10, 11],
+    lords: ['Sun', 'Mars', 'Mercury', 'Jupiter', 'Saturn', 'Rahu'],
+    gochar: ['jupiter_support', 'sade_sati'],
+    action_en: 'Use the window for career decisions, interviews, role changes, visibility, and responsibility planning.',
+    action_hi: 'इस समय का उपयोग करियर निर्णय, इंटरव्यू, भूमिका बदलाव, पहचान और जिम्मेदारी की योजना के लिए करें।',
+  },
+  finance: {
+    title_en: 'Money, gains, assets',
+    title_hi: 'धन, लाभ और संपत्ति',
+    houses: [2, 5, 9, 11],
+    lords: ['Jupiter', 'Venus', 'Mercury', 'Sun', 'Rahu'],
+    gochar: ['jupiter_support'],
+    action_en: 'Plan income, savings, investments, client growth, and asset consolidation with clear records.',
+    action_hi: 'आय, बचत, निवेश, ग्राहक वृद्धि और संपत्ति सुदृढ़ीकरण को स्पष्ट रिकॉर्ड के साथ संभालें।',
+  },
+  relationships: {
+    title_en: 'Marriage, partnership, family',
+    title_hi: 'विवाह, साझेदारी और परिवार',
+    houses: [2, 4, 7],
+    lords: ['Venus', 'Moon', 'Jupiter', 'Mercury'],
+    gochar: ['rahu_ketu_axis'],
+    action_en: 'Time important conversations, commitment decisions, matchmaking reviews, and family healing carefully.',
+    action_hi: 'महत्वपूर्ण बातचीत, प्रतिबद्धता, मिलान समीक्षा और पारिवारिक सुधार को सावधानी से समय दें।',
+  },
+  health: {
+    title_en: 'Health, routine, recovery',
+    title_hi: 'स्वास्थ्य, दिनचर्या और सुधार',
+    houses: [1, 6, 8, 12],
+    lords: ['Sun', 'Moon', 'Mars', 'Saturn', 'Ketu'],
+    gochar: ['sade_sati'],
+    action_en: 'Prioritize routine, sleep, diagnostics, treatment follow-through, and stress reduction.',
+    action_hi: 'दिनचर्या, नींद, जांच, उपचार की निरंतरता और तनाव घटाने को प्राथमिकता दें।',
+  },
+  education_spiritual: {
+    title_en: 'Education, dharma, spiritual growth',
+    title_hi: 'शिक्षा, धर्म और आध्यात्मिक विकास',
+    houses: [5, 9, 12],
+    lords: ['Jupiter', 'Mercury', 'Ketu', 'Sun'],
+    gochar: ['jupiter_support', 'rahu_ketu_axis'],
+    action_en: 'Study, certification, mentoring, mantra, pilgrimage, research, and inner work respond well in this phase.',
+    action_hi: 'अध्ययन, प्रमाणपत्र, मार्गदर्शन, मंत्र, तीर्थ, शोध और आंतरिक कार्य इस चरण में अच्छा प्रतिसाद देते हैं।',
+  },
+};
+
+function planetNameHi(planet) {
+  return PLANET_NAME_HI[planet] || planet || 'ग्रह';
+}
+
+function currentDashaPair(chart) {
+  const currentDasha = chart.dasha?.find((d) => d.is_current) || chart.dasha?.[0] || null;
+  const currentAntardasha = currentDasha?.antardasha?.find((d) => d.is_current) || currentDasha?.antardasha?.[0] || null;
+  return { currentDasha, currentAntardasha };
+}
+
+function planetPositiveNegativeAssessment(chart, planet) {
+  const pd = chart.planets?.[planet];
+  if (!pd) {
+    return {
+      planet,
+      score: 0,
+      polarity: 'mixed',
+      level: 'mixed',
+      label_en: 'Mixed',
+      label_hi: 'मिश्रित',
+      reasons_en: ['Planet data is not available.'],
+      reasons_hi: ['ग्रह डेटा उपलब्ध नहीं है।'],
+      advice_en: 'Recalculate the chart before judging this planet.',
+      advice_hi: 'इस ग्रह का निर्णय करने से पहले कुंडली की पुनः गणना करें।',
+    };
+  }
+
+  const house = houseFromSign(chart.ascendant.rashi_num, pd.rashi_num);
+  const dignity = pd.dignity || 'Neutral';
+  const reasons_en = [];
+  const reasons_hi = [];
+  let score = 0;
+
+  if (dignity.startsWith('Exaltation')) {
+    score += 3;
+    reasons_en.push('Exaltation gives high sign strength.');
+    reasons_hi.push('उच्च राशि ग्रह को बहुत अच्छा राशि बल देती है।');
+  } else if (dignity.startsWith('Moolatrikona')) {
+    score += 2.5;
+    reasons_en.push('Moolatrikona placement gives stable functional strength.');
+    reasons_hi.push('मूलत्रिकोण स्थिति ग्रह को स्थिर कार्यात्मक बल देती है।');
+  } else if (dignity.startsWith('Own Sign')) {
+    score += 2;
+    reasons_en.push('Own sign placement supports natural expression.');
+    reasons_hi.push('स्वगृह स्थिति ग्रह की स्वाभाविक अभिव्यक्ति को सहारा देती है।');
+  } else if (dignity.startsWith('Debilitation')) {
+    score -= 3;
+    reasons_en.push('Debilitation weakens clean expression and needs support.');
+    reasons_hi.push('नीच स्थिति ग्रह की साफ अभिव्यक्ति को कमजोर करती है और सहारा मांगती है।');
+  } else if (dignity === 'shadow') {
+    score -= 0.25;
+    reasons_en.push('Shadow planet results are karmic and need context.');
+    reasons_hi.push('छाया ग्रहों के फल कर्मिक होते हैं और संदर्भ से पढ़े जाते हैं।');
+  } else {
+    reasons_en.push('Neutral dignity gives moderate sign strength.');
+    reasons_hi.push('सामान्य स्थिति मध्यम राशि बल देती है।');
+  }
+
+  if ([1, 5, 9, 10, 11].includes(house)) {
+    score += 2;
+    reasons_en.push(`${ordinal(house)} house is a supportive house for visible results.`);
+    reasons_hi.push(`भाव ${house} परिणाम दिखाने के लिए सहायक माना गया है।`);
+  } else if ([2, 4, 7].includes(house)) {
+    score += 1;
+    reasons_en.push(`${ordinal(house)} house supports practical life outcomes.`);
+    reasons_hi.push(`भाव ${house} व्यावहारिक जीवन फल को सहारा देता है।`);
+  } else if ([3, 6].includes(house)) {
+    score += 0.25;
+    reasons_en.push(`${ordinal(house)} house gives growth through effort, discipline, and competition.`);
+    reasons_hi.push(`भाव ${house} प्रयास, अनुशासन और प्रतिस्पर्धा से विकास देता है।`);
+  } else if (house === 8) {
+    score -= 2;
+    reasons_en.push('8th house makes results transformative, delayed, or sudden.');
+    reasons_hi.push('भाव 8 फल को परिवर्तनशील, विलंबित या अचानक बना सकता है।');
+  } else if (house === 12) {
+    score -= 1.5;
+    reasons_en.push('12th house can create expenses, isolation, foreign themes, or withdrawal.');
+    reasons_hi.push('भाव 12 खर्च, एकांत, विदेश या विरक्ति के विषय बढ़ा सकता है।');
+  }
+
+  const nature = NATURAL_PLANET_NATURE[planet] || 'mixed';
+  if (nature === 'benefic') {
+    score += 0.75;
+    reasons_en.push('Natural benefic nature softens and supports results.');
+    reasons_hi.push('स्वाभाविक शुभ प्रकृति फल को नरम और सहायक बनाती है।');
+  } else if (['firm', 'sharp', 'slow'].includes(nature)) {
+    score -= 0.35;
+    reasons_en.push('Natural malefic nature gives results through pressure, effort, or maturity.');
+    reasons_hi.push('स्वाभाविक पाप प्रकृति दबाव, प्रयास या परिपक्वता के माध्यम से फल देती है।');
+  }
+
+  if (pd.is_retrograde && !['Rahu', 'Ketu'].includes(planet)) {
+    score -= 0.5;
+    reasons_en.push('Retrograde motion makes the planet introspective and less straightforward.');
+    reasons_hi.push('वक्री गति ग्रह के फल को आंतरिक और कम सीधा बनाती है।');
+  }
+
+  const { currentDasha, currentAntardasha } = currentDashaPair(chart);
+  const activeInDasha = [currentDasha?.lord, currentAntardasha?.lord].includes(planet);
+  if (activeInDasha) {
+    reasons_en.push(`${planet} is active in the current Vimshottari period, so its results are more noticeable now.`);
+    reasons_hi.push(`${planetNameHi(planet)} वर्तमान विंशोत्तरी अवधि में सक्रिय है, इसलिए इसके फल अभी अधिक दिख सकते हैं।`);
+  }
+
+  const roundedScore = +score.toFixed(2);
+  const polarity = roundedScore >= 2 ? 'positive' : roundedScore <= -1 ? 'negative' : 'mixed';
+  const level = roundedScore >= 4 ? 'strong_positive'
+    : roundedScore >= 2 ? 'positive'
+      : roundedScore <= -2.5 ? 'strong_negative'
+        : roundedScore <= -1 ? 'negative'
+          : 'mixed';
+  const label_en = polarity === 'positive' ? 'Positive' : polarity === 'negative' ? 'Negative / needs care' : 'Mixed';
+  const label_hi = polarity === 'positive' ? 'शुभ' : polarity === 'negative' ? 'नकारात्मक / सावधानी' : 'मिश्रित';
+  const advice_en = polarity === 'positive'
+    ? `Use ${planet} actively for its karakatva, while keeping discipline around excess.`
+    : polarity === 'negative'
+      ? `Handle ${planet} with remedies, patience, clean decisions, and extra care in its house matters.`
+      : `Treat ${planet} as conditional: results improve when its house themes are handled with maturity.`;
+  const advice_hi = polarity === 'positive'
+    ? `${planetNameHi(planet)} के कारकत्व को सक्रिय रूप से उपयोग करें, पर अति से बचें।`
+    : polarity === 'negative'
+      ? `${planetNameHi(planet)} को उपाय, धैर्य, साफ निर्णय और उसके भाव विषयों में सावधानी से संभालें।`
+      : `${planetNameHi(planet)} के फल मिश्रित हैं; भाव विषयों को परिपक्वता से संभालने पर परिणाम सुधरते हैं।`;
+
+  return {
+    planet,
+    score: roundedScore,
+    polarity,
+    level,
+    label_en,
+    label_hi,
+    house,
+    dignity,
+    active_in_dasha: activeInDasha,
+    reasons_en,
+    reasons_hi,
+    advice_en,
+    advice_hi,
+  };
+}
+
+function calculatePlanetAssessmentMap(chart) {
+  return Object.fromEntries(Object.keys(PLANET_REPORT).map((planet) => [
+    planet,
+    planetPositiveNegativeAssessment(chart, planet),
+  ]));
+}
+
+function activatedByCurrentDasha(entry, activeLords) {
+  const planets = Array.isArray(entry.planets_involved) ? entry.planets_involved : [];
+  return planets.filter((planet) => activeLords.has(planet));
+}
+
+function calculateYogaDashaReport(chart) {
+  const { currentDasha, currentAntardasha } = currentDashaPair(chart);
+  const dashaLord = currentDasha?.lord || null;
+  const antarLord = currentAntardasha?.lord || null;
+  const activeLords = new Set([dashaLord, antarLord].filter(Boolean));
+  const yogas = chart.yogas_doshas?.yogas || [];
+  const doshas = chart.yogas_doshas?.doshas || [];
+
+  const mapEntry = (entry, type) => {
+    const activatedBy = activatedByCurrentDasha(entry, activeLords);
+    const active = activatedBy.length > 0;
+    const strength = entry.strength || entry.severity || 'moderate';
+    const name = entry.name || (type === 'yoga' ? 'Yoga' : 'Dosha');
+    const nameHi = entry.name_hi || name;
+    return {
+      name,
+      name_hi: nameHi,
+      type,
+      strength,
+      active,
+      activated_by: activatedBy,
+      planets_involved: entry.planets_involved || [],
+      trigger_en: entry.trigger_en || '',
+      trigger_hi: entry.trigger_hi || '',
+      timing_en: active
+        ? `${name} is more active because ${activatedBy.join(', ')} is running in the current Dasha/Antardasha. Expect its results to surface more clearly until ${currentAntardasha?.end || currentDasha?.end || 'the current period ends'}.`
+        : `${name} remains a natal promise. It can become stronger when its involved planets run in Dasha/Antardasha or receive strong transit support.`,
+      timing_hi: active
+        ? `${nameHi} अधिक सक्रिय है क्योंकि ${activatedBy.map(planetNameHi).join(', ')} वर्तमान दशा/अंतर्दशा में चल रहा है। इसके फल ${currentAntardasha?.end || currentDasha?.end || 'वर्तमान अवधि'} तक अधिक स्पष्ट हो सकते हैं।`
+        : `${nameHi} जन्म कुंडली का स्थायी संकेत है। इसके जुड़े ग्रहों की दशा/अंतर्दशा या मजबूत गोचर मिलने पर इसका प्रभाव बढ़ सकता है।`,
+    };
+  };
+
+  const yogaRows = yogas.map((entry) => mapEntry(entry, 'yoga')).sort((a, b) => Number(b.active) - Number(a.active));
+  const doshaRows = doshas.map((entry) => mapEntry(entry, 'dosha')).sort((a, b) => Number(b.active) - Number(a.active));
+  const activeYogaCount = yogaRows.filter((row) => row.active).length;
+  const activeDoshaCount = doshaRows.filter((row) => row.active).length;
+  const dashaText = dashaLord && antarLord ? `${dashaLord}-${antarLord}` : 'current Dasha';
+  const dashaTextHi = dashaLord && antarLord ? `${planetNameHi(dashaLord)}-${planetNameHi(antarLord)}` : 'वर्तमान दशा';
+
+  return {
+    current_lords: { mahadasha: dashaLord, antardasha: antarLord },
+    summary_en: `${dashaText} is the current timing lens. ${activeYogaCount} yoga(s) and ${activeDoshaCount} dosha(s) are directly activated by the running lords; the rest stay as background natal promises.`,
+    summary_hi: `${dashaTextHi} वर्तमान समय का मुख्य संकेत है। ${activeYogaCount} योग और ${activeDoshaCount} दोष चल रहे ग्रहों से सीधे सक्रिय हैं; बाकी जन्म कुंडली के पृष्ठभूमि संकेत बने रहते हैं।`,
+    guidance_en: 'Read Yoga/Dosha results through the strength of the involved planets, the current Dasha lord, the Antardasha lord, and the current Gochar overlay.',
+    guidance_hi: 'योग/दोष के फल को जुड़े ग्रहों के बल, महादशा स्वामी, अंतर्दशा स्वामी और वर्तमान गोचर के साथ पढ़ें।',
+    yogas: yogaRows,
+    doshas: doshaRows,
+  };
+}
+
+function antardashaWindow(currentDasha) {
+  const list = currentDasha?.antardasha || [];
+  const foundIndex = list.findIndex((period) => period.is_current);
+  const currentIndex = foundIndex >= 0 ? foundIndex : 0;
+  return {
+    current: list[currentIndex] || null,
+    upcoming: list.slice(currentIndex + 1, currentIndex + 4),
+  };
+}
+
+function calculateEventTiming(chart) {
+  const { currentDasha, currentAntardasha } = currentDashaPair(chart);
+  const dashaLord = currentDasha?.lord || null;
+  const antarLord = currentAntardasha?.lord || null;
+  const activePlanets = [dashaLord, antarLord].filter(Boolean);
+  const gochar = chart.gochar || {};
+  const gocharDate = gochar.date || formatDate(new Date());
+  const sadeSati = gochar.highlights?.sade_sati;
+  const jupiter = gochar.highlights?.jupiter_support;
+  const rahuKetuAxis = gochar.highlights?.rahu_ketu_axis || 'unknown';
+  const activeHouses = Object.fromEntries(activePlanets.map((planet) => [
+    planet,
+    chart.planets?.[planet] ? houseFromSign(chart.ascendant.rashi_num, chart.planets[planet].rashi_num) : null,
+  ]));
+
+  const windows = Object.entries(EVENT_AREA_CONFIG).map(([key, config]) => {
+    let score = 0;
+    const triggers_en = [];
+    const triggers_hi = [];
+
+    for (const planet of activePlanets) {
+      const house = activeHouses[planet];
+      if (config.lords.includes(planet)) {
+        score += planet === dashaLord ? 1.2 : 0.8;
+        triggers_en.push(`${planet} period naturally relates to this area.`);
+        triggers_hi.push(`${planetNameHi(planet)} की अवधि इस क्षेत्र से स्वाभाविक रूप से जुड़ती है।`);
+      }
+      if (house && config.houses.includes(house)) {
+        score += planet === dashaLord ? 1 : 0.75;
+        triggers_en.push(`${planet} is placed in the ${ordinal(house)} house, which activates this area.`);
+        triggers_hi.push(`${planetNameHi(planet)} भाव ${house} में है, इसलिए यह क्षेत्र सक्रिय होता है।`);
+      }
+    }
+
+    if (config.gochar.includes('jupiter_support')) {
+      if (jupiter?.favorable) {
+        score += 1;
+        triggers_en.push(`Transit Jupiter is supportive from Moon (${planets_house_desc(jupiter.house_from_moon)}).`);
+        triggers_hi.push(`गोचर गुरु चंद्र से सहायक है (भाव ${jupiter.house_from_moon})।`);
+      } else {
+        triggers_en.push('Transit Jupiter asks for patient, quality-focused growth.');
+        triggers_hi.push('गोचर गुरु धैर्य और गुणवत्ता-आधारित विकास मांगता है।');
+      }
+    }
+
+    if (config.gochar.includes('sade_sati') && sadeSati?.active) {
+      score -= key === 'health' ? 1.2 : 0.8;
+      triggers_en.push(`Sade Sati is active (${sadeSati.phase}), so timing needs discipline.`);
+      triggers_hi.push(`साढ़ेसाती सक्रिय है (${sadeSati.phase}), इसलिए समय में अनुशासन चाहिए।`);
+    }
+
+    if (config.gochar.includes('rahu_ketu_axis')) {
+      triggers_en.push(`Rahu-Ketu transit axis is ${rahuKetuAxis}, adding karmic focus.`);
+      triggers_hi.push(`राहु-केतु गोचर अक्ष ${rahuKetuAxis} है, जो कर्मिक फोकस जोड़ता है।`);
+    }
+
+    const tone = score >= 2.4 ? 'favorable' : score <= -0.8 ? 'caution' : 'moderate';
+    return {
+      key,
+      title_en: config.title_en,
+      title_hi: config.title_hi,
+      tone,
+      score: +score.toFixed(2),
+      date_from: gocharDate,
+      date_to: currentAntardasha?.end || currentDasha?.end || null,
+      mahadasha_lord: dashaLord,
+      antardasha_lord: antarLord,
+      prediction_en: `${config.title_en}: ${dashaLord || 'current'} Mahadasha and ${antarLord || 'current'} Antardasha make this a ${tone} window until ${currentAntardasha?.end || currentDasha?.end || 'the current period ends'}. ${config.action_en}`,
+      prediction_hi: `${config.title_hi}: ${planetNameHi(dashaLord)} महादशा और ${planetNameHi(antarLord)} अंतर्दशा के कारण यह ${tone === 'favorable' ? 'सहायक' : tone === 'caution' ? 'सावधानी वाला' : 'मध्यम'} समय है (${currentAntardasha?.end || currentDasha?.end || 'वर्तमान अवधि'} तक)। ${config.action_hi}`,
+      triggers_en,
+      triggers_hi,
+      confidence: 'rule_based_dasha_gochar',
+    };
+  });
+
+  const antar = antardashaWindow(currentDasha);
+  return {
+    as_of: gocharDate,
+    methodology_en: 'Event timing combines current Vimshottari Mahadasha/Antardasha with natal house placement of running lords and current Gochar highlights.',
+    methodology_hi: 'घटना समय निर्धारण वर्तमान विंशोत्तरी महादशा/अंतर्दशा, चल रहे ग्रहों की जन्म भाव स्थिति और वर्तमान गोचर संकेतों को मिलाकर किया गया है।',
+    current_window: {
+      mahadasha: currentDasha ? { lord: currentDasha.lord, start: currentDasha.start, end: currentDasha.end } : null,
+      antardasha: currentAntardasha ? { lord: currentAntardasha.lord, start: currentAntardasha.start, end: currentAntardasha.end } : null,
+      gochar_date: gocharDate,
+    },
+    windows,
+    upcoming_antardashas: antar.upcoming.map((period) => ({
+      lord: period.lord,
+      lord_hi: planetNameHi(period.lord),
+      start: period.start,
+      end: period.end,
+      focus_en: `${period.lord} Antardasha will bring ${DASHA_LORD_MEANINGS[period.lord]?.nature || 'planetary'} themes into the main ${dashaLord || 'current'} Mahadasha.`,
+      focus_hi: `${planetNameHi(period.lord)} अंतर्दशा ${planetNameHi(dashaLord)} महादशा में ${planetNameHi(period.lord)} के विषयों को अधिक सक्रिय करेगी।`,
+    })),
+  };
+}
+
+function ordinal(n) {
+  const suffix = (n % 10 === 1 && n % 100 !== 11) ? 'st'
+    : (n % 10 === 2 && n % 100 !== 12) ? 'nd'
+      : (n % 10 === 3 && n % 100 !== 13) ? 'rd' : 'th';
+  return `${n}${suffix}`;
+}
+
+function dashaSequenceFrom(lord) {
+  const start = LORD_IDX[lord] || 0;
+  return Array.from({ length: 9 }, (_, i) => DASHA_SEQ[(start + i) % 9]);
+}
+
+function proportionalLord(offsetDeg, spanDeg, startLord) {
+  const sequence = dashaSequenceFrom(startLord);
+  let cursor = 0;
+  for (const item of sequence) {
+    const size = spanDeg * (item.years / 120);
+    if (offsetDeg <= cursor + size + 1e-9) {
+      return {
+        lord: item.lord,
+        start: cursor,
+        end: cursor + size,
+        size,
+        offset: Math.max(0, offsetDeg - cursor),
+      };
+    }
+    cursor += size;
+  }
+  const last = sequence[sequence.length - 1];
+  return { lord: last.lord, start: spanDeg, end: spanDeg, size: 0, offset: 0 };
+}
+
+function kpSubLordsFromLongitude(siderealDeg) {
+  const nak = nakshatraFromDeg(siderealDeg);
+  const sub = proportionalLord(nak.degree_in_nakshatra, NAK_SPAN, nak.lord);
+  const subSub = proportionalLord(sub.offset, sub.size || NAK_SPAN, sub.lord);
+  return {
+    nakshatra: nak,
+    sub_lord: sub.lord,
+    sub_sub_lord: subSub.lord,
+  };
+}
+
+function equalHouseFromLongitude(ascendantLongitude, targetLongitude) {
+  return Math.floor(norm(targetLongitude - ascendantLongitude) / 30) + 1;
+}
+
+function signForEqualHouse(ascendantSignNum, houseNum) {
+  return wrapSign(ascendantSignNum, houseNum - 1);
+}
+
+function calculateVargaSignMatrix(chart) {
+  const birthValues = () => Object.fromEntries(
+    REPORT_PLANET_ORDER.map((planet) => [planet, chart.planets[planet]?.rashi_num || null])
+  );
+  const chalitValues = () => Object.fromEntries(
+    REPORT_PLANET_ORDER.map((planet) => {
+      const pd = chart.planets[planet];
+      if (!pd) return [planet, null];
+      const chalitHouse = equalHouseFromLongitude(chart.ascendant.longitude, pd.longitude);
+      return [planet, signForEqualHouse(chart.ascendant.rashi_num, chalitHouse)];
+    })
+  );
+  const vargaValues = (slug) => Object.fromEntries(
+    REPORT_PLANET_ORDER.map((planet) => [planet, chart.varga_charts?.[slug]?.planets?.[planet]?.rashi_num || null])
+  );
+
+  return {
+    planet_order: REPORT_PLANET_ORDER,
+    value_type: 'rashi_number',
+    rows: VARGA_MATRIX_ROWS.map((row) => ({
+      key: row.key,
+      label_en: row.label_en,
+      label_hi: row.label_hi,
+      reference_lagna: row.reference_lagna || null,
+      values: row.type === 'chalit'
+        ? chalitValues()
+        : row.slug
+          ? vargaValues(row.slug)
+          : birthValues(),
+    })),
+  };
+}
+
+function reportRowForPoint(label, longitude, ascendant, planets, options = {}) {
+  const rashi = rashiFromDeg(longitude);
+  const kp = kpSubLordsFromLongitude(longitude);
+  const house = options.house || houseFromSign(ascendant.rashi_num, rashi.num);
+  const row = {
+    planet: label,
+    degree: toDMS(longitude),
+    degree_decimal: +norm(longitude).toFixed(4),
+    retrograde: Boolean(options.retrograde),
+    normalized_degree: toDMS(rashi.degreeInSign),
+    normalized_degree_decimal: +rashi.degreeInSign.toFixed(4),
+    house,
+    house_label_en: ordinal(house),
+    house_label_hi: `भाव ${house}`,
+    zodiac_sign: rashi.en,
+    zodiac_sign_hi: rashi.hi,
+    sign_lord: rashi.lord,
+    nakshatra: kp.nakshatra.en,
+    nakshatra_hi: kp.nakshatra.hi,
+    nakshatra_lord: kp.nakshatra.lord,
+    charan: kp.nakshatra.pada,
+    sub_lord: kp.sub_lord,
+    sub_sub_lord: kp.sub_sub_lord,
+    dignity: label === 'Ascendant' ? null : planets[label]?.dignity || null,
+  };
+  if (options.assessment) {
+    row.assessment = options.assessment;
+    row.polarity = options.assessment.polarity;
+    row.positive_negative_en = options.assessment.label_en;
+    row.positive_negative_hi = options.assessment.label_hi;
+    row.assessment_score = options.assessment.score;
+  }
+  return row;
+}
+
+function calculatePlanetDetailRows(chart, assessmentMap = calculatePlanetAssessmentMap(chart)) {
+  const rows = Object.keys(PLANET_REPORT).map((planet) => reportRowForPoint(
+    planet,
+    chart.planets[planet].longitude,
+    chart.ascendant,
+    chart.planets,
+    { retrograde: chart.planets[planet].is_retrograde, assessment: assessmentMap[planet] }
+  ));
+  rows.push(reportRowForPoint('Ascendant', chart.ascendant.longitude, chart.ascendant, chart.planets, { house: 1 }));
+  return rows;
+}
+
+function calculateCuspDetailRows(chart) {
+  return Array.from({ length: 12 }, (_, index) => {
+    const cusp = index + 1;
+    const longitude = norm(chart.ascendant.longitude + index * 30);
+    const rashi = rashiFromDeg(longitude);
+    const kp = kpSubLordsFromLongitude(longitude);
+    return {
+      cusp,
+      degree: toDMS(longitude),
+      degree_decimal: +longitude.toFixed(4),
+      zodiac_sign: rashi.en,
+      zodiac_sign_hi: rashi.hi,
+      sign_lord: rashi.lord,
+      nakshatra: kp.nakshatra.en,
+      nakshatra_hi: kp.nakshatra.hi,
+      nakshatra_lord: kp.nakshatra.lord,
+      sub_lord: kp.sub_lord,
+      sub_sub_lord: kp.sub_sub_lord,
+    };
+  });
+}
+
+function sentenceForPlanet(chart, planet) {
+  const pd = chart.planets[planet];
+  const house = houseFromSign(chart.ascendant.rashi_num, pd.rashi_num);
+  const houseInfo = HOUSE_REPORT[house];
+  const planetInfo = PLANET_REPORT[planet];
+  return {
+    planet,
+    title_en: `${planet} in ${pd.rashi_en}, ${ordinal(house)} house`,
+    title_hi: `${planet} ${pd.rashi_hi}, भाव ${house}`,
+    summary_en: `${planet} represents ${planetInfo.en}. In ${pd.rashi_en}, ruled by ${pd.rashi_lord}, and placed in the ${ordinal(house)} house, it mainly activates ${houseInfo.en}. Its dignity is ${pd.dignity || 'Neutral'}, so judge the result through both sign strength and house theme.`,
+    summary_hi: `${planet} ${planetInfo.hi} का संकेत देता है। ${pd.rashi_hi} राशि (${pd.rashi_lord} स्वामी) और भाव ${house} में यह ${houseInfo.hi} को सक्रिय करता है। इसकी स्थिति ${pd.dignity || 'Neutral'} है, इसलिए फल को राशि बल और भाव विषय दोनों से देखें।`,
+    house,
+    rashi_num: pd.rashi_num,
+    rashi_en: pd.rashi_en,
+    rashi_hi: pd.rashi_hi,
+    house_theme_en: houseInfo.en,
+    house_theme_hi: houseInfo.hi,
+    karakatva_en: planetInfo.en,
+    karakatva_hi: planetInfo.hi,
+    dignity: pd.dignity,
+  };
+}
+
+function sentenceForPlanetWithAssessment(chart, planet, assessment = planetPositiveNegativeAssessment(chart, planet)) {
+  const pd = chart.planets[planet];
+  const house = houseFromSign(chart.ascendant.rashi_num, pd.rashi_num);
+  const houseInfo = HOUSE_REPORT[house];
+  const planetInfo = PLANET_REPORT[planet];
+  return {
+    planet,
+    title_en: `${planet} in ${pd.rashi_en}, ${ordinal(house)} house`,
+    title_hi: `${planetNameHi(planet)} ${pd.rashi_hi}, भाव ${house}`,
+    summary_en: `${planet} represents ${planetInfo.en}. In ${pd.rashi_en}, ruled by ${pd.rashi_lord}, and placed in the ${ordinal(house)} house, it mainly activates ${houseInfo.en}. Its dignity is ${pd.dignity || 'Neutral'}. Assessment: ${assessment.label_en} (score ${assessment.score}). ${assessment.advice_en}`,
+    summary_hi: `${planetNameHi(planet)} ${planetInfo.hi} का संकेत देता है। ${pd.rashi_hi} राशि (${planetNameHi(pd.rashi_lord)} स्वामी) और भाव ${house} में यह ${houseInfo.hi} को सक्रिय करता है। इसकी स्थिति ${pd.dignity || 'Neutral'} है। आकलन: ${assessment.label_hi} (स्कोर ${assessment.score})। ${assessment.advice_hi}`,
+    house,
+    rashi_num: pd.rashi_num,
+    rashi_en: pd.rashi_en,
+    rashi_hi: pd.rashi_hi,
+    house_theme_en: houseInfo.en,
+    house_theme_hi: houseInfo.hi,
+    karakatva_en: planetInfo.en,
+    karakatva_hi: planetInfo.hi,
+    dignity: pd.dignity,
+    assessment,
+  };
+}
+
+function calculateGeneralReport(chart) {
+  const asc = chart.ascendant;
+  const moon = chart.planets.Moon;
+  const sun = chart.planets.Sun;
+  const ascLord = chart.planets[asc.rashi_lord];
+  const ascLordHouse = ascLord ? houseFromSign(asc.rashi_num, ascLord.rashi_num) : null;
+  const moonHouse = houseFromSign(asc.rashi_num, moon.rashi_num);
+  const sunHouse = houseFromSign(asc.rashi_num, sun.rashi_num);
+  const currentDasha = chart.dasha?.find((d) => d.is_current) || chart.dasha?.[0];
+  const currentAntar = currentDasha?.antardasha?.find((d) => d.is_current);
+
+  const sections = [
+    {
+      key: 'lagna',
+      title_en: 'Core Nature From Lagna',
+      title_hi: 'लग्न से मूल स्वभाव',
+      body_en: `${asc.rashi_en} Lagna makes ${asc.rashi_lord} the chart ruler. This puts the life focus through ${asc.rashi_en} qualities and makes the condition of ${asc.rashi_lord}${ascLordHouse ? ` in the ${ordinal(ascLordHouse)} house` : ''} important for health, confidence, decision making, and overall direction.`,
+      body_hi: `${asc.rashi_hi} लग्न होने से ${asc.rashi_lord} कुंडली का लग्नेश बनता है। जीवन दिशा ${asc.rashi_hi} के स्वभाव से चलती है और ${asc.rashi_lord}${ascLordHouse ? ` का भाव ${ascLordHouse}` : ''} स्वास्थ्य, आत्मविश्वास, निर्णय और संपूर्ण दिशा के लिए महत्वपूर्ण हो जाता है।`,
+    },
+    {
+      key: 'mind',
+      title_en: 'Mind And Emotional Pattern',
+      title_hi: 'मन और भावनात्मक पैटर्न',
+      body_en: `Moon in ${moon.rashi_en}, ${chart.nakshatra.en} Nakshatra, shows the instinctive mind. Its house from Lagna is ${ordinal(moonHouse)}, so emotional comfort and daily choices are strongly linked with ${HOUSE_REPORT[moonHouse].en}.`,
+      body_hi: `चंद्र ${moon.rashi_hi} में और ${chart.nakshatra.hi} नक्षत्र में मन की सहज प्रकृति दिखाता है। लग्न से यह भाव ${moonHouse} में है, इसलिए भावनात्मक सुख ${HOUSE_REPORT[moonHouse].hi} से जुड़ता है।`,
+    },
+    {
+      key: 'karma',
+      title_en: 'Karma And Visibility',
+      title_hi: 'कर्म और प्रतिष्ठा',
+      body_en: `Sun in ${sun.rashi_en} in the ${ordinal(sunHouse)} house shows how authority, father themes, recognition, and self-expression operate. Its sign lord ${sun.rashi_lord} becomes a key channel for public confidence and leadership.`,
+      body_hi: `सूर्य ${sun.rashi_hi} में भाव ${sunHouse} में अधिकार, पिता, पहचान और आत्म-अभिव्यक्ति का तरीका दिखाता है। इसका राशि स्वामी ${sun.rashi_lord} नेतृत्व और प्रतिष्ठा का मुख्य माध्यम बनता है।`,
+    },
+    {
+      key: 'period',
+      title_en: 'Current Operating Period',
+      title_hi: 'वर्तमान चल रही अवधि',
+      body_en: currentDasha
+        ? `The running Mahadasha is ${currentDasha.lord}${currentAntar ? ` with ${currentAntar.lord} Antardasha` : ''}. Read current events through the natal placement, house ownership, and strength of these planets before final judgment.`
+        : 'Current Dasha data is not available.',
+      body_hi: currentDasha
+        ? `वर्तमान महादशा ${currentDasha.lord}${currentAntar ? ` और अंतर्दशा ${currentAntar.lord}` : ''} की चल रही है। वर्तमान घटनाओं को इन ग्रहों की जन्म स्थिति, भाव स्वामित्व और बल से पढ़ें।`
+        : 'वर्तमान दशा उपलब्ध नहीं है।',
+    },
+  ];
+
+  return {
+    summary_en: `${asc.rashi_en} Lagna, Moon in ${moon.rashi_en}, and Sun in ${sun.rashi_en} form the main Graha-Rashi-Bhav foundation of this chart.`,
+    summary_hi: `${asc.rashi_hi} लग्न, ${moon.rashi_hi} चंद्र और ${sun.rashi_hi} सूर्य इस कुंडली का मुख्य ग्रह-राशि-भाव आधार बनाते हैं।`,
+    sections,
+  };
+}
+
+function calculateDetailedReports(chart) {
+  const planetAssessments = calculatePlanetAssessmentMap(chart);
+  return {
+    methodology: {
+      house_system: 'whole_sign_for_natal_report',
+      cusp_model: 'equal_house_from_lagna_degree',
+      sub_lord_model: 'KP-style Vimshottari proportional subdivision of each Nakshatra',
+      event_timing_model: 'rule_based_current_vimshottari_dasha_plus_gochar_overlay',
+    },
+    general_report: calculateGeneralReport(chart),
+    planet_report: Object.keys(PLANET_REPORT).map((planet) => sentenceForPlanetWithAssessment(chart, planet, planetAssessments[planet])),
+    planet_assessments: planetAssessments,
+    yoga_dasha_report: calculateYogaDashaReport(chart),
+    event_timing: calculateEventTiming(chart),
+    varga_matrix: calculateVargaSignMatrix(chart),
+    planet_details: calculatePlanetDetailRows(chart, planetAssessments),
+    cusp_details: calculateCuspDetailRows(chart),
+  };
+}
+
 function calculateVedicChart(p) {
   const { year, month, day, hour = 0, minute = 0, second = 0,
           timezone = 5.5, latitude, longitude } = p;
@@ -1699,6 +2417,9 @@ function calculateVedicChart(p) {
 
   // ── Yogas & Doshas ──
   chart.yogas_doshas = detectYogasAndDoshas(chart);
+
+  // ── Detailed Graha, Rashi, Bhav reports ──
+  chart.reports = calculateDetailedReports(chart);
 
   return chart;
 }
@@ -2266,6 +2987,14 @@ module.exports = {
   calculateAshtakoot,
   calculateTransitSummary,
   generateRuleBasedPredictions,
+  calculateDetailedReports,
+  calculateVargaSignMatrix,
+  calculatePlanetDetailRows,
+  calculateCuspDetailRows,
+  planetPositiveNegativeAssessment,
+  calculateYogaDashaReport,
+  calculateEventTiming,
+  kpSubLordsFromLongitude,
   getPlanetDignity,
   tropicalLongitudeForPlanet,
   siderealLongitudeForPlanet,

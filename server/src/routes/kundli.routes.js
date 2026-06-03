@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/auth');
 const { ok, fail } = require('../utils/response');
 const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-calc.service');
 const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
+const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 
 router.use(authenticate);
 
@@ -67,7 +68,13 @@ function parseJsonMaybe(value) {
 
 async function ensureCalculatedChart(profile) {
   const existing = parseJsonMaybe(profile.calculated_data);
-  if (existing) return existing;
+  if (
+    existing?.reports?.planet_details?.length
+    && existing?.reports?.varga_matrix?.rows?.length
+    && existing?.reports?.planet_assessments
+    && existing?.reports?.yoga_dasha_report
+    && existing?.reports?.event_timing?.windows?.length
+  ) return existing;
   return calcAndSave(profile);
 }
 
@@ -280,7 +287,21 @@ router.get('/matchmaking/:id/report.pdf', async (req, res) => {
   }
 });
 
-// ── GET /api/kundli/:id/report.pdf ──
+// GET /api/kundli/reference/varga - seeded divisional chart reference for UI
+router.get('/reference/varga', async (req, res) => {
+  try {
+    const reference = await fetchVargaReferenceData(db);
+    if (!reference.charts.length) {
+      return fail(res, 'Varga reference data has not been seeded', 404);
+    }
+    return ok(res, { reference });
+  } catch (e) {
+    console.error('[VargaReference] Error:', e.message);
+    return fail(res, 'Unable to load Varga reference data', 500);
+  }
+});
+
+// GET /api/kundli/:id/report.pdf
 router.get('/:id/report.pdf', async (req, res) => {
   try {
     const profile = await db('kundli_profiles')
@@ -308,13 +329,9 @@ router.get('/:id', async (req, res) => {
     .first();
   if (!profile) return fail(res, 'Kundli not found', 404);
 
-  // Auto-calculate if data is missing
-  if (!profile.calculated_data) {
-    const chart = await calcAndSave(profile);
-    profile.calculated_data = chart ? JSON.stringify(chart) : null;
-  }
-
-  profile.calculated_data = parseJsonMaybe(profile.calculated_data);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  profile.calculated_data = chart;
 
   // Attach nakshatra insight from DB (Moon nakshatra detailed notes)
   const nakNum = profile.calculated_data?.nakshatra?.num;

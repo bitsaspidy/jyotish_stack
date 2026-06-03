@@ -5,12 +5,16 @@ const {
   calculateVedicChart,
   calculateAshtakoot,
   calculateTransitSummary,
+  calculateDetailedReports,
+  calculateEventTiming,
   calculateVargaChart,
   dailyMotionForPlanet,
   isRetrogradePlanet,
+  kpSubLordsFromLongitude,
   navamshaFromDeg,
   rashiFromDeg,
   nakshatraFromDeg,
+  planetPositiveNegativeAssessment,
   SUPPORTED_VARGA_DIVISIONS,
   vargaPlacementFromDeg,
   vimshottariDasha,
@@ -21,6 +25,10 @@ const {
   MASTER_FAMILY_REFERENCES,
   VARGA_RELATIONSHIP_REFERENCES,
 } = require('../src/data/varga-reference');
+const {
+  normalizeVargaReferenceRows,
+  parseJsonArray,
+} = require('../src/services/varga-reference.service');
 
 const rahulSharmaBirth = {
   year: 1990,
@@ -155,6 +163,100 @@ test('ships Varga reference data for database seeding', () => {
   assert.ok(VARGA_RELATIONSHIP_REFERENCES.length >= 50);
   assert.equal(VARGA_DEFINITIONS.find((item) => item.code === 'D9').primary_domain, 'Marriage, Spouse, Dharma, Planet Strength');
   assert.equal(VARGA_DEFINITIONS.find((item) => item.code === 'D60').division, 60);
+});
+
+test('normalizes seeded Varga reference rows for the UI payload', () => {
+  assert.deepEqual(parseJsonArray('["Marriage","Dharma"]'), ['Marriage', 'Dharma']);
+  assert.deepEqual(parseJsonArray('not-json'), []);
+
+  const reference = normalizeVargaReferenceRows({
+    charts: [{
+      id: 9,
+      code: 'D9',
+      slug: 'd9',
+      division: 9,
+      name_en: 'Navamsha',
+      name_hi: 'नवांश',
+      name_sanskrit: 'Navamsha',
+      primary_domain: 'Marriage',
+      division_note: 'Nine sections',
+      signifies_en: 'Dharma and marriage',
+      signifies_hi: 'धर्म और विवाह',
+      description_en: 'Secondary chart after D1.',
+      description_hi: 'D1 के बाद प्रमुख वर्ग।',
+      key_uses_en: '["Spouse nature","Planet strength"]',
+      key_uses_hi: '["जीवनसाथी का स्वभाव","ग्रह बल"]',
+      calculation_rule: 'Navamsha rule',
+      precision_note: 'Use with D1.',
+      is_high_precision: 0,
+    }],
+    relationships: [{
+      id: 1,
+      varga_chart_id: 9,
+      relationship_topic: 'Spouse Nature',
+      house_or_karaka: '7th house in D9',
+      how_to_read: 'Judge D9 Lagna and 7th house.',
+    }],
+    familyReferences: [{
+      id: 1,
+      topic: 'Relationship with Spouse',
+      charts_houses_to_check: 'D9: primary',
+      notes: null,
+    }],
+  });
+
+  assert.equal(reference.charts[0].slug, 'd9');
+  assert.deepEqual(reference.charts[0].key_uses_hi, ['जीवनसाथी का स्वभाव', 'ग्रह बल']);
+  assert.equal(reference.charts[0].relationships[0].topic, 'Spouse Nature');
+  assert.equal(reference.family_references[0].topic, 'Relationship with Spouse');
+});
+
+test('builds Graha Rashi Bhav report tables for Kundli UI', () => {
+  const chart = calculateVedicChart(rahulSharmaBirth);
+  const reports = chart.reports;
+
+  assert.ok(reports.general_report.summary_en.includes(chart.ascendant.rashi_en));
+  assert.equal(reports.general_report.sections.length, 4);
+  assert.equal(reports.planet_report.length, 9);
+  assert.equal(reports.planet_details.length, 10);
+  assert.equal(reports.cusp_details.length, 12);
+  assert.ok(reports.planet_assessments.Sun);
+  assert.match(reports.planet_assessments.Sun.polarity, /positive|mixed|negative/);
+  assert.equal(reports.yoga_dasha_report.current_lords.mahadasha, chart.dasha.find((period) => period.is_current).lord);
+  assert.ok(reports.yoga_dasha_report.summary_hi.includes('वर्तमान'));
+  assert.ok(reports.event_timing.windows.length >= 5);
+  assert.ok(reports.event_timing.windows.every((window) => window.mahadasha_lord));
+
+  const matrix = reports.varga_matrix;
+  assert.deepEqual(matrix.planet_order, ['Sun', 'Mercury', 'Rahu', 'Mars', 'Jupiter', 'Moon', 'Ketu', 'Venus', 'Saturn']);
+  assert.ok(matrix.rows.length >= 20);
+  assert.equal(matrix.rows.find((row) => row.key === 'birth').values.Sun, chart.planets.Sun.rashi_num);
+  assert.equal(matrix.rows.find((row) => row.key === 'navamsha').values.Sun, chart.varga_charts.d9.planets.Sun.rashi_num);
+
+  const sunDetail = reports.planet_details.find((row) => row.planet === 'Sun');
+  assert.equal(sunDetail.house, 11);
+  assert.equal(sunDetail.zodiac_sign, 'Taurus');
+  assert.equal(sunDetail.assessment.polarity, reports.planet_assessments.Sun.polarity);
+  assert.ok(sunDetail.sub_lord);
+  assert.ok(sunDetail.sub_sub_lord);
+
+  const sunAssessment = planetPositiveNegativeAssessment(chart, 'Sun');
+  assert.equal(sunAssessment.score, reports.planet_assessments.Sun.score);
+
+  const eventTiming = calculateEventTiming(chart);
+  assert.equal(eventTiming.current_window.mahadasha.lord, reports.event_timing.current_window.mahadasha.lord);
+  assert.deepEqual(eventTiming.windows.map((window) => window.key), reports.event_timing.windows.map((window) => window.key));
+
+  const ascDetail = reports.planet_details.find((row) => row.planet === 'Ascendant');
+  assert.equal(ascDetail.house, 1);
+  assert.equal(reports.cusp_details[0].degree_decimal, chart.ascendant.longitude);
+
+  const kp = kpSubLordsFromLongitude(chart.planets.Sun.longitude);
+  assert.equal(kp.nakshatra.en, sunDetail.nakshatra);
+  assert.equal(kp.sub_lord, sunDetail.sub_lord);
+
+  const recalculated = calculateDetailedReports(chart);
+  assert.equal(recalculated.varga_matrix.rows.find((row) => row.key === 'birth').values.Moon, chart.planets.Moon.rashi_num);
 });
 
 test('adds Vimshottari Antardasha periods with deterministic current marking', () => {
