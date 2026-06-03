@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-03 (Session 16)
+> Last updated: 2026-06-03 (Session 24)
 
 ---
 
@@ -403,6 +403,12 @@ Auth, admin panel, main UI, subscription/payments, email, maintenance mode, desi
 - [x] Graha-Rashi-Bhav detailed reports: General Report, Planet Report, Varga Matrix, Planet Detail table, Cusp table
 - [x] North Indian + South Indian chart toggle (D1, D9, and selected Varga panel)
 - [x] Varga reference API + KundliDetail Varga panel (seeded D1-D60 reference, relationship/family maps, EN/HI UI fallback)
+- [x] Atmakaraka calculation (highest-degree planet, 7 Grahas, Parashara BPHS method)
+- [x] Isht Devata derivation (AK in D9 → sign lord → Devata + primary mantra)
+- [x] Varga practical readings per tab — "Your Reading" showing Lagna lord + karakas + D2 Hora type + AK in D9
+- [x] Life Report panel (5 tabs: Soul Profile, Finance, Family, Health, Problems & Solutions)
+- [x] Migration 014 + Seed 011: `jyotish_basics` table with AstroAnsh Class 1 data (4 Vedas, 6 Vedangas, 6 Jyotish Angas, 5 Uses, 3 Karma types, Hora system, Graha BPHS attributes for all 9 planets)
+- [x] `life-report.service.js` — standalone service for all life-report computations
 - [x] Edit birth details modal with Nominatim geocoding
 
 ### Phase 3 — Matchmaking ✅ DONE
@@ -559,4 +565,161 @@ Current panels in render order:
 
 ---
 
-*Last updated: 2026-06-03 (Session 16) | Agent: Alex (Codex GPT-5)*
+---
+
+## 20. Life Report + Isht Devata + Varga Readings + Fundamentals Seed (Session 17)
+
+**New service:** `server/src/services/life-report.service.js`
+- `calculateAtmakaraka(planets)` — highest-degree planet (Sun–Saturn) = Atmakaraka
+- `calculateIshtaDevata(akInfo, d9Chart)` — AK in D9 → sign → sign lord → Devata + mantra
+- `generateVargaAnalysis(chart)` — per-varga practical readings for D1-D60 (Lagna lord + karakas per domain, D2 Hora type, AK in D9)
+- `generateLifeReport(chart)` — 5 sections: profile, finance, family, health, problems
+
+**Wired into `calculateVedicChart()`:** adds `chart.life_report` and `chart.varga_analysis`
+
+**New DB:**
+- Migration `014_jyotish_fundamentals.js` → `jyotish_basics` table (category, item_key, name_en, name_hi, description_en, description_hi, admin_only, extra_data)
+- Seed `011_jyotish_fundamentals.js` → 35 rows: 4 Vedas, 6 Vedangas, 6 Jyotish Angas, 5 Uses of Jyotish, 3 Karma types (Sanchit/Prarabdha/Kriyaman), 2 Hora rules, 9 Graha BPHS attribute rows
+
+**New UI:**
+- `ui-main/src/components/LifeReportPanel.jsx` — 5-tab panel (Soul Profile + Isht Devata / Finance / Family / Health / Problems)
+- Injected into `KundliDetail.jsx` after Life Portrait, before Detailed Reports
+- Varga panel gets "Your Reading — Practical Results" section per chart tab showing actual planet readings with impact colors
+
+**`ensureCalculatedChart()`** now also checks for `life_report.sections` and `varga_analysis` — older saved Kundlis auto-recalculate.
+
+**Tests:** 14/14 pass | Build: 25/25 pages
+
+*Last updated: 2026-06-03 (Session 17) | Agent: Claude Sonnet 4.6*
+
+---
+
+## 21. vedic-calc.service.js Refactor — Helper Modules (Session 18)
+
+**Problem:** `vedic-calc.service.js` had grown to 3,009 lines — a hard-to-navigate monolith.
+
+**Solution:** Extracted into 13 focused helper files under `server/src/services/helpers/`. The main file is now a 181-line orchestrator that imports and re-exports everything.
+
+### File Map
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| `vedic-calc.service.js` | **181** | Main entry — wires helpers, exports public API |
+| `helpers/vedic-data.js` | 105 | Static data: RASHIS, NAKSHATRAS, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS |
+| `helpers/core-helpers.js` | 182 | Core math utilities: norm, lahiriAyanamsa, toSidereal, rashiFromDeg, nakshatraFromDeg, houseFromSign, toDMS, ordinal, nakExtra, etc. |
+| `helpers/varga-calc.js` | 140 | Varga/Divisional chart calculations (D1–D60): trimshamshaFromDegree, vargaPlacementFromDeg, buildWholeSignHouses, calculateAllVargaCharts |
+| `helpers/dasha-calc.js` | 105 | Vimshottari Dasha: DASHA_SEQ, buildAntardasha, vimshottariDasha, dashaSequenceFrom, kpSubLordsFromLongitude |
+| `helpers/mangal-dosha.js` | 42 | analyzeMangalDosha |
+| `helpers/panchang.js` | 178 | Panchang (Tithi, Yoga, Karana, Vara, Masa, Pahar, Sunrise/Sunset) + calculateAstroDetails |
+| `helpers/drishti-bhavkarak.js` | 98 | calculateGrahaDrishti, calculateBhavKarak, calculateDigbala + their data constants |
+| `helpers/gochar.js` | 38 | calculateTransitSummary |
+| `helpers/ashtakoot.js` | 74 | calculateAshtakoot |
+| `helpers/prediction-data.js` | 239 | All large static constants: LAGNA_PORTRAIT, MOON_SIGN_PORTRAIT, DASHA_LORD_MEANINGS, SADE_SATI_DESC, HOUSE_REPORT, PLANET_REPORT, EVENT_AREA_CONFIG, VARGA_MATRIX_ROWS, etc. |
+| `helpers/predictions-engine.js` | 120 | generateRuleBasedPredictions, planets_house_desc, planetNameHi |
+| `helpers/detailed-reports.js` | 253 | All 9 detailed report functions: planetPositiveNegativeAssessment, calculateYogaDashaReport, calculateEventTiming, calculateDetailedReports, etc. |
+| `helpers/yogas-doshas.js` | 126 | detectYogasAndDoshas (12 yogas, 13 doshas, all private helpers) |
+
+### Dependency Chain
+```
+vedic-data.js  ← core-helpers.js ← varga-calc.js
+                                  ← dasha-calc.js
+                                  ← panchang.js
+                                  ← drishti-bhavkarak.js
+                                  ← gochar.js
+                                  ← ashtakoot.js
+prediction-data.js ← predictions-engine.js
+                   ← detailed-reports.js (also imports dasha-calc)
+core-helpers.js + vedic-data.js ← yogas-doshas.js
+All helpers ← vedic-calc.service.js (main orchestrator)
+```
+
+### Zero Regressions
+- All public exports preserved (`dailyMotionForPlanet`, `planetPositiveNegativeAssessment`, `calculateEventTiming`, `calculateDetailedReports`, `isRetrogradePlanet`, `kpSubLordsFromLongitude`, etc.)
+- **Tests:** 14/14 pass | **Build:** 25/25 pages
+
+*Last updated: 2026-06-03 (Session 18) | Agent: Claude Sonnet 4.6*
+
+---
+
+## 22. Kundli Bug-Fix Pass (Session 22)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-03
+
+### Fixed user-facing bugs
+- `GET /api/kundli` now returns a lightweight `chart_summary` so Meri Kundli cards can show Lagna, Nakshatra, and current Dasha without loading the full `calculated_data` JSON in the sorted list query.
+- `KundliManager.jsx` reads `chart_summary` and falls back to parsed chart data only when present.
+- Hindi prediction/life portrait UI ignores short saved Hindi snippets and uses richer generated Hindi fallbacks.
+- Life Report Hindi profile text was expanded for Lagna, Moon, Nakshatra, current Dasha, and Atmakaraka.
+- Predictions page now separates **Chart Isht Devata** from Dasha/Lagna **Remedy Devata**, using `chart.life_report.ishta_devata` to match Life Report.
+- Varga analysis now exposes `role`, `user_summary`, `benefits`, `watch_points`, and `remedies`; the Varga UI hides calculation rules/reference maps from the customer view.
+- Digbala, Bhav Karak, and Graha Drishti now include practical effects, benefits, cautions, and remedies.
+- Yogas/Doshas now include `cancellation_status`, `is_cancelled`, and relief text; Yoga + Dasha and Event Timing tabs now render inside the Yogas & Doshas panel.
+- Global readability improved by lightening royal card backgrounds and raising low-opacity `text-ivory/*` contrast.
+
+### Important files
+- `server/src/routes/kundli.routes.js`
+- `server/src/services/life-report.service.js`
+- `server/src/services/helpers/drishti-bhavkarak.js`
+- `server/src/services/helpers/yogas-doshas.js`
+- `server/src/services/helpers/detailed-reports.js`
+- `ui-main/src/views/KundliManager.jsx`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ui-main/src/views/Predictions.jsx`
+- `ui-main/src/lib/astroI18n.js`
+- `ui-main/src/app/globals.css`
+
+### Verification
+```bash
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/drishti-bhavkarak.js
+node --check server/src/services/helpers/yogas-doshas.js
+node --check server/src/services/life-report.service.js
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully, 25/25 static pages
+```
+
+### Browser smoke caveat
+Browser smoke was attempted but local runtime was not clean: an existing dev server on port 3000 returned stale `.next` chunk errors, `next start` on 3001 returned generic 500 for all routes, and dev server on 3002 timed out during startup. The extra 3001/3002 processes started by Codex were stopped. Build and server tests passed.
+
+### Git/worktree note
+The worktree already contained Claude/Codex changes and untracked helper/component files before this session. Do not assume all dirty files are from Session 22, and do not revert unrelated dirty files.
+
+---
+
+## 23. Kundli Summary Undefined Placement Fix (Session 23)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-03
+
+### Fixed
+- `ui-main/src/components/KundliInsightPanel.jsx` no longer renders `House undefined (undefined)` in the **Summary** tab of **Your Kundli — Explained in Plain Language**.
+- The component now derives planet house placement from `chart.ascendant.rashi_num` and each planet's `rashi_num` when saved chart JSON does not include `planet.house`.
+- The Lagna lord display now prefers backend `chart.ascendant.rashi_lord`, with a corrected local sign-lord fallback map.
+- Summary, Your Planets, Your Houses, and Health Guide all use normalized planet placements.
+- Rare missing placement cases now show `Pending` / `House pending` instead of leaking `undefined`.
+
+### Verification
+```bash
+npm.cmd run build:main    # compiled successfully; 25/25 static pages generated
+```
+
+---
+
+## 24. Predictions Page Kundli Selection Fix (Session 24)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-03
+
+### Fixed
+- Prediction links now carry the intended Kundli UUID with `?kundli=<uuid>` using `ui-main/src/lib/kundliLinks.js`.
+- `ui-main/src/views/Predictions.jsx` reads that URL parameter and selects the matching profile before falling back to the newest Kundli.
+- `ui-main/src/views/KundliDetail.jsx` bottom Predictions button now opens predictions for the currently viewed Kundli.
+- `ui-main/src/views/KundliManager.jsx` has a per-profile Predictions button.
+- `ui-main/src/views/Dashboard.jsx` links the Predictions card to the latest Kundli from the newest-first Kundli list.
+- Predictions profile selector updates the URL when a different profile is selected, preventing stale previously viewed profiles from sticking.
+
+### Verification
+```bash
+npm.cmd run build:main    # compiled successfully; 25/25 static pages generated
+```

@@ -8,7 +8,7 @@
 
   body {
     @apply antialiased;
-    background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%);
+    background: radial-gradient(ellipse at top, #242A4D 0%, #171B34 55%, #101324 100%);
     color: #F5F0E8;
     min-height: 100vh;
   }
@@ -53,25 +53,31 @@
 
   /* Cards */
   .card-royal {
-    background: rgba(17,20,40,0.65);
-    border: 1px solid rgba(212,175,55,0.18);
+    background: rgba(27,32,60,0.82);
+    border: 1px solid rgba(235,203,91,0.24);
     border-radius: 8px;
     backdrop-filter: blur(12px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.22);
     transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
   }
-  .card-royal:hover { border-color: rgba(212,175,55,0.38); }
+  .card-royal:hover { border-color: rgba(235,203,91,0.48); }
 
   /* Form input */
   .input-royal {
     @apply w-full px-4 py-3 rounded;
-    background: rgba(17,20,40,0.6);
-    border: 1px solid rgba(212,175,55,0.22);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(235,203,91,0.3);
     color: #F5F0E8;
     transition: border-color 0.2s;
     outline: none;
   }
   .input-royal::placeholder { color: rgba(245,240,232,0.28); }
   .input-royal:focus        { border-color: rgba(212,175,55,0.6); }
+
+  .font-devanagari {
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+  }
 
   /* Section headings */
   .section-title {
@@ -111,4 +117,20 @@
   .bg-gold-8   { background: rgba(212,175,55,0.08); }
   .glass       { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
   .starfield-bg { background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%); }
+
+  .text-ivory\/15 { color: rgba(245,240,232,0.42) !important; }
+  .text-ivory\/25 { color: rgba(245,240,232,0.52) !important; }
+  .text-ivory\/30 { color: rgba(245,240,232,0.58) !important; }
+  .text-ivory\/32 { color: rgba(245,240,232,0.6) !important; }
+  .text-ivory\/35 { color: rgba(245,240,232,0.62) !important; }
+  .text-ivory\/38 { color: rgba(245,240,232,0.64) !important; }
+  .text-ivory\/40 { color: rgba(245,240,232,0.66) !important; }
+  .text-ivory\/42 { color: rgba(245,240,232,0.68) !important; }
+  .text-ivory\/45 { color: rgba(245,240,232,0.7) !important; }
+  .text-ivory\/50 { color: rgba(245,240,232,0.74) !important; }
+  .text-ivory\/55 { color: rgba(245,240,232,0.78) !important; }
+  .text-ivory\/60 { color: rgba(245,240,232,0.82) !important; }
+  .text-ivory\/62 { color: rgba(245,240,232,0.84) !important; }
+  .text-ivory\/65 { color: rgba(245,240,232,0.86) !important; }
+  .text-ivory\/70 { color: rgba(245,240,232,0.9) !important; }
 }

@@ -2,7 +2,7 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-03 (Session 16)
+> Last updated: 2026-06-03 (Session 24)
 
 ---
 
@@ -24,7 +24,7 @@ Bootstrap the complete Jyotish Stack AI monorepo from scratch.
 ---
 
 ### ✅ TASK-002 — Express Server Bootstrap
-**Status:** Done  
+**Status:** Done
 **Package:** `server` (port 5000)  
 **Tech:** Node.js + Express 4 + Knex.js + MySQL2  
 **Files created:**
@@ -1221,6 +1221,156 @@ remedy_puja_steps: 5 ✓
 
 ---
 
+## Session 22 — 2026-06-03 | Kundli Bug-Fix Pass: Hindi Depth, Remedies Alignment, Practical Interpretation UI
+
+### ✅ TASK-053 — Fix Kundli List Pending Lagna/Nakshatra/Dasha
+**Status:** Done
+**Agent:** Alex / Codex
+
+**Files updated:**
+- `server/src/routes/kundli.routes.js`
+- `ui-main/src/views/KundliManager.jsx`
+
+**Change:** `GET /api/kundli` still avoids returning the full `calculated_data` blob in the sorted list query, but now attaches a lightweight `chart_summary` containing Lagna, Nakshatra, current Mahadasha, current Antardasha, and calculated status. `KundliManager` reads this summary so cards no longer show `Pending` for already-calculated Kundlis.
+
+---
+
+### ✅ TASK-054 — Improve Hindi Prediction and Life Portrait Depth
+**Status:** Done
+
+**Files updated:**
+- `ui-main/src/lib/astroI18n.js`
+- `server/src/services/life-report.service.js`
+
+**Change:** Hindi UI now ignores short saved Hindi snippets and falls back to richer generated Hindi paragraphs for portrait, current period, and prediction summary. Life Report profile Hindi summaries were expanded for Lagna, Moon sign, Nakshatra, current Dasha, and Atmakaraka.
+
+---
+
+### ✅ TASK-055 — Align Isht Devata Between Life Report and Predictions
+**Status:** Done
+
+**File updated:**
+- `ui-main/src/views/Predictions.jsx`
+
+**Change:** Predictions now shows a separate **Chart Isht Devata** tab sourced from `chart.life_report.ishta_devata`, matching Life Report. Dasha/Lagna remedy devatas are now labelled as **Remedy Devata**, avoiding confusion with the personal Isht Devata calculation.
+
+---
+
+### ✅ TASK-056 — Practical Varga, Digbala, Bhav Karak, and Drishti Interpretation
+**Status:** Done
+
+**Files updated:**
+- `server/src/services/life-report.service.js`
+- `server/src/services/helpers/drishti-bhavkarak.js`
+- `ui-main/src/views/KundliDetail.jsx`
+
+**Change:**
+- Varga analysis now includes role, practical summary, benefits, watch points, and remedies per divisional chart.
+- Varga UI removes calculation-rule/reference clutter from the user-facing panel and focuses on practical chart role and results.
+- Digbala now explains effect, benefit, caution, and remedy per planet.
+- Bhav Karak now explains benefits, danger signals, and remedies per house.
+- Graha Drishti now has a plain-language house-by-house explanation for aspects on planets, empty houses, and signs.
+
+---
+
+### ✅ TASK-057 — Yoga/Dosha Cancellation and Missing Tabs
+**Status:** Done
+
+**Files updated:**
+- `server/src/services/helpers/yogas-doshas.js`
+- `server/src/services/helpers/detailed-reports.js`
+- `ui-main/src/views/KundliDetail.jsx`
+
+**Change:**
+- Yoga/Dosha detection now adds `cancellation_status`, `is_cancelled`, `relief_en`, and `relief_hi`.
+- Yoga cards show whether the result is active, modified, relieved, or active with relief.
+- Yogas & Doshas panel now renders the previously empty **Yoga + Dasha** and **Event Timing** tabs using `chart.reports`.
+
+---
+
+### ✅ TASK-058 — Improve UI Readability
+**Status:** Done
+
+**Files updated:**
+- `ui-main/src/app/globals.css`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ui-main/src/views/Predictions.jsx`
+
+**Change:** Lightened page/card backgrounds, strengthened low-opacity ivory text classes, improved Devanagari readability, and raised several inline text colors in the updated panels.
+
+---
+
+### Verification
+```bash
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/drishti-bhavkarak.js
+node --check server/src/services/helpers/yogas-doshas.js
+node --check server/src/services/life-report.service.js
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # Next build compiled; 25/25 static pages generated
+```
+
+**Browser smoke note:** attempted local browser smoke after build. Existing dev server on port 3000 had stale `.next` runtime errors, production `next start` on port 3001 returned generic 500 for all routes, and clean dev server on 3002 timed out during local startup. The extra 3001/3002 processes started by Codex were stopped. Compile/test validation passed.
+
+*Last updated: 2026-06-03 | Agent: Alex / Codex*
+
+---
+
+## Session 23 — 2026-06-03 | Kundli Summary Undefined Placement Fix
+
+### ✅ TASK-059 — Fix `undefined` Lagna Lord House Text in Plain-Language Kundli Summary
+**Status:** Done
+**Agent:** Alex / Codex
+
+**Files updated:**
+- `ui-main/src/components/KundliInsightPanel.jsx`
+
+**Change:**
+- Fixed the Summary tab sentence that could render: `House undefined (undefined)` and `core life energy flows toward undefined`.
+- Added shared house-normalization helpers that derive a planet's house from Lagna rashi + planet rashi when saved chart JSON does not contain `planet.house`.
+- Updated Summary, Your Planets, Your Houses, and Health Guide in `KundliInsightPanel` to use normalized placements.
+- Corrected the local fallback sign-lord map and now prefers backend `chart.ascendant.rashi_lord` for Lagna lord display.
+- Added safe `Pending` display text for rare cases where a house cannot be derived.
+
+**Verification:**
+```bash
+npm.cmd run build:main    # Next build compiled; 25/25 static pages generated
+```
+
+*Last updated: 2026-06-03 | Agent: Alex / Codex*
+
+---
+
+## Session 24 — 2026-06-03 | Predictions Page Kundli Selection Fix
+
+### ✅ TASK-060 — Open Predictions for the Clicked/Latest Kundli
+**Status:** Done
+**Agent:** Alex / Codex
+
+**Files updated:**
+- `ui-main/src/lib/kundliLinks.js`
+- `ui-main/src/views/Predictions.jsx`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ui-main/src/views/KundliManager.jsx`
+- `ui-main/src/views/Dashboard.jsx`
+
+**Change:**
+- Added a shared `predictionHref(uuid)` helper so prediction links can carry the target Kundli UUID as `?kundli=<uuid>`.
+- Predictions page now reads the URL Kundli parameter and selects that profile before falling back to the newest profile from `/api/kundli`.
+- Kundli detail bottom Predictions button now opens predictions for the current Kundli, not a previously viewed/default profile.
+- Meri Kundli cards now include a per-profile Predictions button.
+- Dashboard Predictions card now links to the latest Kundli from the newest-first Kundli list.
+- Profile selector on the Predictions page updates the URL when the user switches profiles, keeping refresh/back behavior aligned.
+
+**Verification:**
+```bash
+npm.cmd run build:main    # Next build compiled; 25/25 static pages generated
+```
+
+*Last updated: 2026-06-03 | Agent: Alex / Codex*
+
+---
+
 ## Session 12 — 2026-06-03 | Yogas & Doshas — Reference DB + Live Detection + UI Panel
 
 ### ✅ TASK-040 — Yogas & Doshas from AstroAnsh Class 11 & 12 PDF
@@ -1577,3 +1727,469 @@ git diff --check          # clean except LF->CRLF warnings
 - `GET /kundli` returned 200.
 
 *Last updated: 2026-06-03 | Agent: Alex (Codex GPT-5)*
+
+---
+
+## Session 17 — 2026-06-03 | Life Report + Isht Devata + Varga Practical Readings + AstroAnsh Class 1
+
+### ✅ TASK-045 — Atmakaraka & Isht Devata Calculation
+**Status:** Done
+**Agent:** Claude Sonnet 4.6
+
+**Source:** AstroAnsh Class 1 Premium Notes (Ch. 4–5 Karma Theory, Ch. 7–8 Graha BPHS) + Parashara BPHS tradition
+
+**Files created/updated:**
+- `server/src/services/life-report.service.js` — NEW standalone service
+- `server/src/services/vedic-calc.service.js` — wired life_report + varga_analysis
+- `server/src/routes/kundli.routes.js` — ensureCalculatedChart now checks life_report.sections
+
+**Logic:**
+- `calculateAtmakaraka(planets)` — planet with highest degree (0–30°) among Sun–Saturn = Atmakaraka (Parashara BPHS)
+- `calculateIshtaDevata(akInfo, d9Chart)` — AK in D9 Navamsha → sign → sign lord → Ishta Devata + primary mantra
+- Full mapping: Sun→Rama/SuryaNarayan, Moon→Krishna/Shiva, Mars→Hanuman/Kartikeya, Mercury→Vishnu, Jupiter→Vishnu/Brihaspati, Venus→Lakshmi/Parvati, Saturn→Shiva/Bhairava, Rahu→Durga/Kali, Ketu→Ganesha
+- `chart.life_report.atmakaraka` + `chart.life_report.ishta_devata` added to all chart objects
+
+---
+
+### ✅ TASK-046 — Varga Chart Practical Readings ("Your Reading" tab)
+**Status:** Done
+
+**Logic:** `generateVargaAnalysis(chart)` creates per-Varga practical readings for D1–D60:
+- Each Varga slug gets: topic_en/hi, findings[], overall_status
+- Each finding: Lagna lord in that Varga chart → house + dignity → impact badge (very_favorable / favorable / neutral / challenging)
+- Key karakas per domain (e.g. D2=Venus, D7=Jupiter, D10=Sun+Saturn)
+- D2 special: Sun Hora vs Moon Hora type (paternal/maternal wealth)
+- D9 special: Atmakaraka placement shown
+
+**UI:** `VargaChartsPanel` in `KundliDetail.jsx` now shows "Your Reading — Practical Results" section per chart tab with colored impact cards.
+
+---
+
+### ✅ TASK-047 — Life Report Panel (5-section practical kundli analysis)
+**Status:** Done
+
+**Files created:**
+- `ui-main/src/components/LifeReportPanel.jsx` — NEW 5-tab panel
+- `server/src/services/life-report.service.js` — 5 section generators
+
+**5 Tabs:**
+| Tab | What it shows |
+|-----|--------------|
+| Soul Profile | Lagna + Moon sign + Nakshatra + current Dasha + **Atmakaraka + Isht Devata card** |
+| Finance | 2nd/11th lord analysis, D2 Hora type, Venus strength, active wealth yogas, problems + remedies |
+| Family | 4th/7th/5th lord + Mangal Dosha + problems + spouse/children remedies |
+| Health | Lagna lord vitality, 6th lord disease indicator, Moon state, nakshatra health + remedies |
+| Problems | All detected doshas, Sade Sati status, Navgraha Suktam as universal remedy |
+
+Injected into `KundliDetail.jsx` after Life Portrait panel, before Detailed Reports panel.
+
+---
+
+### ✅ TASK-048 — Migration 014 + Seed 011: AstroAnsh Class 1 Data
+**Status:** Done
+
+**Source:** `AstroAnsh Class 1 Premium Notes.pdf` (567KB)
+**Chapters covered:** Ch.1 Vedas & Vedangas, Ch.2 6 Angas of Jyotish, Ch.3 5 Uses of Jyotish, Ch.4-5 Karma Theory, Ch.6 Hora System & Weekdays, Ch.7-8 Graha BPHS Attributes
+
+**Files created:**
+- `server/src/migrations/014_jyotish_fundamentals.js` — creates `jyotish_basics` table
+- `server/src/seeds/011_jyotish_fundamentals.js` — 35 rows across 7 categories
+
+**New Table: `jyotish_basics`**
+- Columns: id, category, item_key, name_en, name_hi, description_en, description_hi, parent_key, admin_only, sort_order, extra_data (JSON), timestamps
+- Categories: `veda` | `vedanga` | `jyotish_anga` | `jyotish_use` | `karma_type` | `hora_rule` | `graha_bphs`
+
+**35 rows seeded:**
+- 4 Vedas (Rigveda, Samaveda, Yajurveda, Atharvaveda) — admin_only: true
+- 6 Vedangas (Shiksha, Kalpa, Vyakarana, Nirukta, Chhandas, Jyotish) — admin_only: true
+- 6 Jyotish Angas (Gola, Ganita, Jataka, Prashna, Muhurta, Nimitta) — Jataka & Muhurta: admin_only: false
+- 5 Uses of Jyotish (Trikaal Darshan, Karma Understanding, Muhurta, Prashna, Nimitta) — first 3: admin_only: false
+- 3 Karma types (Sanchit/Prarabdha/Kriyaman with D1/D60 Jyotish house mapping) — admin_only: false
+- 2 Hora rules (overview + effects per planet) — admin_only: false
+- 9 Graha BPHS attribute rows (full karakatva, friends/enemies, digbala, exalt/debil, vimshottari years) — admin_only: false
+
+**Verification:**
+```bash
+npm run migrate   # Batch 10 run: 1 migration
+npm run seed      # Ran 11 seed files
+npm run test:server   # 14/14 tests passed
+npm run build:main    # 25/25 pages
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 18 — 2026-06-03 | vedic-calc.service.js Modular Refactor
+
+### ✅ TASK-049 — Refactor vedic-calc.service.js into Helper Modules
+**Status:** Done
+**Agent:** Claude Sonnet 4.6
+
+**Objective:** Break the 3,009-line `vedic-calc.service.js` monolith into focused helper modules without breaking any existing functionality.
+
+**Files created — `server/src/services/helpers/`:**
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| `vedic-data.js` | 105 | RASHIS, NAKSHATRAS, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS |
+| `core-helpers.js` | 182 | norm, lahiriAyanamsa, toSidereal, rashiFromDeg, nakshatraFromDeg, getPlanetDignity, houseFromSign, toDMS, ordinal, nakExtra, varnaForRashi, vashyaForRashi, formatDate, addYears, etc. |
+| `varga-calc.js` | 140 | trimshamshaFromDegree, vargaPlacementFromDeg, buildWholeSignHouses, calculateVargaChart, calculateNavamshaChart, calculateAllVargaCharts |
+| `dasha-calc.js` | 105 | DASHA_SEQ, LORD_IDX, buildAntardasha, vimshottariDasha, legacyVimshottariDasha, dashaSequenceFrom, proportionalLord, kpSubLordsFromLongitude |
+| `mangal-dosha.js` | 42 | analyzeMangalDosha |
+| `panchang.js` | 178 | hinduMasa, calculateNityaYoga, calculateTithi, calculateKarana, calculateVara, calculatePahar, sunriseSunset, calculatePanchang, calculateAstroDetails |
+| `drishti-bhavkarak.js` | 98 | DRISHTI_OFFSETS, BHAV_KARAK, DIGBALA_STRONG_HOUSE, calculateGrahaDrishti, calculateBhavKarak, calculateDigbala |
+| `gochar.js` | 38 | calculateTransitSummary |
+| `ashtakoot.js` | 74 | calculateAshtakoot |
+| `prediction-data.js` | 239 | LAGNA_PORTRAIT, MOON_SIGN_PORTRAIT, DASHA_LORD_MEANINGS, SADE_SATI_DESC, HOUSE_REPORT, PLANET_REPORT, PLANET_NAME_HI, NATURAL_PLANET_NATURE, REPORT_PLANET_ORDER, VARGA_MATRIX_ROWS, EVENT_AREA_CONFIG |
+| `predictions-engine.js` | 120 | generateRuleBasedPredictions, planets_house_desc, planetNameHi |
+| `detailed-reports.js` | 253 | planetPositiveNegativeAssessment, calculatePlanetAssessmentMap, calculateYogaDashaReport, calculateEventTiming, calculateVargaSignMatrix, reportRowForPoint, calculatePlanetDetailRows, calculateCuspDetailRows, sentenceForPlanet, sentenceForPlanetWithAssessment, calculateGeneralReport, calculateDetailedReports |
+| `yogas-doshas.js` | 126 | detectYogasAndDoshas (all 12 yogas + 13 dosha types + private helpers) |
+
+**Files modified:**
+- `server/src/services/vedic-calc.service.js` — rewritten as 181-line orchestrator (imports helpers, contains calculateVedicChart, re-exports all public functions)
+
+**No regressions:**
+- All exports previously used by tests and routes preserved: `dailyMotionForPlanet`, `isRetrogradePlanet`, `calculateEventTiming`, `calculateDetailedReports`, `planetPositiveNegativeAssessment`, `kpSubLordsFromLongitude`, `calculateAshtakoot`, `calculateTransitSummary`, `generateRuleBasedPredictions`, etc.
+
+**Size reduction:**
+- Main file: 3,009 lines → **181 lines** (94% reduction)
+- Total across all helpers: ~1,700 lines (each file 38–253 lines, avg ~130)
+
+**Verification:**
+```bash
+npm run test:server   # 14/14 tests passed
+npm run build:main    # 25/25 pages — zero compile errors
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+
+---
+
+## Session 19 — 2026-06-03 | AstroAnsh Class 2 — Nine Grahas DB Corrections + Enrichment
+
+### ✅ TASK-050 — Class 2 PDF Processed: Graha Data Corrected & Enriched
+**Status:** Done
+**Source:** `AstroAnsh Class 2 Premium Notes.pdf` (797KB, 34 pages) — "A Comprehensive Bilingual Study Guide on the Nine Grahas"
+
+**Files created:**
+- `server/src/migrations/015_graha_class2_enhancements.js` — adds 10 new columns to `planets` table
+- `server/src/seeds/012_graha_class2.js` — UPDATE corrections + INSERT rich new data (no DELETE)
+
+**Corrections applied (9 errors fixed):**
+| Planet | Field | Was | Now |
+|--------|-------|-----|-----|
+| Rahu | direction | South-West | North-West |
+| Ketu | direction | North-East | South-West |
+| Ketu | color | Grey/Spotted | Multi-colored |
+| Ketu | metal | Mixed Metals | Iron |
+| Ketu | element | Fire | Fire & Earth |
+| Rahu | weekday | null | Saturday |
+| Ketu | weekday | null | Tuesday |
+| Sun | color | Copper/Red-Orange | Golden/Saffron |
+| Venus | metal | Silver/Platinum | Silver |
+| Mercury | metal | Brass/Bronze | Bronze/Kansa |
+| Saturn | metal | Iron | Iron/Lead |
+
+**New columns + data:** season, health_conditions_en/hi, professions_en/hi, key_relations_en/hi, physical_manifestations_en/hi — all 9 planets seeded with rich bilingual data from PDF.
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 20 — 2026-06-03 | AstroAnsh Class 3 & 4 — Bhavas, Rashis, and Planetary Classification
+
+### ✅ TASK-051 — Class 3 & 4 PDF Processed: Gunas, Planet Classification, Zodiac Signs, House Details
+**Status:** Done
+**Source:** `AstroAnsh Class 3,4 and characteristics of Bhavas Premium Notes.pdf` (708KB, 21 pages, BPHS-based)
+
+**Files created:**
+- `server/src/migrations/016_class3_enhancements.js` — adds new columns to `planets`, `zodiac_signs`, `houses`
+- `server/src/seeds/013_class3_data.js` — UPDATE all 9 planets + 12 signs + 12 houses (no DELETE)
+
+#### Migration 016 — New Columns Added
+
+| Table | New Columns |
+|-------|-------------|
+| `planets` | `guna`, `guna_hi`, `varna`, `varna_hi`, `court_role`, `court_role_hi`, `deity`, `deity_hi` |
+| `zodiac_signs` | `key_traits_en`, `key_traits_hi`, `detailed_description_en`, `detailed_description_hi` |
+| `houses` | `keywords_en`, `keywords_hi`, `topics_en`, `topics_hi`, `health_organs_en`, `health_organs_hi`, `detailed_notes_en`, `detailed_notes_hi` |
+
+#### Seed 013 — Data Seeded
+
+**Part 1: Planet Classification (Section 3 of PDF) — all 9 Navagrahas:**
+| Planet | Guna | Varna | Court Role | Deity |
+|--------|------|-------|------------|-------|
+| Sun | Satvik | Kshatriya | King | Agni |
+| Moon | Satvik | Vaishya | Queen | Varun |
+| Mars | Tamsik | Kshatriya | Commander | Kartikeya |
+| Mercury | Rajsik | Vaishya | Prince | Vishnu |
+| Jupiter | Satvik | Brahmin | Minister | Indra |
+| Venus | Rajsik | Brahmin | Minister | Indrani |
+| Saturn | Tamsik | Shudra | Servant | Brahma |
+| Rahu | Tamsik | Malechha | Army | Brahma / Laxmi / Ganesh |
+| Ketu | Tamsik | Malechha | Army | Ganesh |
+
+**Part 2: Zodiac Signs (Section 4) — all 12 Rashis:**
+- `key_traits_en/hi` — 5-6 word trait summaries per sign
+- `detailed_description_en/hi` — full paragraphs: symbol, element, quality, personality, strengths, challenges
+
+**Part 3: Houses (Part 4, pages 15–20) — all 12 Bhavas:**
+- `keywords_en/hi` — brief house keywords (Self/Wealth/Courage etc.)
+- `topics_en/hi` — all topics covered by each house (modern context included)
+- `health_organs_en/hi` — specific organs governed by each house (with laterality: Left Eye, Right Ear etc.)
+- `detailed_notes_en/hi` — rich per-house description with BPHS rules, modern insights, planet-specific effects
+
+**Three Gunas from PDF (Section 1):**
+- Satvik (Sun, Moon, Jupiter): purity, wisdom, dharmic living
+- Rajsik (Mercury, Venus): passion, activity, worldly success
+- Tamsik (Mars, Saturn, Rahu, Ketu): challenges, karmic lessons, transformation
+
+**DB verification:**
+```
+planets:      9 rows — guna/varna/court_role/deity ✓
+zodiac_signs: 12 rows — key_traits + detailed descriptions ✓
+houses:       12 rows — keywords + topics + health_organs + detailed_notes ✓
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 21 — 2026-06-03 | KundliInsightPanel — Plain Language Customer Guide
+
+### ✅ TASK-052 — Customer-Friendly Kundli Reading Panel
+**Status:** Done
+
+**Files created:**
+- `ui-main/src/components/KundliInsightPanel.jsx` — NEW 4-tab plain-language panel
+
+**Files updated:**
+- `server/src/routes/kundli.routes.js` — added `fetchChartEnrichment()` + wired into GET /:id and recalculate
+- `ui-main/src/views/KundliDetail.jsx` — `chartEnrichment` state + import + panel insertion
+
+#### Server: `fetchChartEnrichment(ascRashiNum, moonRashiNum)`
+Queries zodiac_signs (key_traits + detailed_description), planets (guna/varna/court_role/deity), houses (keywords/topics/health_organs/detailed_notes). Returns `profile.chart_enrichment` in the API response.
+
+#### KundliInsightPanel — 4 Tabs:
+| Tab | What Customer Sees |
+|-----|-------------------|
+| **📋 Summary** | Lagna sign meaning + key traits · Moon sign emotional nature · Current Dasha in plain language · Strong Planets ✅ / Needs Attention ⚠️ split |
+| **🪐 Your Planets** | 9 planet cards with deity (🙏 Agni/Varun etc.), guna badge (Satvik=Pure/Rajsik=Active/Tamsik=Intense), court role with plain meaning, position, dignity in plain terms (★ Excellent / ▼ Needs Care) |
+| **🏠 Your Houses** | 12 house cards with keywords, topics, health organs, planets present + "activate this life area" |
+| **🏥 Health Guide** | Body organ per house, planet influence, Watch/Protected color badges |
+
+**Verification:**
+```bash
+node --check server/src/routes/kundli.routes.js  ✓
+npm run test:server   # 14/14 passed ✓
+npm run build:main    # 25/25 pages ✓
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 25 — 2026-06-03 | Upcoming Antardasha Signals — Yoga + Dasha Forecast
+
+### ✅ TASK-061 — Predict Yoga + Dasha for Upcoming Antardasha Periods
+**Status:** Done
+**Agent:** Claude Sonnet 4.6
+
+**Files updated:**
+- `server/src/services/helpers/detailed-reports.js`
+- `ui-main/src/views/KundliDetail.jsx`
+
+#### Backend changes (`detailed-reports.js`)
+
+**New private helpers added:**
+
+| Helper | Purpose |
+|--------|---------|
+| `_scoreEventAreasForPlanets(activePlanets, chart, gochar, mahadashLord)` | Scores all 5 EVENT_AREA_CONFIG areas for any set of active planets (reusable) |
+| `_predictUpcomingAntardasha(dashaLord, uLord, chart, gochar)` | Full Yoga+Dasha prediction for one upcoming antardasha period |
+
+**`_predictUpcomingAntardasha` returns:**
+- `activated_yogas[]` — yogas from chart's `yogas_doshas.yogas` whose `planets_involved` includes dashaLord or uLord (with `is_cancelled` flag)
+- `activated_doshas[]` — doshas activated by the same pair
+- `life_area_windows[]` — all 5 event areas scored and sorted by score descending, each with tone (favorable/moderate/caution) and trigger notes
+- `nature_en/hi` — DASHA_LORD_MEANINGS[uLord].nature
+- `key_themes[]` — top 3 opportunities from DASHA_LORD_MEANINGS
+- `cautions[]` — top 2 cautions from DASHA_LORD_MEANINGS
+- `focus_en/hi` — rich summary combining top life area + nature + yoga/dosha suffixes
+
+**`calculateEventTiming` updated:** `upcoming_antardashas` now spread the full `_predictUpcomingAntardasha` result per period (replacing the old single-line generic focus text).
+
+**Exported:** `predictUpcomingAntardasha` (public alias to the private helper) added to module.exports.
+
+#### UI changes (`KundliDetail.jsx`)
+
+Replaced the minimal 3-card grid in the Event Timing → Upcoming Antardasha section with rich expanded cards:
+
+| Section in each card | Content |
+|----------------------|---------|
+| **Planet header** | Icon + colored planet name + date range (border tinted to planet color) |
+| **Focus paragraph** | Rich bilingual summary sentence |
+| **Life Areas** | Top 3 scored areas as tone-colored rows (↑ favorable / ⚠ caution / ~ moderate) |
+| **Yogas That Activate** | Green chips for active (non-cancelled) yogas |
+| **Doshas to Watch** | Amber chips for activated doshas |
+| **Key Themes** | Gold bullet list of up to 3 opportunities |
+| **Cautions** | Saffron warning list of up to 2 cautions |
+
+Section heading updated to: "Upcoming Antardasha Signals — Yoga + Dasha Forecast"
+
+**Verification:**
+```bash
+node --check server/src/services/helpers/detailed-reports.js  ✓
+npm run test:server   # 14/14 passed ✓
+npm run build:main    # 25/25 pages ✓
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 26 — 2026-06-03 | Varga Charts — Plain-Language User Summary
+
+### ✅ TASK-062 — Rewrite Varga Panel for Normal Users (Remove Technical Jargon)
+**Status:** Done
+**Agent:** Claude Sonnet 4.6
+
+**Files updated:**
+- `server/src/services/life-report.service.js`
+- `ui-main/src/views/KundliDetail.jsx`
+
+#### Problem
+The Varga / Divisional Charts panel was showing highly technical astrological data directly to users:
+- "Marriage, dharma — Lagna Lord (Jupiter) in Taurus (house 11) · Neutral"
+- "Key significator — Venus in Gemini (house 12) · Neutral"
+- Generic role text like "This divisional chart shows how wealth actually works in the native's life, beyond the surface promise of D1."
+
+Normal users could not understand what any of this meant for their life.
+
+#### Backend changes (`life-report.service.js`)
+
+Rewrote `buildVargaGuidance()` to produce plain-language output:
+
+| Old field | Before | After |
+|-----------|--------|-------|
+| `role_en` | "This divisional chart shows how X works in the native's life..." | "Your X chart looks supportive — you have natural strength here." |
+| `user_summary_en` | Referenced "strongest visible factor is Jupiter in Taurus (house 11)..." | Full plain paragraph with zero planet/house jargon |
+| `benefits[]` | "D9 Lagna Lord (Jupiter) in Gemini (house 7) · Neutral. Generally positive..." | "This is one of the stronger areas of your chart. When you put effort in here..." |
+| `watch_points[]` | "Venus in Gemini (house 12) · Neutral. Treat this as the main area..." | "This area may go through phases of delay... patience works better than pushing hard." |
+| `remedies[]` | "Strengthen the weak karaka with mantra..." | "Strengthen this area through regular mantra, acts of service, and clean daily habits..." |
+
+Added new fields: `verdict_en/hi` ("Looking Good" / "Mixed Picture" / "Needs Attention") and plain `role_en/hi`.
+
+#### Frontend changes (`KundliDetail.jsx`)
+
+Replaced the right-panel layout entirely:
+
+| Removed | Added |
+|---------|-------|
+| "Signifies" + "Role in Your Kundli" 2-column jargon grid | **Verdict banner** — colored badge (Looking Good / Mixed / Needs Attention) + plain "what this chart tells you" sentence |
+| `findings` cards (technical planet/house rows) | **Plain answer paragraph** — 2–3 sentences in everyday language |
+| Generic "Benefits / Watch Points / Remedies" labels | **3 cards**: "What It Means For You" ✓ · "What To Watch" ⚠ · "What To Do" ✦ |
+| "Good For" section label | **"Use This Chart To Check"** with bullet dots |
+
+**Verification:**
+```bash
+node --check server/src/services/life-report.service.js  ✓
+npm run test:server   # 14/14 passed ✓
+npm run build:main    # 25/25 pages ✓
+```
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+
+---
+
+## Session 27 — 2026-06-03 | D60 Past Life Reading + D20 Spiritual Path
+
+### TASK-063 — D60 Past Life Deep Reading Engine
+Files: server/src/services/life-report.service.js, ui-main/src/views/KundliDetail.jsx
+
+New generateD60PastLifeReading(d60Chart): D60 Lagna=personality, 10H=profession, 9H=father, 4H=mother, 7H=spouse, 12H=moksha karma. Lookup tables: D60_LAGNA_PAST_LIFE, D60_PLANET_PROFESSION, D60_PLANET_FATHER, D60_PLANET_MOTHER, D60_PLANET_SPOUSE, D60_PLANET_PAST_MOKSHA. Helpers: signOfHouse, planetsInHouseList, primaryPlanetForHouse.
+
+### TASK-064 — D20 Spiritual Path Analysis Engine
+New generateD20SpiritualReading(d20Chart, ishtaDevata): D20_LAGNA_SPIRITUAL (12 entries), D20_PLANET_PRACTICE (9 planets), Jupiter+Ketu favorability, 9H grace path, 12H moksha indicator, Isht Devata from chart._ishtaDevata. generateLifeReport now stashes chart._ishtaDevata.
+
+### TASK-065 — D60/D20 Special UI Panels in VargaChartsPanel
+D60 panel: karma badge, personality paragraph, 5 cards (Profession/Father/Mother/Spouse/Spiritual). D20 panel: spirit verdict, temperament, core practice, Jupiter+Ketu, grace path, Isht Devata, moksha indicator. Fully bilingual.
+
+Verification: 14/14 tests, 25/25 pages.
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 28 — 2026-06-03 | Bug Fix: Webpack Cache + Varga Reading Blank Fields
+
+### ✅ TASK-066 — Webpack Cache Error Fix
+**Status:** Done
+**File:** `ui-main/.next/` (deleted)
+
+**Problem:** `[webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat '...\.next\cache\webpack\client-development\5.pack.gz'`
+**Fix:** Deleted the stale `.next` directory. Webpack rebuilds fresh cache on next `dev:main` start.
+
+---
+
+### ✅ TASK-067 — Varga/Divisional Chart Reading Panel Blank Fields
+**Status:** Done
+**File:** `server/src/routes/kundli.routes.js`
+
+**Root cause:** `ensureCalculatedChart` only checked `existing?.varga_analysis` (truthy object), so charts saved in Sessions 17–25 passed the check even though they were missing:
+- `role_en`, `role_hi`, `verdict_en`, `verdict_hi`, `user_summary_en`, `user_summary_hi` — added in Session 26 plain-language rewrite of `buildVargaGuidance()`
+- `past_life_reading` (D60) and `spiritual_reading` (D20) — added in Session 27
+
+**Symptom:** "What this chart tells you" showed a blank header, the summary paragraph was empty. D60 Past Life and D20 Spiritual Path special panels didn't appear.
+
+**Fix:** Two new checks in `ensureCalculatedChart`:
+```js
+&& existing?.varga_analysis?.d1?.role_en              // Session 26: plain-language Varga fields
+&& existing?.varga_analysis?.d60?.past_life_reading   // Session 27: D60 past-life reading
+```
+Any stale chart failing either check is recalculated on next API access.
+
+**Verification:**
+```bash
+node --check server/src/routes/kundli.routes.js  ✓
+npm run test:server   # 14/14 passed ✓
+npm run build:main    # 25/25 pages ✓
+```
+
+---
+
+## Session 29 — 2026-06-04 | Planet Life Impact Panel
+
+### ✅ TASK-068 — Planet Life Impact: How Each Planet Affects Your Life Areas
+**Status:** Done
+**Files created:** `ui-main/src/components/PlanetImpactPanel.jsx`
+**Files updated:** `ui-main/src/views/KundliDetail.jsx` — import + panel after KundliInsightPanel
+
+**Feature:** For each of the 9 Navagrahas, shows a plain-language card explaining how the planet affects specific life areas (money, career, family, relationships, education, health, spirituality etc.) based on whether it is positive, mixed, or negative in the chart.
+
+**Data:** Pure frontend — reads existing `chart.reports.planet_assessments` + `chart.planets`. No server changes, no new DB fields.
+
+**Each card shows:** planet name/icon, assessment badge, house placement + domain, active-in-dasha badge, 5 life-area impact items with area chips and plain-language text (EN + HI), and a "What to do" advice line.
+
+**Filter tabs:** All 9 Planets / Strong / Needs Attention
+
+**Planet → life areas:**
+Sun → Career, Confidence, Father, Status, Eye/Heart health
+Moon → Mind/Emotions, Mother/Home, Wealth, Memory, Mental/Gut health
+Mars → Energy/Drive, Property, Technical career, Siblings, Physical vitality
+Mercury → Intelligence, Education, Business/Trade, Communication, Nervous system
+Jupiter → Wealth, Education, Children/Family, Marriage, Luck/Blessings
+Venus → Love/Romance, Marriage, Luxury/Wealth, Arts, Reproductive health
+Saturn → Career/Goals, Discipline, Justice/Karma, Delays, Bone/Joint health
+Rahu → Ambition, Technology/Innovation, Sudden fortune, Material gains, Foreign
+Ketu → Spirituality, Past-life gifts, Research, Detachment, Viral/Immune health
+
+**Verification:**
+```bash
+npm run build:main    # 25/25 pages ✓
+```
+
+*Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6*

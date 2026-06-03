@@ -16,20 +16,30 @@ exports.seed = async function (knex) {
     { key: 'razorpay_enabled', value: 'false', description: 'Enable Razorpay payments' },
   ]);
 
-  // Default superadmin
-  await knex('users').del();
-  const hash = await bcrypt.hash('Admin@2026!', 12);
-  await knex('users').insert([
-    {
-      uuid: uuidv4(),
-      name: 'Super Admin',
-      email: 'admin@jyotishstack.com',
-      password_hash: hash,
-      role: 'superadmin',
-      is_active: true,
-      email_verified: true,
-    },
-  ]);
+  // Default accounts — upsert so re-running seeds never wipes real user accounts
+  const adminEmail = 'admin@jyotishstack.com';
+  const clientEmail = 'client@jyotishstack.com';
+
+  const adminHash  = await bcrypt.hash('Admin@2026!', 12);
+  const clientHash = await bcrypt.hash('Client@2026!', 12);
+
+  // Superadmin
+  const existingAdmin = await knex('users').where({ email: adminEmail }).first();
+  if (!existingAdmin) {
+    await knex('users').insert({
+      uuid: uuidv4(), name: 'Super Admin', email: adminEmail,
+      password_hash: adminHash, role: 'superadmin', is_active: true, email_verified: true,
+    });
+  }
+
+  // Default test client (role: user)
+  const existingClient = await knex('users').where({ email: clientEmail }).first();
+  if (!existingClient) {
+    await knex('users').insert({
+      uuid: uuidv4(), name: 'Test Client', email: clientEmail,
+      password_hash: clientHash, role: 'user', is_active: true, email_verified: true,
+    });
+  }
 
   // Subscription plans
   await knex('subscription_plans').del();

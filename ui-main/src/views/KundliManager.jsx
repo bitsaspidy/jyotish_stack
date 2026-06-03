@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import StarField from '../components/StarField';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
+import { predictionHref } from '../lib/kundliLinks';
 
 const emptyForm = {
   name: '',
@@ -32,6 +33,21 @@ function parseChart(profile) {
   try { return JSON.parse(profile.calculated_data); } catch { return null; }
 }
 
+function profileSummary(profile, chart, lang) {
+  const summary = profile?.chart_summary || {};
+  const currentDasha = chart?.dasha?.find((period) => period.is_current) || chart?.dasha?.[0];
+  return {
+    calculated: Boolean(summary.calculated || chart),
+    lagna: lang === 'hi'
+      ? (summary.lagna_hi || chart?.ascendant?.rashi_hi || summary.lagna_en || chart?.ascendant?.rashi_en)
+      : (summary.lagna_en || chart?.ascendant?.rashi_en || summary.lagna_hi || chart?.ascendant?.rashi_hi),
+    nakshatra: lang === 'hi'
+      ? (summary.nakshatra_hi || chart?.nakshatra?.hi || summary.nakshatra_en || chart?.nakshatra?.en)
+      : (summary.nakshatra_en || chart?.nakshatra?.en || summary.nakshatra_hi || chart?.nakshatra?.hi),
+    dasha: summary.dasha_lord || currentDasha?.lord,
+  };
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -53,7 +69,21 @@ export default function KundliManager({ startWithForm = false }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
 
+  const [locQuery,   setLocQuery]   = useState('');
+  const [locResults, setLocResults] = useState([]);
+  const [searching,  setSearching]  = useState(false);
+  const searchRef = useRef(null);
+
   const t = (en, hi) => (lang === 'hi' ? hi : en);
+
+  // Close location dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setLocResults([]);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
@@ -76,7 +106,7 @@ export default function KundliManager({ startWithForm = false }) {
   }, [user]);
 
   const stats = useMemo(() => {
-    const calculated = profiles.filter((profile) => !!profile.calculated_data).length;
+    const calculated = profiles.filter((profile) => profile?.chart_summary?.calculated || !!profile.calculated_data).length;
     return [
       { label: t('Profiles', 'Profiles'), value: profiles.length },
       { label: t('Calculated', 'Calculated'), value: calculated },
@@ -85,6 +115,44 @@ export default function KundliManager({ startWithForm = false }) {
   }, [profiles, lang]);
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+
+  async function handleLocationSearch(e) {
+    e.preventDefault();
+    if (!locQuery.trim()) return;
+    setSearching(true);
+    setLocResults([]);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locQuery)}&format=json&limit=6&addressdetails=1`;
+      const res = await fetch(url, {
+        headers: { 'Accept-Language': lang === 'hi' ? 'hi' : 'en', 'Accept': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.length === 0) toast.error(t('No results found. Try a different name.', 'कोई परिणाम नहीं मिला। अलग नाम आज़माएं।'));
+      setLocResults(data);
+    } catch {
+      toast.error(t('Location search failed. Check internet connection.', 'स्थान खोज विफल रही। इंटरनेट कनेक्शन जांचें।'));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function selectLocResult(r) {
+    const lat = parseFloat(r.lat);
+    const lon = parseFloat(r.lon);
+    let tz = Math.round((lon / 15) * 2) / 2;
+    // India heuristic → IST = +5.5
+    if (lat >= 6 && lat <= 37 && lon >= 68 && lon <= 98) tz = 5.5;
+    const label = r.display_name;
+    setForm((current) => ({
+      ...current,
+      place_of_birth:  label,
+      latitude:        lat.toFixed(6),
+      longitude:       lon.toFixed(6),
+      timezone_offset: String(tz),
+    }));
+    setLocQuery(label.split(',')[0]);
+    setLocResults([]);
+  }
 
   const applyPreset = (preset) => {
     setForm((current) => ({
@@ -180,23 +248,79 @@ export default function KundliManager({ startWithForm = false }) {
                 {t('Time of Birth', 'Janm samay')}
                 <input className="input-royal mt-1" type="time" step="1" value={form.time_of_birth} onChange={(e) => update('time_of_birth', e.target.value)} required />
               </label>
+              {/* Location search — Nominatim (free, no API key) */}
+              <div className="md:col-span-2" ref={searchRef} style={{ position: 'relative' }}>
+                <p className="text-xs text-ivory/55 mb-1">{t('Search Place of Birth', 'जन्म स्थान खोजें')}</p>
+                <div className="flex gap-2">
+                  <input
+                    className="input-royal flex-1"
+                    placeholder={t('e.g. Jodhpur, Rajasthan, India', 'जैसे: जोधपुर, राजस्थान, भारत')}
+                    value={locQuery}
+                    onChange={(e) => setLocQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleLocationSearch(e); } }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleLocationSearch}
+                    disabled={searching}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                      background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.4)',
+                      color: '#D4AF37', cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {searching ? '⏳' : `🔍 ${t('Search', 'खोजें')}`}
+                  </button>
+                </div>
+                {locResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute', zIndex: 100, left: 0, right: 0,
+                    background: '#0f1128', border: '1px solid rgba(212,175,55,0.3)',
+                    borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: 'auto',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                  }}>
+                    {locResults.map((r, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => selectLocResult(r)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '10px 14px', fontSize: 12, color: 'rgba(245,240,232,0.75)',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          borderBottom: i < locResults.length - 1 ? '1px solid rgba(212,175,55,0.08)' : 'none',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(212,175,55,0.08)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                      >
+                        <span style={{ color: '#D4AF37', marginRight: 6 }}>📍</span>
+                        {r.display_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Place label (auto-filled or manual) */}
               <label className="text-xs text-ivory/55 md:col-span-2">
-                {t('Place of Birth', 'Janm sthan')}
+                {t('Place of Birth (Label)', 'जन्म स्थान (लेबल)')}
                 <input className="input-royal mt-1" value={form.place_of_birth} onChange={(e) => update('place_of_birth', e.target.value)} required placeholder="City, State, Country" />
               </label>
+
               <label className="text-xs text-ivory/55">
-                Latitude
-                <input className="input-royal mt-1" value={form.latitude} onChange={(e) => update('latitude', e.target.value)} required placeholder="28.6139" />
+                {t('Latitude', 'अक्षांश')}
+                <input className="input-royal mt-1" type="number" step="0.000001" value={form.latitude} onChange={(e) => update('latitude', e.target.value)} required placeholder="28.6139" />
               </label>
               <label className="text-xs text-ivory/55">
-                Longitude
-                <input className="input-royal mt-1" value={form.longitude} onChange={(e) => update('longitude', e.target.value)} required placeholder="77.2090" />
+                {t('Longitude', 'देशांतर')}
+                <input className="input-royal mt-1" type="number" step="0.000001" value={form.longitude} onChange={(e) => update('longitude', e.target.value)} required placeholder="77.2090" />
               </label>
               <label className="text-xs text-ivory/55">
-                Timezone
-                <input className="input-royal mt-1" value={form.timezone_offset} onChange={(e) => update('timezone_offset', e.target.value)} required placeholder="5.5" />
+                {t('Timezone (UTC offset)', 'टाइमज़ोन (UTC अंतर)')}
+                <input className="input-royal mt-1" type="number" step="0.5" value={form.timezone_offset} onChange={(e) => update('timezone_offset', e.target.value)} required placeholder="5.5" />
               </label>
               <div className="flex flex-wrap items-end gap-2">
+                <p className="w-full text-xs text-ivory/40 mb-1">{t('Quick fill:', 'Quick fill:')}</p>
                 {presets.map((preset) => (
                   <button key={preset.label} type="button" onClick={() => applyPreset(preset)} className="btn-outline-gold text-xs px-3 py-2">
                     {preset.label}
@@ -224,7 +348,7 @@ export default function KundliManager({ startWithForm = false }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {profiles.map((profile) => {
               const chart = parseChart(profile);
-              const currentDasha = chart?.dasha?.find((period) => period.is_current);
+              const summary = profileSummary(profile, chart, lang);
               return (
                 <motion.div key={profile.uuid} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card-royal p-5">
                   <div className="flex items-start justify-between gap-3">
@@ -237,19 +361,20 @@ export default function KundliManager({ startWithForm = false }) {
                   <div className="grid grid-cols-3 gap-2 my-4">
                     <div className="bg-white/5 rounded p-2">
                       <p className="text-[10px] text-ivory/35">Lagna</p>
-                      <p className="text-sm text-ivory">{chart?.ascendant?.rashi_en || 'Pending'}</p>
+                      <p className="text-sm text-ivory font-devanagari">{summary.lagna || 'Pending'}</p>
                     </div>
                     <div className="bg-white/5 rounded p-2">
                       <p className="text-[10px] text-ivory/35">Nakshatra</p>
-                      <p className="text-sm text-ivory">{chart?.nakshatra?.en || 'Pending'}</p>
+                      <p className="text-sm text-ivory font-devanagari">{summary.nakshatra || 'Pending'}</p>
                     </div>
                     <div className="bg-white/5 rounded p-2">
                       <p className="text-[10px] text-ivory/35">Dasha</p>
-                      <p className="text-sm text-ivory">{currentDasha?.lord || 'Pending'}</p>
+                      <p className="text-sm text-ivory">{summary.dasha || 'Pending'}</p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Link href={`/kundli/${profile.uuid}`} className="btn-gold text-xs px-4 py-2">{t('Open', 'Open')}</Link>
+                    <Link href={predictionHref(profile.uuid)} className="btn-outline-gold text-xs px-4 py-2">{t('Predictions', 'भविष्यवाणी')}</Link>
                     <button onClick={() => downloadPdf(profile)} className="btn-outline-gold text-xs px-4 py-2">PDF</button>
                     <Link href="/matchmaking" className="btn-outline-gold text-xs px-4 py-2">{t('Match', 'Milan')}</Link>
                   </div>
