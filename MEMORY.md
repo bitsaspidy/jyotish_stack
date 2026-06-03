@@ -2,6 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
+> Last updated: 2026-06-03 (Session 13)
 
 ---
 
@@ -11,7 +12,7 @@
 **Hindi Name:** ज्योतिष स्टैक AI  
 **Tagline:** Ancient Wisdom. Modern Intelligence.  
 **Hindi Tagline:** प्राचीन ज्ञान। आधुनिक बुद्धि।  
-**Purpose:** Vedic astrology platform offering Kundli generation, Bhavishya Vani (predictions), Kundli matchmaking, Dasha/Nakshatra analysis — powered by AI calculations.  
+**Purpose:** Vedic astrology platform offering Kundli generation, Bhavishya Vani (predictions), Kundli matchmaking, Dasha/Nakshatra analysis — powered by real astronomical calculations.  
 **Languages:** Hindi (`hi`) + English (`en`) — all user-facing content must support both.  
 **Target Year:** 2026 — design must be royal, premium, AI-era aesthetic.
 
@@ -25,10 +26,10 @@
 | `jyotishstack.in` | `ui-in` | 3001 | India-focused, Hindi-first |
 | `jyotishstackai.com` | `ui-ai-com` | 3002 | AI-branded variant |
 | `jyotishstackai.in` | `ui-ai-in` | 3003 | AI-branded India variant |
-| Admin panel | `ui-admin` | 3004 | Internal only, no public domain |
+| Admin panel | merged into ui-main | `/admin/*` | Accessible at jyotishstack.com/admin/login |
 | API server | `server` | 5000 | Single backend for all 4 UIs |
 
-All UIs call the same Express API server. They differ in design theme, language default, and content focus. Core features are identical.
+**Note:** `ui-admin` package still exists but is NOT the primary admin panel. The admin is merged into `ui-main` at `/admin/*` routes.
 
 ---
 
@@ -37,147 +38,154 @@ All UIs call the same Express API server. They differ in design theme, language 
 ```
 jyotish-stack/
 ├── MEMORY.md                  ← YOU ARE HERE
-├── package.json               ← npm workspaces root
-├── server/                    ← Express + Knex backend
-│   ├── .env                   ← environment variables
-│   ├── knexfile.js
+├── ACTIVITY.md                ← Full task-by-task log of all sessions
+├── package.json               ← npm workspaces root (6 packages)
+├── server/                    ← Express + Knex backend (port 5000)
+│   ├── .env                   ← DB, JWT, SMTP, Razorpay, CORS env vars
+│   ├── knexfile.js            ← Knex config (dev + prod); DATE/DATETIME typeCast fix
 │   ├── src/
 │   │   ├── index.js           ← main entry (port 5000)
 │   │   ├── config/db.js       ← Knex instance
+│   │   ├── data/
+│   │   │   └── varga-reference.js   ← 18 Varga chart definitions (VARGA_DEFINITIONS)
 │   │   ├── middleware/
 │   │   │   ├── auth.js        ← JWT authenticate, requireRole
 │   │   │   └── maintenance.js ← Coming Soon guard (30s cache)
-│   │   ├── migrations/        ← run: npm run migrate --workspace=server
+│   │   ├── migrations/        ← 013 files total (run: npm run migrate)
 │   │   │   ├── 001_create_users.js
 │   │   │   ├── 002_create_app_settings.js
 │   │   │   ├── 003_create_kundli.js
-│   │   │   └── 004_create_subscriptions_notifications.js
-│   │   ├── seeds/001_defaults.js  ← default admin + settings + plans
+│   │   │   ├── 004_create_subscriptions_notifications.js
+│   │   │   ├── 005_vedic_reference_data.js      ← zodiac_signs, planets, planet_dignity, nakshatras, houses
+│   │   │   ├── 006_house_lord_interpretations.js ← 144 combinations (12×12)
+│   │   │   ├── 007_varga_reference_data.js       ← varga_charts, varga_family_references, varga_chart_relationships
+│   │   │   ├── 008_kundli_list_index.js           ← composite index (user_id, created_at)
+│   │   │   ├── 009_drishti_bhavkarak_digbala.js   ← 3 reference tables
+│   │   │   ├── 010_nakshatra_gandmool.js          ← adds is_gandmool column
+│   │   │   ├── 011_nakshatra_detailed_notes.js    ← 12 new columns for EN+HI notes
+│   │   │   ├── 012_remedy_data.js                 ← remedy_planets, remedy_problems, remedy_puja_steps
+│   │   │   └── 013_yogas_doshas.js                ← yogas_library, doshas_library
+│   │   ├── seeds/             ← 010 seed files
+│   │   │   ├── 001_defaults.js          ← superadmin, app_settings, plans
+│   │   │   ├── 002_planets.js           ← 9 Navagrahas
+│   │   │   ├── 003_zodiac_signs.js      ← 12 Rashis + 12 Bhavas
+│   │   │   ├── 004_planet_dignity.js    ← Exalt/Debil/Mool from PDF
+│   │   │   ├── 005_nakshatras.js        ← 27 Nakshatras (full EN+HI detailed notes)
+│   │   │   ├── 006_house_lord_interpretations.js ← 144 EN interpretations
+│   │   │   ├── 007_varga_reference_data.js
+│   │   │   ├── 008_drishti_bhavkarak_digbala.js
+│   │   │   ├── 009_remedy_data.js       ← 9 planets, 7 problems, 5 puja steps
+│   │   │   └── 010_yogas_doshas.js      ← 12 yogas, 14 dosha rows
 │   │   ├── routes/
-│   │   │   ├── auth.routes.js        ← /api/auth/*
-│   │   │   ├── admin.routes.js       ← /api/admin/* (admin/superadmin only)
-│   │   │   ├── user.routes.js        ← /api/users/*
-│   │   │   ├── kundli.routes.js      ← /api/kundli/*
-│   │   │   ├── subscription.routes.js ← /api/subscriptions/*
-│   │   │   ├── newsletter.routes.js  ← /api/newsletter/*
-│   │   │   └── settings.routes.js    ← /api/settings/public
+│   │   │   ├── auth.routes.js
+│   │   │   ├── admin.routes.js
+│   │   │   ├── user.routes.js
+│   │   │   ├── kundli.routes.js    ← includes recalculate, PDF export, nakshatra insight, remedy data
+│   │   │   ├── subscription.routes.js
+│   │   │   ├── newsletter.routes.js
+│   │   │   └── settings.routes.js
 │   │   ├── services/
-│   │   │   ├── email.service.js      ← Nodemailer + template system
-│   │   │   └── razorpay.service.js   ← Order creation + signature verify
+│   │   │   ├── ephemeris.service.js    ← Meeus astronomical algorithms
+│   │   │   ├── vedic-calc.service.js   ← All Vedic calculations (see Section 11)
+│   │   │   ├── report.service.js       ← PDF report generation (PDFKit)
+│   │   │   ├── email.service.js        ← Nodemailer + 6 HTML templates
+│   │   │   └── razorpay.service.js     ← Order creation + HMAC verification
+│   │   ├── tests/
+│   │   │   └── vedic-calc.test.js      ← 12 tests (Node built-in runner)
 │   │   └── utils/
-│   │       ├── response.js           ← ok(), fail() helpers
-│   │       └── token.js              ← JWT sign/verify + randomToken
-├── ui-main/                   ← React (Vite + Tailwind) — jyotishstack.com
+│   │       ├── response.js             ← ok(), fail() helpers
+│   │       └── token.js                ← JWT sign/verify + randomToken
+├── ui-main/                   ← Next.js 14 App Router — jyotishstack.com (port 3000)
 │   └── src/
-│       ├── App.jsx            ← Router + maintenance check + lang toggle
-│       ├── main.jsx
-│       ├── index.css          ← Tailwind + custom classes
-│       ├── lib/api.js         ← Axios instance with auto-refresh
-│       ├── context/AuthContext.jsx
+│       ├── app/
+│       │   ├── layout.jsx           ← server component, loads fonts
+│       │   ├── globals.css          ← Tailwind + custom classes
+│       │   ├── providers.jsx        ← LangProvider > AuthProvider > maintenance check
+│       │   ├── page.jsx             → Home
+│       │   ├── login/page.jsx
+│       │   ├── register/page.jsx
+│       │   ├── dashboard/page.jsx
+│       │   ├── verify-email/page.jsx
+│       │   ├── forgot-password/page.jsx
+│       │   ├── reset-password/page.jsx
+│       │   ├── kundli/
+│       │   │   ├── page.jsx         → KundliManager (list + create)
+│       │   │   ├── new/page.jsx     → New Kundli form
+│       │   │   └── [uuid]/page.jsx  → KundliDetail (full chart view)
+│       │   ├── matchmaking/page.jsx → Ashtakoot + Mangal + PDF export
+│       │   ├── predictions/page.jsx → Full prediction page
+│       │   ├── pricing/page.jsx
+│       │   └── admin/               → Admin panel at /admin/* routes
+│       │       ├── layout.jsx
+│       │       ├── login/page.jsx
+│       │       └── dashboard/ ... email-logs/  (8 protected pages)
 │       ├── components/
-│       │   ├── StarField.jsx  ← Canvas animated starfield (royal bg)
-│       │   ├── Logo.jsx       ← SVG yantra-inspired JS logo
-│       │   ├── Navbar.jsx     ← Sticky, glass, bilingual, mobile menu
-│       │   └── Footer.jsx     ← Newsletter subscribe + links
-│       └── pages/
-│           ├── ComingSoon.jsx ← Countdown timer + notify me
-│           ├── Home.jsx       ← Hero + Features + Pricing sections
-│           ├── Login.jsx
-│           ├── Register.jsx
-│           └── Dashboard.jsx  ← Protected user dashboard
-├── ui-admin/                  ← Admin Panel (Vite + Tailwind, port 3004)
-│   └── src/
-│       ├── App.jsx            ← Protected admin router
-│       ├── lib/api.js
-│       ├── components/Sidebar.jsx
-│       └── pages/
-│           ├── AdminLogin.jsx
-│           ├── Dashboard.jsx   ← Stats: users, subscribers, kundlis, subs
-│           ├── Users.jsx       ← List, search, activate/deactivate
-│           ├── Settings.jsx    ← Maintenance toggle, site info, payments
-│           ├── Newsletter.jsx  ← Subscriber list + blast
-│           ├── Notifications.jsx ← Send targeted/broadcast notifications
-│           ├── EmailBlast.jsx  ← Send custom email to all/specific users
-│           ├── Plans.jsx       ← Subscription plan management
-│           └── EmailLogs.jsx   ← Email send history
-├── ui-in/                     ← Stub (port 3001) — to be built
-├── ui-ai-com/                 ← Stub (port 3002) — to be built
-└── ui-ai-in/                  ← Stub (port 3003) — to be built
+│       │   ├── StarField.jsx        ← canvas starfield
+│       │   ├── Logo.jsx             ← SVG yantra logo
+│       │   ├── Navbar.jsx           ← bilingual, sticky
+│       │   ├── Footer.jsx           ← newsletter subscribe
+│       │   └── ComingSoonPage.jsx
+│       ├── admin-components/        ← AdminShell, Sidebar (for /admin/* routes)
+│       ├── admin-views/             ← 8 admin page components
+│       ├── context/
+│       │   ├── AuthContext.jsx      ← useAuth()
+│       │   ├── LangContext.jsx      ← useLang() — hi/en toggle
+│       │   └── AdminAuthContext.jsx ← useAdminAuth()
+│       └── views/
+│           ├── KundliDetail.jsx     ← main chart detail (all panels)
+│           ├── KundliManager.jsx    ← list + create
+│           ├── Matchmaking.jsx
+│           └── Predictions.jsx      ← full prediction page
+├── ui-in/                     ← Next.js 14, port 3001 — Hindi-first full design ✅
+├── ui-ai-com/                 ← Next.js 14, port 3002 — AI tech design ✅
+├── ui-ai-in/                  ← Next.js 14, port 3003 — Hybrid saffron+cyan design ✅
+└── ui-admin/                  ← Legacy standalone admin (port 3004) — NOT primary
 ```
 
 ---
 
 ## 4. Database
 
-**Engine:** MySQL  
-**Host:** localhost  
-**Port:** 3306  
-**User:** root  
-**Password:** bitsaspidy  
-**Database name:** jyotish_stack_ai_db  
-**Charset:** utf8mb4  
-**ORM:** Knex.js  
+**Engine:** MySQL 8  
+**Host:** localhost | **Port:** 3306 | **User:** root | **Password:** bitsaspidy  
+**Database:** `jyotish_stack_ai_db` | **Charset:** utf8mb4 | **ORM:** Knex.js
 
-### Tables
+### All Tables (25 total)
 
-| Table | Purpose |
-|-------|---------|
-| `users` | All users — role: user / admin / superadmin |
-| `user_sessions` | Refresh token storage per device |
-| `app_settings` | Key-value store for runtime config |
-| `kundli_profiles` | Birth chart data per person |
-| `matchmaking_requests` | Pair of kundlis + result |
-| `predictions` | AI-generated predictions per kundli |
-| `subscription_plans` | Plan definitions (Basic free, Premium ₹499/mo, Yearly ₹3999) |
-| `user_subscriptions` | User → plan mapping + Razorpay IDs |
-| `newsletter_subscribers` | Email-only subscribers |
-| `notifications` | In-app notifications (user_id NULL = broadcast) |
-| `email_logs` | Track all outbound emails |
+| Table | Purpose | Migration |
+|-------|---------|-----------|
+| `users` | All users — role: user/admin/superadmin | 001 |
+| `user_sessions` | Refresh token storage per device | 001 |
+| `app_settings` | Key-value runtime config | 002 |
+| `kundli_profiles` | Birth chart data + calculated_data JSON | 003 |
+| `matchmaking_requests` | Pair of kundlis + Ashtakoot result | 003 |
+| `predictions` | Stored prediction records | 003 |
+| `subscription_plans` | Plan definitions | 004 |
+| `user_subscriptions` | User ↔ plan + Razorpay IDs | 004 |
+| `newsletter_subscribers` | Email-only subscribers | 004 |
+| `notifications` | In-app notifications (NULL user_id = broadcast) | 004 |
+| `email_logs` | Outbound email history | 004 |
+| `zodiac_signs` | 12 Rashis with attributes | 005 |
+| `planets` | 9 Navagrahas with full attributes | 005 |
+| `planet_dignity` | Exaltation/Debilitation/Moolatrikona degrees | 005 |
+| `nakshatras` | 27 Nakshatras — full data + detailed EN+HI notes (migrations 005, 010, 011) | 005/010/011 |
+| `houses` | 12 Bhavas with significations | 005 |
+| `house_lord_interpretations` | 144 combinations (12×12) with EN+HI | 006 |
+| `varga_charts` | 18 Varga chart definitions (D1–D60) | 007 |
+| `varga_family_references` | Family/relationship topics per varga | 007 |
+| `varga_chart_relationships` | Chart-specific family references | 007 |
+| `graha_drishti_rules` | 19 aspect rules | 009 |
+| `bhav_karak` | 17 house significator rows | 009 |
+| `digbala_rules` | 7 directional strength rows | 009 |
+| `remedy_planets` | 9 planets — Ishta Devata + mantras EN+HI | 012 |
+| `remedy_problems` | 7 life problems + mantras | 012 |
+| `remedy_puja_steps` | 5 daily puja steps | 012 |
+| `yogas_library` | 12 yogas — full EN+HI definitions, rules, effects | 013 |
+| `doshas_library` | 14 dosha rows (13 types) — full EN+HI + technical notes | 013 |
 
-### Key `app_settings` keys
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `maintenance_mode` | `false` | `true` = show Coming Soon to all non-admin |
-| `maintenance_title` | `Coming Soon` | Title on maintenance page |
-| `maintenance_message` | ... | English message |
-| `maintenance_message_hi` | ... | Hindi message |
-| `site_name` | `Jyotish Stack AI` | |
-| `site_tagline` | `Ancient Wisdom. Modern Intelligence.` | |
-| `site_tagline_hi` | `प्राचीन ज्ञान। आधुनिक बुद्धि।` | |
-| `contact_email` | `contact@jyotishstack.com` | |
-| `razorpay_enabled` | `false` | Enable payment flow |
-
-### Migrations commands
-```bash
-cd server
-npx knex migrate:latest --knexfile knexfile.js
-npx knex seed:run --knexfile knexfile.js
-```
-
----
-
-## 4b. UI Framework
-
-**All 5 UIs use Next.js 14 (App Router)** — NOT Vite.  
-Old Vite files (`vite.config.js`, `index.html`, `src/main.jsx`, `src/App.jsx`) still exist in the repo but are unused. `next.config.js` and `src/app/` are the active entrypoints.
-
-### Next.js Key Patterns Used
-- `src/app/layout.jsx` — root HTML + font loading via `next/font/google`
-- `src/app/providers.jsx` — `'use client'` wrapper with AuthProvider + LangProvider + maintenance check
-- `src/app/page.jsx` (and sub-routes) — thin server wrappers that import page components
-- All interactive components have `'use client'` directive at top
-- Navigation: `next/link` (Link) + `next/navigation` (useRouter, usePathname, useSearchParams)
-- API proxy: `next.config.js` → `rewrites` → `http://localhost:5000/api/:path*`
-
-### ui-main Contexts
-- `AuthContext` — JWT auth state (`useAuth()`)
-- `LangContext` — hi/en language preference (`useLang()`) — persisted to localStorage
-
-### ui-admin Pattern
-- `AdminAuthContext` — separate admin auth state (`useAdminAuth()`)
-- `AdminShell` component — wraps every protected page, checks auth, renders Sidebar
-- Each admin route page: `export default function XPage() { return <AdminShell><X /></AdminShell>; }`
+### Important `nakshatras` columns (after all migrations)
+All standard fields + `is_gandmool` (010) + 12 detailed note columns (011):
+`characteristics_en/hi`, `negative_traits_en/hi`, `professions_en/hi` (JSON), `health_issues_en/hi`, `health_root_cause_en/hi`, `health_guidance_en/hi`
 
 ---
 
@@ -188,307 +196,324 @@ Old Vite files (`vite.config.js`, `index.html`, `src/main.jsx`, `src/App.jsx`) s
 ### Auth (`/api/auth/`)
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/register` | — | Register new user |
+| POST | `/register` | — | Register + send welcome email + auto-login |
 | POST | `/login` | — | Login, returns accessToken + refreshToken |
-| POST | `/refresh` | — | Exchange refreshToken for new accessToken |
-| POST | `/logout` | ✓ | Invalidate session |
+| POST | `/refresh` | — | Token refresh |
+| POST | `/logout` | ✓ | Delete session |
 | GET | `/verify-email?token=` | — | Verify email |
 | POST | `/forgot-password` | — | Send reset link |
 | POST | `/reset-password` | — | Reset with token |
-| GET | `/me` | ✓ | Get current user |
+| GET | `/me` | ✓ | Return current user |
 
-### Admin (`/api/admin/`) — requires `admin` or `superadmin` role
+### Kundli (`/api/kundli/`) — auth required
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/` | Create kundli (auto-calculates chart) |
+| GET | `/` | List user's kundlis (lightweight, no calculated_data) |
+| GET | `/:id` | Full kundli + chart + nakshatra_insight + remedy_data |
+| PATCH | `/:id` | Update birth details |
+| DELETE | `/:id` | Delete kundli |
+| POST | `/:id/recalculate` | Recalculate chart + returns nakshatra_insight + remedy_data |
+| GET | `/:id/report.pdf` | Download PDF report |
+| POST | `/matchmaking/request` | Create Ashtakoot matchmaking |
+| GET | `/matchmaking/list` | List user's matchmaking requests |
+| GET | `/matchmaking/:id/report.pdf` | Download matchmaking PDF |
+
+### Admin (`/api/admin/`) — admin/superadmin only
 | Endpoint | Description |
 |----------|-------------|
-| GET `/dashboard` | Stats overview |
-| GET/POST `/users` | List / create users |
-| PATCH `/users/:id/toggle-active` | Activate / deactivate |
+| GET `/dashboard` | Stats |
+| GET/POST `/users` | List/create users |
+| PATCH `/users/:id/toggle-active` | Activate/deactivate |
 | PATCH `/users/:id/role` | Change role |
-| POST `/send-email` | Blast email to users |
-| GET/POST `/notifications` | List / send notifications |
-| GET/PATCH `/settings` | Read / update app_settings |
-| GET `/newsletter` | List subscribers |
-| POST `/newsletter/blast` | Send newsletter |
-| GET/POST/PATCH `/plans` | Manage subscription plans |
-| GET `/email-logs` | Email send history |
+| POST `/send-email` | Email blast |
+| GET/POST `/notifications` | Notifications |
+| GET/PATCH `/settings` | App settings |
+| GET `/newsletter` | Subscriber list |
+| POST `/newsletter/blast` | Newsletter blast |
+| GET/POST/PATCH `/plans` | Subscription plans |
+| GET `/email-logs` | Email history |
 
-### Kundli (`/api/kundli/`) — requires auth
-| Endpoint | Description |
-|----------|-------------|
-| POST `/` | Create kundli profile |
-| GET `/` | List user's kundlis |
-| GET `/:id` | Get single kundli (by UUID) |
-| PATCH `/:id` | Update kundli |
-| DELETE `/:id` | Delete kundli |
-| POST `/matchmaking/request` | Create matchmaking request |
-| GET `/matchmaking/list` | List user's matchmaking requests |
-
-### Subscriptions (`/api/subscriptions/`)
-| Endpoint | Auth | Description |
-|----------|------|-------------|
-| GET `/plans` | — | List active plans |
-| POST `/order` | ✓ | Create Razorpay order |
-| POST `/verify` | ✓ | Verify payment + activate |
-
-### Newsletter (`/api/newsletter/`)
-| Endpoint | Description |
-|----------|-------------|
-| POST `/subscribe` | Subscribe email |
-| GET `/unsubscribe?token=` | Unsubscribe via token |
-
-### Settings (`/api/settings/`)
-| Endpoint | Description |
-|----------|-------------|
-| GET `/public` | Public site settings (maintenance, tagline, etc.) |
+### Subscriptions, Newsletter, Settings — same as before (see ACTIVITY.md)
 
 ---
 
-## 6. Design System
+## 6. Vedic Calculation Engine (`vedic-calc.service.js`)
 
-**Theme:** Royal Cosmos — deep navy/indigo cosmos background, gold accents, saffron highlights.  
-**Fonts:** Playfair Display (headings/serif), Inter (body), Noto Sans Devanagari (Hindi)
+The core calculation service. `calculateVedicChart(p)` accepts `{ year, month, day, hour, minute, second, timezone, latitude, longitude }` and returns a complete chart object.
 
-### Color Palette (Tailwind custom)
+### chart object structure
+```javascript
+chart = {
+  meta:            { julian_day, ayanamsa, ayanamsa_dms, system, calculation, accuracy },
+  ascendant:       { longitude, rashi_num, rashi_en, rashi_hi, rashi_lord, degree_in_sign_dms },
+  planets: {
+    Sun/Moon/Mars/Mercury/Jupiter/Venus/Saturn/Rahu/Ketu: {
+      longitude, rashi_num, rashi_en, rashi_hi, rashi_lord, degree_in_sign, dignity,
+      daily_motion, is_retrograde
+    }
+  },
+  nakshatra:       { num, en, hi, lord, pada, degree_in_nakshatra, deity_en, deity_hi, is_gandmool },
+  houses:          { H1..H12: { rashi_num, lord, planets[] } },
+  dasha:           [ { lord, start, end, years, is_current, antardasha: [...] } ],
+  varga_charts:    { d1..d60 },    // 18 Varga charts
+  navamsha:        chart.varga_charts.d9,
+  mangal_dosha:    { has_dosha, severity, checks[], cancellations[], summary_en/hi },
+  yogas_doshas:    { yogas[], doshas[], yoga_count, dosha_count },
+  gochar:          { transit summary },
+  predictions:     { portrait, current_period, life_areas, gochar_narrative, remedies, ... },
+  drishti:         { by_planet, by_house },
+  bhav_karak:      { H1..H12: { karakas[], signification_en/hi, karaka_positions[] } },
+  digbala:         { Sun/Moon/..: { has_digbala, has_digbala_loss, strength_percent } },
+  panchang:        { masa, tithi, vara, yoga, karana, pahar, moon_phase, sunrise, sunset },
+  astro_details:   { varna, vashya, yoni, gana, nadi, tatva, yunja, naam_akshar, paya, ... }
+}
+```
+
+### Algorithms (Meeus Astronomical Algorithms 2nd Ed.)
+| Body | Method | Accuracy |
+|------|--------|----------|
+| Sun | equation of center | ~0.01° |
+| Moon | 60 perturbation terms | ~0.1° |
+| Rahu (mean node) | Meeus Ch.47 | ~0.1° |
+| Mars/Mercury/Jupiter/Venus/Saturn | Keplerian + helio→geo | ~0.5–2° |
+| Ascendant | LST + obliquity | ~0.1° |
+| Ayanamsa | Lahiri (23.85317° at J2000 + 50.2796"/yr) | ~0.1° |
+
+### Yogas & Doshas Detection (`detectYogasAndDoshas(chart)`)
+Returns `chart.yogas_doshas = { yogas[], doshas[], yoga_count, dosha_count }`.
+Each entry: `{ name, name_hi, strength/severity, trigger_en, trigger_hi, planets_involved[] }`.
+
+**12 Yogas detected:** Gajakesari, Budh-Aditya, Neech Bhanga Raj, Saraswati, Kalaneedhi, Chandra-Mangal Laxmi, Dhan Yoga group (Laxmi/Adhi/Dhan), Raj Yoga, Vipreet Raj Yoga (Harsha/Sarala/Vimala), Parivartan (Raj/Dhan/Dusthana), Guru-Aditya, Shatru Hanta.
+
+**13 Dosha types detected:** Pitru, Surya-Shani Vish, Mangal-Shani Vish, Moon-Shani Vish, Amavasya, Angarak (Mars+Rahu), Shaapit (Saturn+Rahu), Surya Grahan, Chandra Grahan, Guru Chandaal, Venus-Mangal Vish, Venus-Rahu Vish, Kemdrum, Paap Kartari.
+
+---
+
+## 7. Design System
+
+**Theme:** Royal Cosmos — deep navy cosmos background, gold accents.  
+**Fonts:** Playfair Display (headings), Inter (body), Noto Sans Devanagari (Hindi)
+
 | Token | Hex | Use |
 |-------|-----|-----|
 | `cosmos-800` | `#0B0D1A` | Page background |
 | `cosmos-700` | `#111428` | Card background |
-| `cosmos-900` | `#06070F` | Deepest bg / footer |
-| `gold` | `#D4AF37` | Primary accent, borders, CTAs |
-| `gold-light` | `#F0D060` | Hover states |
-| `gold-dark` | `#A88B20` | Gradient end |
+| `gold` | `#D4AF37` | Primary accent |
 | `ivory` | `#F5F0E8` | Body text |
-| `saffron` | `#FF9933` | Accent / Hindi text |
-| `indigo` | `#3D3580` | Secondary accent |
-| `crimson` | `#8B0000` | Danger / error |
+| `saffron` | `#FF9933` | Hindi / accent |
+| `indigo` | `#3D3580` | Secondary |
+| `crimson` | `#8B0000` | Error/danger |
 
-### CSS utility classes (ui-main)
-- `.btn-gold` — primary CTA button
-- `.btn-outline-gold` — secondary outlined button
-- `.card-royal` — glassmorphism card with gold border
-- `.input-royal` — form input
-- `.section-title` — serif gold heading
-- `.text-gradient-gold` — gold gradient text
-- `.starfield-bg` — radial cosmos background
-- `.glass` — backdrop-blur glass panel
+**CSS classes:** `.btn-gold`, `.btn-outline-gold`, `.card-royal`, `.input-royal`, `.section-title`, `.text-gradient-gold`, `.starfield-bg`, `.glass`
 
 ---
 
-## 7. Default Credentials
+## 8. Default Credentials
 
 | Role | Email | Password |
 |------|-------|---------|
 | Superadmin | admin@jyotishstack.com | Admin@2026! |
 
-⚠️ **Change password immediately in production.**
-
 ---
 
-## 8. Environment Variables (server/.env)
+## 9. Environment Variables (server/.env)
 
 ```
-NODE_ENV=development
-PORT=5000
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=bitsaspidy
+DB_HOST=localhost | DB_PORT=3306 | DB_USER=root | DB_PASSWORD=bitsaspidy
 DB_NAME=jyotish_stack_ai_db
 JWT_SECRET=jyotish_stack_super_secret_jwt_key_2026
-JWT_EXPIRES_IN=7d
 JWT_REFRESH_SECRET=jyotish_stack_refresh_secret_2026
-JWT_REFRESH_EXPIRES_IN=30d
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=<your email>
-SMTP_PASS=<app password>
-SMTP_FROM=no-reply@jyotishstack.com
-RAZORPAY_KEY_ID=<key>
-RAZORPAY_KEY_SECRET=<secret>
+SMTP_HOST=smtp.gmail.com | SMTP_PORT=587 | SMTP_USER=<email> | SMTP_PASS=<app password>
+RAZORPAY_KEY_ID=<key> | RAZORPAY_KEY_SECRET=<secret>
 ALLOWED_ORIGINS=http://localhost:3000,...
 APP_URL=https://jyotishstack.com
 ```
 
 ---
 
-## 9. Feature Roadmap
+## 10. How to Run
+
+```bash
+# Install all deps
+npm install
+
+# Create DB
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -pbitsaspidy \
+  -e "CREATE DATABASE IF NOT EXISTS jyotish_stack_ai_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Run migrations + seeds
+npm run migrate
+npm run seed
+
+# Start dev servers
+npm run dev:server   # API on :5000
+npm run dev:main     # jyotishstack.com on :3000
+
+# Run all server tests (12 tests)
+npm run test:server
+
+# Build ui-main for production
+npm run build:main
+```
+
+---
+
+## 11. Key Decisions & Architecture Notes
+
+- **UUIDs everywhere** for public-facing IDs. Integer IDs are internal only.
+- **Maintenance mode** cached 30s server-side. `maintenanceGuard.invalidate()` called after admin updates setting.
+- **Auth bypass** for `/api/admin` and `/api/auth` routes from maintenance guard.
+- **Email is fire-and-forget** — logged to `email_logs`, errors swallowed.
+- **Razorpay** — Free plans activate instantly. Paid: create order → Razorpay SDK → verify HMAC.
+- **CORS** — from `ALLOWED_ORIGINS` env var (comma-separated).
+- **Admin merged** into `ui-main` at `/admin/*` — `ui-admin` standalone still exists but is legacy.
+- **DATE typeCast fix** in `knexfile.js` — MySQL2 returns DATE as JS Date with UTC timezone shift. Fixed with `typeCast` option so DATE/DATETIME columns return as plain "YYYY-MM-DD" strings.
+- **Retrograde status** — computed from apparent sidereal daily motion (JD ±0.5). Sun/Moon forced non-retrograde.
+- **Whole-sign house system** — `houseFromSign(ascRashi, planetRashi)` = `((planet - asc + 12) % 12) + 1`.
+- **Dasha calculation** — `vimshottariDasha()` computes from Moon's Nakshatra. Returns full 9-period sequence with `is_current` flag. Each period has `antardasha[]` sub-periods.
+- **Nakshatra insight** — `GET /api/kundli/:id` and `POST /:id/recalculate` both return `profile.nakshatra_insight` (characteristics, professions JSON, health EN+HI) queried live from `nakshatras` table using Moon's nakshatra num.
+- **Remedy data** — `GET /api/kundli/:id` returns `profile.remedy_data` with `dasha_planet`, `lagna_planet`, and `puja_sequence` from `remedy_planets` + `remedy_puja_steps` tables.
+- **Yogas & Doshas** — `calculateVedicChart()` wires in `detectYogasAndDoshas(chart)` and returns `chart.yogas_doshas`. Reference data stored in `yogas_library` + `doshas_library` tables.
+- **PDF reports** — `report.service.js` generates lightweight PDFKit reports. No external binary required. Routes: `GET /:id/report.pdf` and `GET /matchmaking/:id/report.pdf`.
+- **Stale `.next` cache** — after major multi-file changes, delete `ui-main/.next` before `npm run build:main`.
+- **Test runner** — Node built-in (`node --test`). Run `npm run test:server`. Currently 12/12 passing.
+
+---
+
+## 12. Feature Roadmap
 
 ### Phase 1 — Foundation ✅ DONE
-- [x] Monorepo setup (npm workspaces)
-- [x] Express server with all core routes
-- [x] MySQL schema (7 migration files)
-- [x] JWT auth (register/login/refresh/logout/verify email/password reset)
-- [x] Admin panel UI (users, settings, notifications, email blast, newsletter, plans, logs)
-- [x] Main UI (ui-main) — Home, Login, Register, Dashboard
-- [x] Coming Soon / Maintenance page with countdown
-- [x] Language toggle (Hindi/English) saved to localStorage
-- [x] Newsletter subscribe/unsubscribe
-- [x] Razorpay payment integration (order + verify)
-- [x] Email templates (welcome, verify, reset, subscription, newsletter, custom)
-- [x] Maintenance mode toggle from admin panel (30-second server cache)
-- [x] StarField canvas background
-- [x] Royal design system (Tailwind custom palette + components)
+Auth, admin panel, main UI, subscription/payments, email, maintenance mode, design system.
 
-### Phase 2 — Kundli Engine (pending PDFs from owner)
-- [x] Vedic planetary position calculations (degrees, Rashi, Nakshatra, Pada, retrograde status)
-- [x] Lagna chart generation (D1)
-- [x] Extended Varga charts (D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60)
-- [x] Dasha/Antardasha calculations (Vimshottari)
-- [x] Kundli chart SVG rendering — North Indian + South Indian toggle (applies to D1 and D9)
-- [x] Panchang engine — Tithi, Nitya Yoga, Karana, Vara, Hindu Masa, Sunrise/Sunset, Pahar
-- [x] Astro details — Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya
-- [x] Nakshatra detailed report — characteristics, professions, health (EN + HI, from DB)
+### Phase 2 — Kundli Engine ✅ DONE
+- [x] Real astronomical calculations (Meeus 2nd Ed.)
+- [x] 9 grahas: longitude, rashi, dignity, retrograde, daily motion
+- [x] Ascendant, whole-sign houses
+- [x] 18 Varga charts (D1–D60)
+- [x] Vimshottari Mahadasha + Antardasha
+- [x] Panchang engine (Tithi, Yoga, Karana, Vara, Masa, Pahar, Sunrise/Sunset)
+- [x] Astro details (Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya)
+- [x] Graha Drishti (aspects), Bhav Karak, Digbala
+- [x] Nakshatra detailed report (characteristics, professions, health EN+HI from DB)
+- [x] Life Portrait panel (Lagna, Moon, Nakshatra soul, Dasha period)
+- [x] Yogas & Doshas detection (12 yogas, 13 dosha types)
+- [x] North Indian + South Indian chart toggle (D1 and D9)
+- [x] Edit birth details modal with Nominatim geocoding
 
-### Phase 3 — Matchmaking
-- [x] Ashtakoot Guna Milan (36 gunas)
+### Phase 3 — Matchmaking ✅ DONE
+- [x] Ashtakoot Guna Milan (36 gunas, 8 Kootas)
 - [x] Mangal Dosha detection
+- [x] Matchmaking PDF export
 - [ ] Dashakoot compatibility
-- [x] PDF export of match report
 
-### Phase 4 — Predictions (Bhavishya Vani)
-- [ ] Daily horoscope by Rashi
-- [x] Transit predictions (Gochar)
-- [x] Rule-based personalized prediction engine
+### Phase 4 — Predictions ✅ MOSTLY DONE
+- [x] Rule-based prediction engine (Lagna portrait, Moon portrait, Nakshatra soul)
+- [x] Dasha/Antardasha predictions (9 planet meanings × 5 life areas)
+- [x] Transit predictions (Gochar) — Sade Sati, Jupiter, Rahu-Ketu
+- [x] Remedy system (Ishta Devata, mantras, puja steps from PDF)
+- [ ] Daily Rashi horoscope
 - [ ] Annual predictions (Varshphal)
 - [ ] AI-generated personalised predictions
 
-### Phase 5 — Other UIs
-- [ ] ui-in (jyotishstack.in) — Hindi-first design
-- [ ] ui-ai-com (jyotishstackai.com) — AI-branded variant
-- [ ] ui-ai-in (jyotishstackai.in) — AI-branded India
+### Phase 5 — Other UIs ✅ DONE (full designs built)
+- [x] ui-in (jyotishstack.in) — Devotional Saffron, Hindi-first
+- [x] ui-ai-com (jyotishstackai.com) — AI Tech, English, cyan+violet
+- [x] ui-ai-in (jyotishstackai.in) — Hybrid Saffron+Cyan, bilingual
+
+### Pending
+- [ ] Dashakoot compatibility
+- [ ] Swiss Ephemeris certification / reference chart validation
+- [ ] Daily horoscope by Rashi
+- [ ] Annual Varshphal
+- [ ] AI-generated predictions
+- [ ] SMTP + Razorpay live key configuration
+- [ ] Production deployment
 
 ---
 
-## 10. How to Run
+## 13. Nakshatra Reference (AstroAnsh Class 8 + 9)
 
-### Install dependencies
-```bash
-# From repo root
-npm install
-```
+**Gandmool nakshatras (6 of 27):**
+- Ketu's 3: Ashwini (1), Magha (10), Mula (19)
+- Mercury's 3: Ashlesha (9), Jyeshtha (18), Revati (27)
 
-### Setup MySQL database
-```bash
-mysql -u root -pbitsaspidy -e "CREATE DATABASE IF NOT EXISTS jyotish_stack_ai_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
-
-### Run migrations + seeds
-```bash
-npm run migrate     # runs knex migrate:latest in server/
-npm run seed        # runs knex seed:run in server/
-```
-
-### Start development servers
-```bash
-npm run dev:server   # Express API on :5000
-npm run dev:main     # ui-main on :3000
-npm run dev:admin    # ui-admin on :3004
-```
+**`nakshatras` table columns (after migrations 005, 010, 011):**
+Standard fields + `is_gandmool` + `characteristics_en/hi` + `negative_traits_en/hi` + `professions_en/hi` (JSON) + `health_issues_en/hi` + `health_root_cause_en/hi` + `health_guidance_en/hi`
 
 ---
 
-## 11. Key Decisions & Notes
+## 14. Drishti / Bhav Karak / Digbala (AstroAnsh Class — Drishti PDF)
 
-- **UUIDs everywhere for public-facing IDs** — integer IDs are internal only. API consumers always use UUID fields.
-- **Maintenance mode** is server-side cached for 30s to avoid DB hit on every request. Call `maintenanceGuard.invalidate()` after admin updates the setting — already done in `admin.routes.js`.
-- **Auth bypass for admin routes** — `/api/admin` and `/api/auth` are excluded from the maintenance guard.
-- **Email is fire-and-forget** — `sendEmail()` logs to `email_logs` table regardless of success/failure. Errors are swallowed to not block API responses.
-- **Razorpay** — Free plans skip payment and activate immediately. Paid plans: create order → frontend calls Razorpay SDK → verify signature on server.
-- **CORS** — Origins list comes from `ALLOWED_ORIGINS` env var (comma-separated). Add new domains there.
-- **All 4 UIs share one API** — no per-domain backend logic. Domain differentiation is frontend-only.
-- **Calculations** — All Vedic astrology calculations (Kundli, Dasha, Nakshatra, Guna Milan) will be implemented in server-side JS after the owner provides calculation PDFs. Placeholder DB columns (`calculated_data` JSON) are already in schema.
-- **Retrograde status** — `server/src/services/vedic-calc.service.js` now computes apparent sidereal daily motion for every graha. Sun/Moon are forced non-retrograde; Mercury/Venus/Mars/Jupiter/Saturn/Rahu/Ketu use negative daily motion to set `is_retrograde`. Each planet also exposes `daily_motion` for audit/debug.
-- **Calculation expansion** — `calculateVedicChart()` now returns D1 plus the 18-chart Varga set (D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60), Vimshottari Mahadasha + Antardasha, Mangal Dosha, Gochar transit highlights, and rule-based prediction summaries. `calculateAshtakoot()` provides 36-guna matching with Mangal compatibility.
-- **Varga database reference** — Migration/seed `007_varga_reference_data.js` creates and populates `varga_charts`, `varga_family_references`, and `varga_chart_relationships` from the owner-provided pasted PDF text. Local seed verification: 18 chart definitions, 15 family reference rows, and 62 chart relationship rows.
-- **PDF exports** — `server/src/services/report.service.js` generates lightweight authenticated PDF reports without external dependencies. Routes: `GET /api/kundli/:id/report.pdf` and `GET /api/kundli/matchmaking/:id/report.pdf`.
-- **Product UI flows** — `ui-main` now has real `/kundli`, `/kundli/new`, `/kundli/:uuid`, `/matchmaking`, and `/predictions` flows. Detail view includes D1, D9, planets, dasha/antardasha, dosha, gochar, predictions, and PDF export.
-- **Calculation tests** — Run `npm run test:server` from repo root. Current tests validate the documented Rahul Sharma reference chart, retrograde flags, D9/Navamsha, complete Varga set, Varga boundary rules, seed reference data, Antardasha, Mangal Dosha, Gochar, Ashtakoot, PDF report buffers, and rashi/nakshatra boundaries using Node's built-in test runner.
-- **Panchang engine** — `calculateVedicChart()` now also returns `chart.panchang` (Hindu Masa, Tithi, Nitya Yoga, Karana, Vara, Pahar, Moon Phase, Sunrise, Sunset) and `chart.astro_details` (Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya). Verified against Jodhpur 23-Jan-1989 — all 14 fields match reference values.
-- **Nakshatra Insight API** — `GET /api/kundli/:id` returns `profile.nakshatra_insight` (characteristics, professions JSON, health EN+HI) fetched live from `nakshatras` table using Moon's nakshatra num.
-- **KundliDetail UI** — North/South Indian toggle now applies to both D1 and D9 Navamsha charts. New `BasicDetailsPanel` (tabbed: Basic Details, Ghat Chakra, Astro Details). New `PersonalityInsights` panel (tabbed: Traits, Career, Health) from nakshatra DB data.
-- **Stale cache** — After multi-file changes, delete `ui-main/.next` and rebuild to fix webpack `'call'` errors.
+**Drishti rules:** Sun/Moon/Mercury/Venus aspect 7th only. Mars: 4th, 7th, 8th. Jupiter: 5th, 7th, 9th. Saturn: 3rd, 7th, 10th. Rahu/Ketu: 5th, 7th, 9th.
+
+**Digbala (directional strength):**
+| Planet | Strong House | Direction |
+|--------|-------------|-----------|
+| Jupiter, Mercury | 1st | East |
+| Sun, Mars | 10th | South |
+| Saturn | 7th | West |
+| Moon, Venus | 4th | North |
+
+**DB tables:** `graha_drishti_rules` (19 rows), `bhav_karak` (17 rows), `digbala_rules` (7 rows)
 
 ---
 
-## 12. When the Owner Provides PDFs
+## 15. Remedy System (AstroAnsh Remedy Class 1 — May 2026)
 
-1. Read PDFs carefully for calculation formulas.
-2. Create a new migration file after the current latest migration (`007_varga_reference_data.js`) if new columns or tables are needed.
-3. Implement calculation logic in `server/src/services/astro/` directory.
-4. Wire calculations into `kundli.routes.js` (on create and on `GET /:id` if `calculated_data` is null).
-5. Update this MEMORY.md with the new formulas and column details.
+**DB tables:**
+- `remedy_planets` (9 rows) — each planet → Ishta Devata, mantras EN+HI, special notes
+- `remedy_problems` (7 rows) — Diseases, Debts, Miscarriage, Anger, Vastu Dosh, Wealth, Intelligence
+- `remedy_puja_steps` (5 steps) — daily puja sequence (Ganesh → Ishta Devata → Lagna Lord → Atmakarak → Shakti Pujan)
 
----
+**Planet → Ishta Devata mapping:**
+Sun→Rama/SuryaNarayan, Moon→Krishna/Shiva, Mars→Hanuman/Kartikeya, Mercury→Vishnu, Jupiter→Vishnu/Brihaspati, Venus→Lakshmi/Parvati, Saturn→Shani/Bhairava/Rudra, Rahu→Durga/Kali, Ketu→Ganesha
 
----
+**API:** `GET /api/kundli/:id` returns `profile.remedy_data = { dasha_planet, lagna_planet, puja_sequence }`.
 
-## 13. Nakshatra Reference Data (AstroAnsh Class 8 PDF)
-
-**Source:** `AstroAnsh Class 8 — Nakshatra Table Sheet.pdf`  
-**Migration:** `010_nakshatra_gandmool.js` — adds `is_gandmool` column to `nakshatras` table  
-**Seed:** `005_nakshatras.js` — re-seeded with deity and gandmool data
-
-### Nakshatra → Lord → Deity → Gandmool
-
-| # | Nakshatra | Lord | Deity | Gandmool |
-|---|-----------|------|-------|----------|
-| 1 | Ashwini | Ketu | Ashwini Kumars | ✅ Yes |
-| 2 | Bharani | Venus | Yama | No |
-| 3 | Krittika | Sun | Agni | No |
-| 4 | Rohini | Moon | Brahma | No |
-| 5 | Mrigashira | Mars | Soma / Chandra | No |
-| 6 | Ardra | Rahu | Rudra | No |
-| 7 | Punarvasu | Jupiter | Aditi | No |
-| 8 | Pushya | Saturn | Brihaspati | No |
-| 9 | Ashlesha | Mercury | Nagas | ✅ Yes |
-| 10 | Magha | Ketu | Pitris (Ancestors) | ✅ Yes |
-| 11 | Purva Phalguni | Venus | Bhaga | No |
-| 12 | Uttara Phalguni | Sun | Aryaman | No |
-| 13 | Hasta | Moon | Savitar | No |
-| 14 | Chitra | Mars | Tvashtar / Vishwakarma | No |
-| 15 | Swati | Rahu | Vayu | No |
-| 16 | Vishakha | Jupiter | Indra & Agni | No |
-| 17 | Anuradha | Saturn | Mitra | No |
-| 18 | Jyeshtha | Mercury | Indra | ✅ Yes |
-| 19 | Mula | Ketu | Nirriti | ✅ Yes |
-| 20 | Purva Ashadha | Venus | Apas (Water) | No |
-| 21 | Uttara Ashadha | Sun | Vishwadeva | No |
-| 22 | Shravana | Moon | Vishnu | No |
-| 23 | Dhanishtha | Mars | Vasus | No |
-| 24 | Shatabhisha | Rahu | Varuna | No |
-| 25 | Purva Bhadrapada | Jupiter | Aja Ekapada | No |
-| 26 | Uttara Bhadrapada | Saturn | Ahirbudhnya | No |
-| 27 | Revati | Mercury | Pushan | ✅ Yes |
-
-### Gandmool Rule (from PDF)
-
-- **Ketu's 3 nakshatras** = ALL Gandmool: Ashwini (1), Magha (10), Mula (19)
-- **Mercury's 3 nakshatras** = ALL Gandmool: Ashlesha (9), Jyeshtha (18), Revati (27)
-- **All other planets' nakshatras** = NOT Gandmool
-- Total Gandmool: **6 out of 27** nakshatras
-
-### Planet → Nakshatra Mapping (Vimshottari sequence)
-
-| Planet | Nakshatra 1 | Nakshatra 2 | Nakshatra 3 | Dasha Years | Gandmool |
-|--------|-------------|-------------|-------------|-------------|---------|
-| Ketu | Ashwini | Magha | Mula | 7 | ✅ All 3 |
-| Venus | Bharani | Purva Phalguni | Purva Ashadha | 20 | No |
-| Sun | Krittika | Uttara Phalguni | Uttara Ashadha | 6 | No |
-| Moon | Rohini | Hasta | Shravana | 10 | No |
-| Mars | Mrigashira | Chitra | Dhanishtha | 7 | No |
-| Rahu | Ardra | Swati | Shatabhisha | 18 | No |
-| Jupiter | Punarvasu | Vishakha | Purva Bhadrapada | 16 | No |
-| Saturn | Pushya | Anuradha | Uttara Bhadrapada | 19 | No |
-| Mercury | Ashlesha | Jyeshtha | Revati | 17 | ✅ All 3 |
-
-### New fields added to `NAKSHATRAS` (vedic-calc.service.js)
-- `deity_en` — English deity name
-- `deity_hi` — Hindi deity name
-- `is_gandmool` — boolean (true for 6 nakshatras)
-
-### New DB column added to `nakshatras` table
-- `is_gandmool` BOOLEAN DEFAULT false (migration 010)
+**Note:** When owner provides Remedy Class 2, 3 etc. — add rows to existing tables via new seed files. No migration changes needed.
 
 ---
 
-*Last updated: 2026-06-02 | Agent: Claude Sonnet 4.6*
+## 16. Yogas & Doshas Reference (AstroAnsh Class 11 & 12 — BPHS)
+
+**DB tables:** `yogas_library` (12 rows), `doshas_library` (14 rows)
+
+**12 Yogas (category):**
+Gajakesari (power), Budh-Aditya (intellect), Neech Bhanga Raj (power), Saraswati (wisdom), Kalaneedhi (wealth), Chandra-Mangal Laxmi (wealth), Dhan Yoga group (wealth), Raj Yoga (power), Vipreet Raj Yoga/Harsha/Sarala/Vimala (power), Parivartan (general), Guru-Aditya (wisdom), Shatru Hanta (victory)
+
+**14 Dosha rows / 13 types (category):**
+Pitru (karmic), Surya-Shani Vish (vish), Mangal-Shani Vish (vish), Moon-Shani Vish (vish), Amavasya (luminary), Angarak/Mars+Rahu (vish), Shaapit/Saturn+Rahu (karmic), Surya Grahan (grahan), Chandra Grahan (grahan), Guru Chandaal (karmic), Venus-Mangal Vish (vish), Venus-Rahu Vish (vish), Kemdrum (luminary), Paap Kartari (general)
+
+**Detection:** `detectYogasAndDoshas(chart)` in `vedic-calc.service.js`. Returns only present yogas/doshas with strength/severity and trigger descriptions.
+
+**UI:** `YogasAndDoshasPanel` in `KundliDetail.jsx` — tabbed Yogas/Doshas view with strength badges, category chips, chart-specific triggers, formation rules, likely results, balancing guidance, and translated planet chips.
+
+**Hindi/i18n update (Session 13):** `ui-main/src/lib/astroI18n.js` centralizes EN/HI helpers for planet names, house labels, dignity/status badges, Nitya Yoga/Karana names, prediction fallbacks, Yoga/Dosha detail text, and list-item localization. `KundliDetail.jsx` and `Predictions.jsx` use it so Hindi mode covers chart labels, edit modal, basic details, dasha panels, Mangal/Gochar summaries, prediction narratives, remedies, and Yoga/Dosha detail cards.
+
+---
+
+## 17. KundliDetail UI Panels (ui-main/src/views/KundliDetail.jsx)
+
+Current panels in render order:
+1. Header (name, birth details, edit button, PDF export, recalculate)
+2. Chart style toggle (North/South Indian)
+3. D1 Lagna Chart (North or South Indian SVG)
+4. D9 Navamsha Chart (same style as D1)
+5. Planet Table (sign, DMS, house, dignity badge)
+6. Vimshottari Dasha timeline (current highlighted)
+7. 12-House Grid (lord + planets)
+8. Basic Details Panel (tabbed: Basic Details / Ghat Chakra / Astro Details)
+9. Personality Insights Panel (tabbed: Traits / Career / Health — from nakshatra DB)
+10. Life Portrait Panel (tabbed: Who You Are / Current Period)
+11. Mangal Dosha card
+12. Gochar (transit) card
+13. Digbala panel
+14. Bhav Karak panel
+15. Graha Drishti panel
+16. **Yogas & Doshas panel** (tabbed: Yogas / Doshas — from detectYogasAndDoshas; expanded detail cards with formation/result/guidance in EN+HI)
+17. Bottom navigation
+
+---
+
+*Last updated: 2026-06-03 (Session 13) | Agent: Alex (Codex GPT-5)*
