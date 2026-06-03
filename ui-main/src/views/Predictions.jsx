@@ -8,6 +8,7 @@ import StarField from '../components/StarField';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
+import { predictionHref, readPredictionKundliParam } from '../lib/kundliLinks';
 import {
   areaLabel,
   currentPeriodText,
@@ -265,20 +266,54 @@ function ChallengesOpportunitiesCard({ challenges, opportunities, lang, delay = 
   );
 }
 
-function RemediesCard({ remedyData, fallbackRemedies, lang, delay = 0 }) {
-  const [tab, setTab] = useState('dasha');
+function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, delay = 0 }) {
+  const [tab, setTab] = useState('ishta');
+  const hasLifeIshta = !!lifeIshtaDevata;
   const hasDashaRemedy  = !!remedyData?.dasha_planet;
   const hasLagnaRemedy  = !!remedyData?.lagna_planet;
   const hasPujaSequence = remedyData?.puja_sequence?.length > 0;
   const hasFallback     = fallbackRemedies?.length > 0;
 
-  if (!hasDashaRemedy && !hasFallback) return null;
+  if (!hasLifeIshta && !hasDashaRemedy && !hasFallback) return null;
 
   const tabs = [
+    hasLifeIshta     && { key:'ishta',  label: chooseText(lang, 'Chart Isht Devata', 'कुंडली इष्ट देवता') },
     hasDashaRemedy  && { key:'dasha',  label: chooseText(lang, 'Dasha Remedy', 'दशा उपाय')   },
     hasLagnaRemedy  && { key:'lagna',  label: chooseText(lang, 'Lagna Remedy', 'लग्न उपाय')   },
     hasPujaSequence && { key:'puja',   label: chooseText(lang, 'Puja Sequence', 'पूजा क्रम')  },
   ].filter(Boolean);
+  const activeTab = tabs.some((item) => item.key === tab) ? tab : tabs[0]?.key;
+
+  const renderLifeIshtaCard = () => {
+    if (!lifeIshtaDevata) return null;
+    return (
+      <div className="space-y-3">
+        <div style={{ padding:'13px 14px', borderRadius:10, background:'rgba(212,175,55,0.07)', border:'1px solid rgba(212,175,55,0.22)' }}>
+          <p style={{ color:'rgba(245,240,232,0.58)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:5 }}>
+            {chooseText(lang, 'Your Personal Isht Devata', 'आपके व्यक्तिगत इष्ट देवता')}
+          </p>
+          <p style={{ color:'#D4AF37', fontSize:18, fontWeight:700, fontFamily:'Georgia,serif' }}>
+            {lang === 'hi' ? lifeIshtaDevata.ishta_devata_hi : lifeIshtaDevata.ishta_devata_en}
+          </p>
+          <p style={{ color:'rgba(245,240,232,0.76)', fontSize:12, lineHeight:1.75, marginTop:8, fontFamily:'var(--font-devanagari),sans-serif' }}>
+            {chooseText(
+              lang,
+              `Calculated from Atmakaraka ${lifeIshtaDevata.atmakaraka} in D9 (${lifeIshtaDevata.d9_sign_en}), whose sign lord is ${lifeIshtaDevata.d9_sign_lord}. This is the same Isht Devata shown in the Life Report.`,
+              `यह आत्मकारक ${lifeIshtaDevata.atmakaraka_hi || lifeIshtaDevata.atmakaraka} की D9 स्थिति (${lifeIshtaDevata.d9_sign_hi || lifeIshtaDevata.d9_sign_en}) से निकला है; इसका राशि स्वामी ${lifeIshtaDevata.d9_sign_lord} है। यही इष्ट देवता Life Report में भी दिखाया गया है।`
+            )}
+          </p>
+        </div>
+        <div style={{ padding:'10px 12px', borderRadius:8, background:'rgba(167,139,250,0.06)', border:'1px solid rgba(167,139,250,0.18)' }}>
+          <p style={{ color:'#A78BFA', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:5 }}>
+            {chooseText(lang, 'Primary Mantra / Suktam', 'प्राथमिक मंत्र / सूक्त')}
+          </p>
+          <p style={{ color:'rgba(245,240,232,0.86)', fontSize:12.5, lineHeight:1.75, fontFamily:'var(--font-devanagari),sans-serif' }}>
+            {lang === 'hi' ? lifeIshtaDevata.primary_mantra_hi : lifeIshtaDevata.primary_mantra_en}
+          </p>
+        </div>
+      </div>
+    );
+  };
 
   const renderPlanetCard = (planet) => {
     if (!planet) return null;
@@ -286,11 +321,11 @@ function RemediesCard({ remedyData, fallbackRemedies, lang, delay = 0 }) {
     const secondaryMantras = lang === 'hi' ? (planet.mantras_en || []) : (planet.mantras_hi || []);
     return (
       <div className="space-y-4">
-        {/* Ishta Devata */}
+        {/* Planetary remedy devata */}
         <div style={{ display:'flex', gap:12, alignItems:'flex-start', padding:'12px 14px', borderRadius:10, background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.15)' }}>
           <span style={{ fontSize:22, flexShrink:0 }}>🙏</span>
           <div>
-            <p style={{ color:'rgba(245,240,232,0.4)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:3 }}>{chooseText(lang, 'Ishta Devata', 'इष्ट देवता')}</p>
+            <p style={{ color:'rgba(245,240,232,0.58)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:3 }}>{chooseText(lang, 'Remedy Devata', 'उपाय देवता')}</p>
             <p style={{ color:'#D4AF37', fontSize:15, fontWeight:700, fontFamily:'Georgia,serif' }}>{lang === 'hi' ? planet.ishta_devata_hi : planet.ishta_devata_en}</p>
             <p style={{ color:'rgba(245,240,232,0.5)', fontSize:11, marginTop:2, fontFamily:'var(--font-devanagari),sans-serif' }}>{lang === 'hi' ? planet.ishta_devata_en : planet.ishta_devata_hi}</p>
           </div>
@@ -334,8 +369,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lang, delay = 0 }) {
     <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay }}
       className="card-royal p-5">
       <h2 className="font-serif text-gold text-sm font-semibold mb-1">🌺 {chooseText(lang, 'Vedic Remedies', 'वैदिक उपाय')}</h2>
-      <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10, marginBottom:14 }}>
-        {chooseText(lang, 'From the Vedic Jyotish Remedial Manual — Ishta Devata, prescribed mantras, and daily puja sequence.', 'वैदिक ज्योतिष उपाय मैनुअल से — इष्ट देवता, निर्धारित मंत्र और दैनिक पूजा क्रम।')}
+      <p style={{ color:'rgba(245,240,232,0.58)', fontSize:10, marginBottom:14 }}>
+        {chooseText(lang, 'Chart Isht Devata is matched with the Life Report. Dasha and Lagna tabs show planetary remedy devata, prescribed mantras, and daily puja sequence.', 'कुंडली इष्ट देवता Life Report से मिलाया गया है। दशा और लग्न टैब ग्रह उपाय देवता, निर्धारित मंत्र और दैनिक पूजा क्रम दिखाते हैं।')}
       </p>
 
       {/* Tab bar */}
@@ -344,18 +379,19 @@ function RemediesCard({ remedyData, fallbackRemedies, lang, delay = 0 }) {
           {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               style={{ padding:'4px 12px', borderRadius:16, fontSize:10, fontWeight:600, cursor:'pointer', border:'none',
-                background: tab===t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
-                color: tab===t.key ? '#D4AF37' : 'rgba(245,240,232,0.38)', transition:'all 0.18s' }}>
+                background: activeTab===t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
+                color: activeTab===t.key ? '#D4AF37' : 'rgba(245,240,232,0.6)', transition:'all 0.18s' }}>
               {t.label}
             </button>
           ))}
         </div>
       )}
 
-      {tab === 'dasha' && renderPlanetCard(remedyData?.dasha_planet)}
-      {tab === 'lagna' && renderPlanetCard(remedyData?.lagna_planet)}
+      {activeTab === 'ishta' && renderLifeIshtaCard()}
+      {activeTab === 'dasha' && renderPlanetCard(remedyData?.dasha_planet)}
+      {activeTab === 'lagna' && renderPlanetCard(remedyData?.lagna_planet)}
 
-      {tab === 'puja' && hasPujaSequence && (
+      {activeTab === 'puja' && hasPujaSequence && (
         <div className="space-y-3">
           <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, lineHeight:1.7, marginBottom:10 }}>
             {chooseText(lang, 'Follow this sequence for your daily remedial puja. Always begin with Step 0 — invoking Ganesha.', 'दैनिक उपाय पूजा के लिए यह क्रम अपनाएं। हमेशा चरण 0 — गणेश आवाहन — से शुरू करें।')}
@@ -433,8 +469,16 @@ export default function Predictions() {
             return detail.data.profile;
           } catch { return profile; }
         }));
+        const requestedUuid = readPredictionKundliParam(
+          typeof window !== 'undefined' ? window.location.search : ''
+        );
         setProfiles(detailed);
-        setSelectedUuid((current) => current || detailed[0]?.uuid || '');
+        setSelectedUuid((current) => {
+          const requested = detailed.find((profile) => profile.uuid === requestedUuid)?.uuid;
+          if (requested) return requested;
+          const currentStillValid = detailed.some((profile) => profile.uuid === current);
+          return currentStillValid ? current : (detailed[0]?.uuid || '');
+        });
       } catch (e) {
         toast.error(e.response?.data?.message || t('Unable to load predictions', 'भविष्यवाणी लोड नहीं हो पाई'));
       } finally {
@@ -509,7 +553,10 @@ export default function Predictions() {
                 <h2 className="font-serif text-gold text-sm mb-3">{t('Profiles', 'प्रोफाइल')}</h2>
                 <div className="space-y-2">
                   {profiles.map((profile) => (
-                    <button key={profile.uuid} onClick={() => setSelectedUuid(profile.uuid)}
+                    <button key={profile.uuid} onClick={() => {
+                      setSelectedUuid(profile.uuid);
+                      router.replace(predictionHref(profile.uuid), { scroll: false });
+                    }}
                       className={`w-full text-left rounded border p-3 transition-colors ${profile.uuid === selected?.uuid ? 'border-gold/45 bg-gold/10' : 'border-gold/10 hover:border-gold/30'}`}>
                       <p className="text-sm text-ivory font-medium">{profile.name}</p>
                       <p className="text-[10px] text-ivory/35 mt-1">{String(profile.date_of_birth).slice(0, 10)}</p>
@@ -667,7 +714,13 @@ export default function Predictions() {
                   <GocharCard gochar={pred?.gochar_narrative} chart={chart} lang={lang} delay={0.26} />
 
                   {/* ── Remedies (from DB via PDF) ── */}
-                  <RemediesCard remedyData={remedyData} fallbackRemedies={pred?.remedies} lang={lang} delay={0.3} />
+                  <RemediesCard
+                    remedyData={remedyData}
+                    fallbackRemedies={pred?.remedies}
+                    lifeIshtaDevata={chart?.life_report?.ishta_devata}
+                    lang={lang}
+                    delay={0.3}
+                  />
                 </>
               )}
             </div>

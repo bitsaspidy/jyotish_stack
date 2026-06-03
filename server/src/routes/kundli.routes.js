@@ -6,6 +6,7 @@ const { authenticate } = require('../middleware/auth');
 const { ok, fail } = require('../utils/response');
 const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-calc.service');
 const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
+const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 
 router.use(authenticate);
 
@@ -65,9 +66,41 @@ function parseJsonMaybe(value) {
   }
 }
 
+function buildKundliListSummary(chart) {
+  if (!chart) return { calculated: false };
+  const currentDasha = Array.isArray(chart.dasha)
+    ? (chart.dasha.find((period) => period.is_current) || chart.dasha[0] || null)
+    : null;
+  const currentAntardasha = Array.isArray(currentDasha?.antardasha)
+    ? (currentDasha.antardasha.find((period) => period.is_current) || currentDasha.antardasha[0] || null)
+    : null;
+
+  return {
+    calculated: true,
+    lagna_en: chart.ascendant?.rashi_en || null,
+    lagna_hi: chart.ascendant?.rashi_hi || null,
+    nakshatra_en: chart.nakshatra?.en || null,
+    nakshatra_hi: chart.nakshatra?.hi || null,
+    nakshatra_pada: chart.nakshatra?.pada || null,
+    dasha_lord: currentDasha?.lord || null,
+    dasha_end: currentDasha?.end || null,
+    antardasha_lord: currentAntardasha?.lord || null,
+    antardasha_end: currentAntardasha?.end || null,
+  };
+}
+
 async function ensureCalculatedChart(profile) {
   const existing = parseJsonMaybe(profile.calculated_data);
-  if (existing) return existing;
+  if (
+    existing?.reports?.planet_details?.length
+    && existing?.reports?.varga_matrix?.rows?.length
+    && existing?.reports?.planet_assessments
+    && existing?.reports?.yoga_dasha_report
+    && existing?.reports?.event_timing?.windows?.length
+    && existing?.life_report?.sections
+    && existing?.varga_analysis?.d1?.role_en              // Session 26: plain-language Varga fields
+    && existing?.varga_analysis?.d60?.past_life_reading   // Session 27: D60 past-life reading
+  ) return existing;
   return calcAndSave(profile);
 }
 
@@ -94,6 +127,42 @@ async function fetchDashaRemedies(dashaLord, lagnaLord) {
       puja_sequence: stepsOut,
     };
   } catch { return null; }
+}
+
+// Fetch chart enrichment from DB — zodiac sign descriptions, planet classification,
+// and house detailed notes (added in Session 20 — Class 3 & 4 PDF data)
+async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
+  try {
+    const rashiIds = [...new Set([ascRashiNum, moonRashiNum].filter(Boolean))];
+    const signs = rashiIds.length
+      ? await db('zodiac_signs')
+          .whereIn('id', rashiIds)
+          .select('id','name','name_hi','key_traits_en','key_traits_hi',
+                  'detailed_description_en','detailed_description_hi')
+      : [];
+    const signMap = Object.fromEntries(signs.map((s) => [s.id, s]));
+
+    const planetRows = await db('planets')
+      .select('id','name','name_hi','guna','guna_hi','varna','varna_hi',
+              'court_role','court_role_hi','deity','deity_hi','characteristics');
+    const planet_meta = Object.fromEntries(planetRows.map((p) => [p.name, p]));
+
+    const houses_meta = await db('houses')
+      .select('id','name','name_hi','keywords_en','keywords_hi',
+              'topics_en','topics_hi','health_organs_en','health_organs_hi',
+              'detailed_notes_en','detailed_notes_hi')
+      .orderBy('id');
+
+    return {
+      lagna_sign: signMap[ascRashiNum] || null,
+      moon_sign:  signMap[moonRashiNum] || null,
+      planet_meta,
+      houses_meta,
+    };
+  } catch (e) {
+    console.error('[ChartEnrichment] Error:', e.message);
+    return null;
+  }
 }
 
 // Fetch detailed nakshatra insight from DB for a given nakshatra number (1-27)
@@ -155,7 +224,20 @@ router.get('/', async (req, res) => {
             'place_of_birth','latitude','longitude','timezone_offset',
             'gender','is_public','created_at','updated_at')
     .orderBy('created_at', 'desc');
-  return ok(res, { profiles });
+
+  const chartRows = profiles.length
+    ? await db('kundli_profiles')
+        .whereIn('id', profiles.map((profile) => profile.id))
+        .select('id', 'calculated_data')
+    : [];
+  const summaryById = new Map(
+    chartRows.map((row) => [row.id, buildKundliListSummary(parseJsonMaybe(row.calculated_data))])
+  );
+  const profilesWithSummary = profiles.map((profile) => ({
+    ...profile,
+    chart_summary: summaryById.get(profile.id) || { calculated: false },
+  }));
+  return ok(res, { profiles: profilesWithSummary });
 });
 
 // ── POST /api/kundli/matchmaking/request ──
@@ -280,7 +362,21 @@ router.get('/matchmaking/:id/report.pdf', async (req, res) => {
   }
 });
 
-// ── GET /api/kundli/:id/report.pdf ──
+// GET /api/kundli/reference/varga - seeded divisional chart reference for UI
+router.get('/reference/varga', async (req, res) => {
+  try {
+    const reference = await fetchVargaReferenceData(db);
+    if (!reference.charts.length) {
+      return fail(res, 'Varga reference data has not been seeded', 404);
+    }
+    return ok(res, { reference });
+  } catch (e) {
+    console.error('[VargaReference] Error:', e.message);
+    return fail(res, 'Unable to load Varga reference data', 500);
+  }
+});
+
+// GET /api/kundli/:id/report.pdf
 router.get('/:id/report.pdf', async (req, res) => {
   try {
     const profile = await db('kundli_profiles')
@@ -308,13 +404,9 @@ router.get('/:id', async (req, res) => {
     .first();
   if (!profile) return fail(res, 'Kundli not found', 404);
 
-  // Auto-calculate if data is missing
-  if (!profile.calculated_data) {
-    const chart = await calcAndSave(profile);
-    profile.calculated_data = chart ? JSON.stringify(chart) : null;
-  }
-
-  profile.calculated_data = parseJsonMaybe(profile.calculated_data);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  profile.calculated_data = chart;
 
   // Attach nakshatra insight from DB (Moon nakshatra detailed notes)
   const nakNum = profile.calculated_data?.nakshatra?.num;
@@ -324,6 +416,12 @@ router.get('/:id', async (req, res) => {
   const cd = profile.calculated_data;
   const currentDasha = Array.isArray(cd?.dasha) ? cd.dasha.find((d) => d.is_current) || cd.dasha[0] : null;
   profile.remedy_data = await fetchDashaRemedies(currentDasha?.lord, cd?.ascendant?.rashi_lord);
+
+  // Attach chart enrichment (Session 20 — Class 3&4 PDF: guna/varna/deity + house notes)
+  profile.chart_enrichment = await fetchChartEnrichment(
+    cd?.ascendant?.rashi_num,
+    cd?.planets?.Moon?.rashi_num
+  );
 
   return ok(res, { profile });
 });
@@ -348,6 +446,12 @@ router.post('/:id/recalculate', async (req, res) => {
   // Attach remedy data
   const currentDasha = Array.isArray(chart?.dasha) ? chart.dasha.find((d) => d.is_current) || chart.dasha[0] : null;
   freshProfile.remedy_data = await fetchDashaRemedies(currentDasha?.lord, chart?.ascendant?.rashi_lord);
+
+  // Attach chart enrichment
+  freshProfile.chart_enrichment = await fetchChartEnrichment(
+    chart?.ascendant?.rashi_num,
+    chart?.planets?.Moon?.rashi_num
+  );
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });

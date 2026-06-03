@@ -465,9 +465,15 @@ export function detailText(detail, key, lang) {
   return lang === 'hi' ? detail[`${key}_hi`] : detail[`${key}_en`];
 }
 
+function hasDetailedHindiText(text, minLength = 90) {
+  return typeof text === 'string'
+    && text.length >= minLength
+    && /[\u0900-\u097F]/.test(text);
+}
+
 export function portraitText(portrait, key, chart, lang) {
   if (lang !== 'hi') return portrait?.[`${key}_en`] || '';
-  if (portrait?.[`${key}_hi`]) return portrait[`${key}_hi`];
+  if (hasDetailedHindiText(portrait?.[`${key}_hi`])) return portrait[`${key}_hi`];
 
   const asc = chart?.ascendant?.rashi_hi || chart?.ascendant?.rashi_en || '';
   const ascLord = planetName(chart?.ascendant?.rashi_lord, 'hi');
@@ -491,7 +497,7 @@ export function portraitText(portrait, key, chart, lang) {
 
 export function currentPeriodText(period, chart, lang) {
   if (lang !== 'hi') return period?.combined_en || '';
-  if (period?.combined_hi) return period.combined_hi;
+  if (hasDetailedHindiText(period?.combined_hi, 120)) return period.combined_hi;
   const md = period?.mahadasha?.lord || chart?.dasha?.find((d) => d.is_current)?.lord || '—';
   const ad = period?.antardasha?.lord || chart?.dasha?.find((d) => d.is_current)?.antardasha?.find((a) => a.is_current)?.lord || '—';
   const mdHi = planetName(md, 'hi');
@@ -640,7 +646,9 @@ export function predictionSummaryLines(chart, lang) {
   const pred = chart?.predictions;
   if (!pred) return [];
   if (lang !== 'hi') return pred.summary_en || [];
-  if (pred.summary_hi?.length > 2 && pred.summary_hi.every((line) => /[\u0900-\u097F]/.test(line))) {
+  const hasRichHindiSummary = pred.summary_hi?.length > 2
+    && pred.summary_hi.every((line) => hasDetailedHindiText(line, 70));
+  if (hasRichHindiSummary) {
     return pred.summary_hi;
   }
   const period = pred.current_period;

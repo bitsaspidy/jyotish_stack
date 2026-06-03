@@ -7,6 +7,7 @@ import StarField from '../components/StarField';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
+import { predictionHref } from '../lib/kundliLinks';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -31,9 +32,10 @@ export default function Dashboard() {
     </div>
   );
 
+  const latestKundliUuid = kundlis[0]?.uuid || '';
   const cards = [
     { icon: '🪐', label: lang === 'hi' ? 'कुंडली' : 'My Kundlis', value: kundlis.length, href: '/kundli' },
-    { icon: '💫', label: lang === 'hi' ? 'भविष्यवाणी' : 'Predictions', value: '—', href: '/predictions' },
+    { icon: '💫', label: lang === 'hi' ? 'भविष्यवाणी' : 'Predictions', value: '—', href: predictionHref(latestKundliUuid) },
     { icon: '🔔', label: lang === 'hi' ? 'सूचनाएं' : 'Notifications', value: notifications.filter(n => !n.is_read).length, href: '#' },
     { icon: '💍', label: lang === 'hi' ? 'मिलान' : 'Matchmaking', value: '—', href: '/matchmaking' },
   ];
