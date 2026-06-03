@@ -8,6 +8,24 @@ import StarField from '../components/StarField';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
+import {
+  categoryLabel,
+  chartStyleLabel,
+  currentPeriodText,
+  detailText,
+  dignityLabel,
+  getYogaDoshaDetail,
+  houseLabel,
+  karanaName,
+  localizeAstroText,
+  nityaYogaName,
+  planetName,
+  portraitText,
+  predictionSummaryLines,
+  strengthLabel,
+  t,
+  untilText,
+} from '../lib/astroI18n';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -95,13 +113,13 @@ function EmptyCell() {
   );
 }
 
-function PlanetTokens({ names }) {
+function PlanetTokens({ names, lang = 'en' }) {
   if (!names.length) return null;
   return (
     <div style={{ display:'flex', flexWrap:'wrap', gap:1, marginTop:'auto' }}>
       {names.map(p => (
         <span key={p} style={{ fontSize:7, color: PLANET_META[p]?.color || '#D4AF37', fontWeight:700, lineHeight:1 }}>
-          {PLANET_META[p]?.icon}{p.slice(0,2)}
+          {PLANET_META[p]?.icon}{planetName(p, lang).slice(0,2)}
         </span>
       ))}
     </div>
@@ -111,7 +129,7 @@ function PlanetTokens({ names }) {
 // ─── South Indian Chart ───────────────────────────────────────────────────────
 
 function SouthIndianChart({ chart, lang }) {
-  if (!chart) return <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:24 }}>Calculating chart…</p>;
+  if (!chart) return <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:24 }}>{t(lang, 'Calculating chart…', 'कुंडली बन रही है…')}</p>;
 
   const ascSign = chart.ascendant?.rashi_num || 1;
 
@@ -140,13 +158,13 @@ function SouthIndianChart({ chart, lang }) {
                   {isAsc ? '↑' : houseNum}
                 </span>
               </div>
-              <PlanetTokens names={planetsIn} />
+              <PlanetTokens names={planetsIn} lang={lang} />
             </ChartCell>
           );
         })}
       </div>
       <p style={{ color:'rgba(245,240,232,0.25)', fontSize:10, textAlign:'center', marginTop:8 }}>
-        ↑ = Lagna · Signs fixed · Houses float
+        {t(lang, '↑ = Lagna · Signs fixed · Houses float', '↑ = लग्न · राशियां स्थिर · भाव चलते हैं')}
       </p>
     </div>
   );
@@ -171,7 +189,7 @@ function SouthIndianChart({ chart, lang }) {
 
 function NorthIndianChart({ chart, lang }) {
   if (!chart) {
-    return <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:24 }}>Calculating chart…</p>;
+    return <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:24 }}>{t(lang, 'Calculating chart…', 'कुंडली बन रही है…')}</p>;
   }
 
   const S = 300;  // SVG canvas size
@@ -231,7 +249,7 @@ function NorthIndianChart({ chart, lang }) {
 
           // Planet icons string (max 4 to avoid overflow)
           const planetStr = planetsIn.slice(0,4)
-            .map(p => (PLANET_META[p]?.icon || '') + p.slice(0,2))
+            .map(p => (PLANET_META[p]?.icon || '') + planetName(p, lang).slice(0,2))
             .join(' ');
 
           return (
@@ -305,7 +323,7 @@ function NorthIndianChart({ chart, lang }) {
       </svg>
 
       <p style={{ color:'rgba(245,240,232,0.25)', fontSize:10, textAlign:'center', marginTop:8 }}>
-        L = Lagna (H1) · Houses fixed · Signs float · H1/4/7/10 = Kendra
+        {t(lang, 'L = Lagna (H1) · Houses fixed · Signs float · H1/4/7/10 = Kendra', 'L = लग्न (भाव 1) · भाव स्थिर · राशियां चलती हैं · भाव 1/4/7/10 = केंद्र')}
       </p>
     </div>
   );
@@ -313,10 +331,10 @@ function NorthIndianChart({ chart, lang }) {
 
 // ─── Chart Style Toggle ───────────────────────────────────────────────────────
 
-function ChartToggle({ style, onChange }) {
+function ChartToggle({ style, onChange, lang }) {
   const opts = [
-    { value:'south', label:'South Indian', icon:'◈' },
-    { value:'north', label:'North Indian', icon:'◇' },
+    { value:'south', label:t(lang, 'South Indian', 'दक्षिण भारतीय'), icon:'◈' },
+    { value:'north', label:t(lang, 'North Indian', 'उत्तर भारतीय'), icon:'◇' },
   ];
   return (
     <div style={{ display:'flex', gap:4, justifyContent:'center', marginBottom:12 }}>
@@ -342,6 +360,7 @@ function ChartToggle({ style, onChange }) {
 // Map preview:     OSM embed iframe.
 
 function EditKundliModal({ kundli, onClose, onSaved }) {
+  const { lang } = useLang();
   const dob = String(kundli.date_of_birth || '').slice(0, 10);
   const [form, setForm] = useState({
     name:             kundli.name          || '',
@@ -380,12 +399,12 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
     try {
       const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locQuery)}&format=json&limit=6&addressdetails=1`;
       const res  = await fetch(url, {
-        headers: { 'Accept-Language': 'en', 'Accept': 'application/json' },
+        headers: { 'Accept-Language': lang === 'hi' ? 'hi' : 'en', 'Accept': 'application/json' },
       });
       const data = await res.json();
       setLocResults(data);
     } catch {
-      toast.error('Location search failed. Check internet connection.');
+      toast.error(t(lang, 'Location search failed. Check internet connection.', 'स्थान खोज विफल रही। इंटरनेट कनेक्शन जांचें।'));
     } finally {
       setSearching(false);
     }
@@ -423,7 +442,7 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
   async function handleSave(e) {
     e.preventDefault();
     if (!form.name || !form.date_of_birth || !form.time_of_birth) {
-      toast.error('Name, date and time are required.');
+      toast.error(t(lang, 'Name, date and time are required.', 'नाम, जन्म तिथि और जन्म समय आवश्यक हैं।'));
       return;
     }
     setSaving(true);
@@ -440,10 +459,10 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
       });
       // Force fresh recalculation with new birth data
       await api.post(`/kundli/${kundli.uuid}/recalculate`);
-      toast.success('Birth details saved & chart recalculated!');
+      toast.success(t(lang, 'Birth details saved & chart recalculated!', 'जन्म विवरण सेव हो गया और कुंडली पुनः गणना हो गई!'));
       onSaved();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Save failed. Try again.');
+      toast.error(err?.response?.data?.message || t(lang, 'Save failed. Try again.', 'सेव नहीं हो पाया। फिर प्रयास करें।'));
     } finally {
       setSaving(false);
     }
@@ -465,7 +484,7 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-serif text-gold text-lg font-bold">✏️ Edit Birth Details</h2>
+          <h2 className="font-serif text-gold text-lg font-bold">✏️ {t(lang, 'Edit Birth Details', 'जन्म विवरण संपादित करें')}</h2>
           <button onClick={onClose}
             style={{ color:'rgba(245,240,232,0.4)', fontSize:20, lineHeight:1, background:'none', border:'none', cursor:'pointer' }}>
             ✕
@@ -476,17 +495,17 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
           {/* Name + Gender */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Full Name *</label>
+              <label className={labelCls}>{t(lang, 'Full Name *', 'पूरा नाम *')}</label>
               <input className={inputCls} value={form.name}
                 onChange={e => set('name', e.target.value)} required />
             </div>
             <div>
-              <label className={labelCls}>Gender *</label>
+              <label className={labelCls}>{t(lang, 'Gender *', 'लिंग *')}</label>
               <select className={inputCls} value={form.gender}
                 onChange={e => set('gender', e.target.value)}>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
+                <option value="male">{t(lang, 'Male', 'पुरुष')}</option>
+                <option value="female">{t(lang, 'Female', 'महिला')}</option>
+                <option value="other">{t(lang, 'Other', 'अन्य')}</option>
               </select>
             </div>
           </div>
@@ -494,12 +513,12 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
           {/* Date + Time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Date of Birth *</label>
+              <label className={labelCls}>{t(lang, 'Date of Birth *', 'जन्म तिथि *')}</label>
               <input type="date" className={inputCls} value={form.date_of_birth}
                 onChange={e => set('date_of_birth', e.target.value)} required />
             </div>
             <div>
-              <label className={labelCls}>Time of Birth *</label>
+              <label className={labelCls}>{t(lang, 'Time of Birth *', 'जन्म समय *')}</label>
               <input type="time" className={inputCls} value={form.time_of_birth}
                 onChange={e => set('time_of_birth', e.target.value)} required />
             </div>
@@ -507,11 +526,11 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
 
           {/* Location search */}
           <div ref={searchRef}>
-            <label className={labelCls}>Search Place of Birth (OpenStreetMap — free)</label>
+            <label className={labelCls}>{t(lang, 'Search Place of Birth (OpenStreetMap — free)', 'जन्म स्थान खोजें (OpenStreetMap — मुफ्त)')}</label>
             <div className="flex gap-2">
               <input
                 className={`${inputCls} flex-1`}
-                placeholder="e.g. Jodhpur, Rajasthan, India"
+                placeholder={t(lang, 'e.g. Jodhpur, Rajasthan, India', 'जैसे: जोधपुर, राजस्थान, भारत')}
                 value={locQuery}
                 onChange={e => setLocQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLocationSearch(e); }}}
@@ -522,7 +541,7 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
                   background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.4)',
                   color: '#D4AF37', cursor: 'pointer', whiteSpace: 'nowrap',
                 }}>
-                {searching ? '⏳' : '🔍 Search'}
+                {searching ? '⏳' : `🔍 ${t(lang, 'Search', 'खोजें')}`}
               </button>
             </div>
 
@@ -556,30 +575,30 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
 
           {/* Place label (editable) */}
           <div>
-            <label className={labelCls}>Place of Birth (Label)</label>
+            <label className={labelCls}>{t(lang, 'Place of Birth (Label)', 'जन्म स्थान (लेबल)')}</label>
             <input className={inputCls} value={form.place_of_birth}
               onChange={e => set('place_of_birth', e.target.value)}
-              placeholder="City, State, Country" />
+              placeholder={t(lang, 'City, State, Country', 'शहर, राज्य, देश')} />
           </div>
 
           {/* Lat / Lon / Timezone */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className={labelCls}>Latitude °N</label>
+              <label className={labelCls}>{t(lang, 'Latitude °N', 'अक्षांश °N')}</label>
               <input type="number" step="0.000001" className={inputCls}
                 value={form.latitude}
                 onChange={e => set('latitude', e.target.value)}
                 placeholder="26.2800" />
             </div>
             <div>
-              <label className={labelCls}>Longitude °E</label>
+              <label className={labelCls}>{t(lang, 'Longitude °E', 'देशांतर °E')}</label>
               <input type="number" step="0.000001" className={inputCls}
                 value={form.longitude}
                 onChange={e => set('longitude', e.target.value)}
                 placeholder="73.0200" />
             </div>
             <div>
-              <label className={labelCls}>UTC Offset (hrs)</label>
+              <label className={labelCls}>{t(lang, 'UTC Offset (hrs)', 'UTC अंतर (घंटे)')}</label>
               <select className={inputCls} value={form.timezone_offset}
                 onChange={e => set('timezone_offset', e.target.value)}>
                 {['-12','-11','-10','-9.5','-9','-8','-7','-6','-5','-4.5','-4',
@@ -595,14 +614,14 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
           {/* OSM Map preview */}
           {hasCoords && mapSrc && (
             <div>
-              <label className={labelCls}>Location Preview (OpenStreetMap)</label>
+              <label className={labelCls}>{t(lang, 'Location Preview (OpenStreetMap)', 'स्थान पूर्वावलोकन (OpenStreetMap)')}</label>
               <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(212,175,55,0.2)', height: 200 }}>
                 <iframe
                   src={mapSrc}
                   width="100%" height="200"
                   style={{ border: 'none', display: 'block' }}
                   loading="lazy"
-                  title="Birth place map"
+                  title={t(lang, 'Birth place map', 'जन्म स्थान मानचित्र')}
                 />
               </div>
               <p style={{ fontSize:10, color:'rgba(245,240,232,0.25)', marginTop:4 }}>
@@ -610,7 +629,7 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
                 <a href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=12/${lat}/${lon}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ color:'#D4AF37', marginLeft:4, textDecoration:'underline' }}>
-                  Open full map ↗
+                  {t(lang, 'Open full map ↗', 'पूरा मानचित्र खोलें ↗')}
                 </a>
               </p>
             </div>
@@ -623,7 +642,7 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
                 padding:'8px 20px', borderRadius:8, fontSize:12, cursor:'pointer',
                 background:'transparent', border:'1px solid rgba(212,175,55,0.25)', color:'rgba(245,240,232,0.5)',
               }}>
-              Cancel
+              {t(lang, 'Cancel', 'रद्द करें')}
             </button>
             <button type="submit" disabled={saving}
               style={{
@@ -632,7 +651,9 @@ function EditKundliModal({ kundli, onClose, onSaved }) {
                 border:'none', color: saving ? '#D4AF37' : '#0B0D1A',
                 opacity: saving ? 0.7 : 1,
               }}>
-              {saving ? '⏳ Saving & Recalculating…' : '💾 Save & Recalculate Chart'}
+              {saving
+                ? `⏳ ${t(lang, 'Saving & Recalculating…', 'सेव और पुनः गणना हो रही है…')}`
+                : `💾 ${t(lang, 'Save & Recalculate Chart', 'सेव करें और कुंडली पुनः गणना करें')}`}
             </button>
           </div>
         </form>
@@ -672,6 +693,7 @@ function BasicDetailsPanel({ kundli, chart, lang }) {
   const tz   = kundli.timezone_offset;
   const p    = chart?.panchang;
   const ad   = chart?.astro_details;
+  const label = (en, hi) => t(lang, en, hi);
 
   const fmt12 = (t) => {
     if (!t) return '—';
@@ -707,53 +729,53 @@ function BasicDetailsPanel({ kundli, chart, lang }) {
 
       {tab === 'basic' && (
         <div>
-          <InfoRow label="Name"       value={kundli.name} />
-          <InfoRow label="Place"      value={kundli.place_of_birth} />
-          <InfoRow label="Date"       value={dateFormatted} />
-          <InfoRow label="Time"       value={fmt12(time)} />
-          <InfoRow label="Latitude"   value={`${parseFloat(kundli.latitude).toFixed(2)}°`} />
-          <InfoRow label="Longitude"  value={`${parseFloat(kundli.longitude).toFixed(2)}°`} />
-          <InfoRow label="Timezone"   value={`GMT+${tz}`} />
-          <InfoRow label="Sunrise"    value={p?.sunrise || '—'} />
-          <InfoRow label="Sunset"     value={p?.sunset  || '—'} />
-          <InfoRow label="Ayanamsha"  value={chart ? `${chart.meta.ayanamsa_dms} (Lahiri)` : '—'} />
+          <InfoRow label={label('Name', 'नाम')}       value={kundli.name} />
+          <InfoRow label={label('Place', 'स्थान')}      value={kundli.place_of_birth} />
+          <InfoRow label={label('Date', 'तिथि')}       value={dateFormatted} />
+          <InfoRow label={label('Time', 'समय')}       value={fmt12(time)} />
+          <InfoRow label={label('Latitude', 'अक्षांश')}   value={`${parseFloat(kundli.latitude).toFixed(2)}°`} />
+          <InfoRow label={label('Longitude', 'देशांतर')}  value={`${parseFloat(kundli.longitude).toFixed(2)}°`} />
+          <InfoRow label={label('Timezone', 'समय क्षेत्र')}   value={`GMT+${tz}`} />
+          <InfoRow label={label('Sunrise', 'सूर्योदय')}    value={p?.sunrise || '—'} />
+          <InfoRow label={label('Sunset', 'सूर्यास्त')}     value={p?.sunset  || '—'} />
+          <InfoRow label={label('Ayanamsha', 'अयनांश')}  value={chart ? `${chart.meta.ayanamsa_dms} (Lahiri)` : '—'} />
         </div>
       )}
 
       {tab === 'ghat' && (
         <div>
-          <InfoRow label="Month"      value={p ? (lang==='hi' ? p.masa.name_hi : p.masa.name) : '—'} />
-          <InfoRow label="Tithi"      value={p ? (lang==='hi' ? p.tithi.display_hi : p.tithi.display_en) : '—'} />
-          <InfoRow label="Day"        value={p ? (lang==='hi' ? p.vara.day_hi : p.vara.day_en) : '—'} />
-          <InfoRow label="Nakshatra"  value={chart ? (lang==='hi' ? chart.nakshatra.hi : chart.nakshatra.en) : '—'} />
-          <InfoRow label="Yoga"       value={p ? p.yoga.name : '—'} />
-          <InfoRow label="Karan"      value={p ? p.karana.name : '—'} />
-          <InfoRow label="Pahar"      value={p?.pahar != null ? String(p.pahar) : '—'} />
-          <InfoRow label="Moon Phase" value={p?.moon_phase != null ? String(p.moon_phase) : '—'} />
+          <InfoRow label={label('Month', 'मास')}      value={p ? (lang==='hi' ? p.masa.name_hi : p.masa.name) : '—'} />
+          <InfoRow label={label('Tithi', 'तिथि')}      value={p ? (lang==='hi' ? p.tithi.display_hi : p.tithi.display_en) : '—'} />
+          <InfoRow label={label('Day', 'वार')}        value={p ? (lang==='hi' ? p.vara.day_hi : p.vara.day_en) : '—'} />
+          <InfoRow label={label('Nakshatra', 'नक्षत्र')}  value={chart ? (lang==='hi' ? chart.nakshatra.hi : chart.nakshatra.en) : '—'} />
+          <InfoRow label={label('Yoga', 'योग')}       value={p ? nityaYogaName(p.yoga, lang) : '—'} />
+          <InfoRow label={label('Karan', 'करण')}      value={p ? karanaName(p.karana, lang) : '—'} />
+          <InfoRow label={label('Pahar', 'पहर')}      value={p?.pahar != null ? String(p.pahar) : '—'} />
+          <InfoRow label={label('Moon Phase', 'चंद्र कला')} value={p?.moon_phase != null ? String(p.moon_phase) : '—'} />
         </div>
       )}
 
       {tab === 'astro' && ad && (
         <div>
-          <InfoRow label="Ascendant"       value={lang==='hi' ? ad.ascendant_rashi_hi : ad.ascendant_rashi_en} />
-          <InfoRow label="Ascendant Lord"  value={ad.ascendant_lord} />
-          <InfoRow label="Varna"           value={lang==='hi' ? ad.varna.name_hi : ad.varna.name} />
-          <InfoRow label="Vashya"          value={lang==='hi' ? ad.vashya.name_hi : ad.vashya.name} />
-          <InfoRow label="Yoni"            value={ad.yoni.name} />
-          <InfoRow label="Gan"             value={lang==='hi' ? ad.gana.name_hi : ad.gana.name} />
-          <InfoRow label="Nadi"            value={lang==='hi' ? ad.nadi.name_hi : ad.nadi.name} />
-          <InfoRow label="Sign Lord"       value={ad.moon_sign_lord} />
-          <InfoRow label="Sign"            value={lang==='hi' ? ad.moon_sign_hi : ad.moon_sign_en} />
-          <InfoRow label="Nakshatra"       value={lang==='hi' ? ad.moon_nakshatra_hi : ad.moon_nakshatra_en} />
-          <InfoRow label="Nakshatra Lord"  value={ad.moon_nakshatra_lord} />
-          <InfoRow label="Charan"          value={String(ad.moon_pada)} />
-          <InfoRow label="Yoga"            value={ad.yoga.name} />
-          <InfoRow label="Karan"           value={ad.karana.name} />
-          <InfoRow label="Tithi"           value={lang==='hi' ? ad.tithi.display_hi : ad.tithi.display_en} />
-          <InfoRow label="Yunja"           value={lang==='hi' ? ad.yunja.yunja_hi : ad.yunja.yunja} />
-          <InfoRow label="Tatva"           value={lang==='hi' ? ad.tatva.hi : ad.tatva.en} />
-          <InfoRow label="Name Alphabet"   value={ad.naam_akshar} />
-          <InfoRow label="Paya"            value={lang==='hi' ? ad.paya.paya_hi : ad.paya.paya} />
+          <InfoRow label={label('Ascendant', 'लग्न')}       value={lang==='hi' ? ad.ascendant_rashi_hi : ad.ascendant_rashi_en} />
+          <InfoRow label={label('Ascendant Lord', 'लग्नेश')}  value={planetName(ad.ascendant_lord, lang)} />
+          <InfoRow label={label('Varna', 'वर्ण')}           value={lang==='hi' ? ad.varna.name_hi : ad.varna.name} />
+          <InfoRow label={label('Vashya', 'वश्य')}          value={lang==='hi' ? ad.vashya.name_hi : ad.vashya.name} />
+          <InfoRow label={label('Yoni', 'योनि')}            value={ad.yoni.name} />
+          <InfoRow label={label('Gan', 'गण')}             value={lang==='hi' ? ad.gana.name_hi : ad.gana.name} />
+          <InfoRow label={label('Nadi', 'नाड़ी')}            value={lang==='hi' ? ad.nadi.name_hi : ad.nadi.name} />
+          <InfoRow label={label('Sign Lord', 'राशि स्वामी')}       value={planetName(ad.moon_sign_lord, lang)} />
+          <InfoRow label={label('Sign', 'राशि')}            value={lang==='hi' ? ad.moon_sign_hi : ad.moon_sign_en} />
+          <InfoRow label={label('Nakshatra', 'नक्षत्र')}       value={lang==='hi' ? ad.moon_nakshatra_hi : ad.moon_nakshatra_en} />
+          <InfoRow label={label('Nakshatra Lord', 'नक्षत्र स्वामी')}  value={planetName(ad.moon_nakshatra_lord, lang)} />
+          <InfoRow label={label('Charan', 'चरण')}          value={String(ad.moon_pada)} />
+          <InfoRow label={label('Yoga', 'योग')}            value={nityaYogaName(ad.yoga, lang)} />
+          <InfoRow label={label('Karan', 'करण')}           value={karanaName(ad.karana, lang)} />
+          <InfoRow label={label('Tithi', 'तिथि')}           value={lang==='hi' ? ad.tithi.display_hi : ad.tithi.display_en} />
+          <InfoRow label={label('Yunja', 'युंजा')}           value={lang==='hi' ? ad.yunja.yunja_hi : ad.yunja.yunja} />
+          <InfoRow label={label('Tatva', 'तत्व')}           value={lang==='hi' ? ad.tatva.hi : ad.tatva.en} />
+          <InfoRow label={label('Name Alphabet', 'नाम अक्षर')}   value={ad.naam_akshar} />
+          <InfoRow label={label('Paya', 'पाया')}            value={lang==='hi' ? ad.paya.paya_hi : ad.paya.paya} />
         </div>
       )}
       {tab === 'astro' && !ad && (
@@ -905,6 +927,313 @@ function PersonalityInsights({ insight, chart, lang }) {
   );
 }
 
+// ─── Life Portrait Panel ─────────────────────────────────────────────────────
+// Shows who the person is: Lagna portrait, Moon portrait, nakshatra soul,
+// and current dasha period summary — all in narrative paragraph form.
+
+const PORTRAIT_TABS = [
+  { key: 'you',    label: 'Who You Are',       label_hi: 'आप कौन हैं'       },
+  { key: 'period', label: 'Current Period',    label_hi: 'वर्तमान दशा'      },
+];
+
+function LifePortraitPanel({ chart, lang }) {
+  const [tab, setTab] = useState('you');
+  const portrait = chart?.predictions?.portrait;
+  const period   = chart?.predictions?.current_period;
+  const dasha    = chart?.dasha?.find((d) => d.is_current) || chart?.dasha?.[0];
+  const antar    = dasha?.antardasha?.find((d) => d.is_current) || dasha?.antardasha?.[0];
+
+  if (!portrait && !period) return null;
+
+  const fmtDate = (s) => {
+    if (!s) return '—';
+    const d = new Date(s);
+    return isNaN(d) ? s : d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  };
+
+  return (
+    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.14 }}
+      className="card-royal p-5">
+      {/* Header */}
+      <h2 className="font-serif text-gold text-sm font-semibold mb-3">
+        🪐 {lang === 'hi' ? 'जीवन चित्रण' : 'Life Portrait'}
+      </h2>
+
+      {/* Tab bar */}
+      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'1px solid rgba(212,175,55,0.1)', paddingBottom:10 }}>
+        {PORTRAIT_TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              padding:'4px 12px', borderRadius:16, fontSize:10, fontWeight:600, cursor:'pointer', border:'none',
+              background: tab === t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
+              color: tab === t.key ? '#D4AF37' : 'rgba(245,240,232,0.38)',
+              transition:'all 0.18s',
+            }}>
+            {lang === 'hi' ? t.label_hi : t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Who You Are */}
+      {tab === 'you' && portrait && (
+        <div className="space-y-4">
+          <div>
+            <p style={{ color:'#D4AF37', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6 }}>
+              ✦ {lang==='hi' ? 'आपकी लग्न — बाहरी व्यक्तित्व' : 'Your Ascendant — Outer Personality'}
+            </p>
+            <p style={{ color:'rgba(245,240,232,0.82)', fontSize:12.5, lineHeight:1.8 }}>
+              {portraitText(portrait, 'lagna', chart, lang)}
+            </p>
+          </div>
+          <div style={{ borderTop:'1px solid rgba(212,175,55,0.08)', paddingTop:14 }}>
+            <p style={{ color:'#94A3B8', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6 }}>
+              ☽ {lang==='hi' ? 'आपकी चन्द्र राशि — आंतरिक भावनाएं' : 'Your Moon Sign — Inner Emotional World'}
+            </p>
+            <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12.5, lineHeight:1.8 }}>
+              {portraitText(portrait, 'moon', chart, lang)}
+            </p>
+          </div>
+          <div style={{ borderTop:'1px solid rgba(212,175,55,0.08)', paddingTop:14 }}>
+            <p style={{ color:'#A78BFA', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6 }}>
+              ✨ {lang==='hi' ? 'आपका नक्षत्र — आत्मा की प्रकृति' : 'Your Nakshatra — Soul Nature'}
+            </p>
+            <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12.5, lineHeight:1.8 }}>
+              {portraitText(portrait, 'nakshatra', chart, lang)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Current Period */}
+      {tab === 'period' && (
+        <div className="space-y-4">
+          {/* Dasha badges */}
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            <div style={{
+              padding:'6px 14px', borderRadius:20,
+              background:'rgba(212,175,55,0.12)', border:'1px solid rgba(212,175,55,0.35)',
+              textAlign:'center',
+            }}>
+              <p style={{ color:'rgba(245,240,232,0.4)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.14em' }}>{t(lang, 'Mahadasha', 'महादशा')}</p>
+              <p style={{ color:'#D4AF37', fontSize:15, fontWeight:700, fontFamily:'Georgia,serif', marginTop:2 }}>{planetName(dasha?.lord, lang) || '—'}</p>
+              <p style={{ color:'rgba(245,240,232,0.3)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(dasha?.end), lang)}</p>
+            </div>
+            <div style={{
+              padding:'6px 14px', borderRadius:20,
+              background:'rgba(167,139,250,0.1)', border:'1px solid rgba(167,139,250,0.3)',
+              textAlign:'center',
+            }}>
+              <p style={{ color:'rgba(245,240,232,0.4)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.14em' }}>{t(lang, 'Antardasha', 'अंतर्दशा')}</p>
+              <p style={{ color:'#A78BFA', fontSize:15, fontWeight:700, fontFamily:'Georgia,serif', marginTop:2 }}>{planetName(antar?.lord, lang) || '—'}</p>
+              <p style={{ color:'rgba(245,240,232,0.3)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(antar?.end), lang)}</p>
+            </div>
+          </div>
+
+          {/* Combined meaning */}
+          {period?.combined_en && (
+            <div style={{ borderTop:'1px solid rgba(212,175,55,0.08)', paddingTop:14 }}>
+              <p style={{ color:'#D4AF37', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:8 }}>
+                📖 {lang==='hi' ? 'इस दशा का अर्थ' : 'What This Period Means'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.8)', fontSize:12.5, lineHeight:1.85 }}>
+                {currentPeriodText(period, chart, lang)}
+              </p>
+            </div>
+          )}
+
+          {/* Mahadasha nature */}
+          {period?.mahadasha?.nature && (
+            <div style={{ background:'rgba(255,255,255,0.03)', borderRadius:8, padding:'10px 12px' }}>
+              <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginBottom:2 }}>
+                {lang==='hi' ? 'महादशा की प्रकृति' : 'Mahadasha Nature'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12 }}>
+                {lang === 'hi'
+                  ? `${planetName(period.mahadasha.lord, 'hi')} की महादशा उसके कारकत्व, भाव स्थिति और बल के अनुसार जीवन की मुख्य दिशा को सक्रिय करती है।`
+                  : period.mahadasha.nature}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Yogas & Doshas Panel ────────────────────────────────────────────────────
+
+const YOGA_STRENGTH_STYLE = {
+  strong:   { bg:'rgba(34,197,94,0.12)',  color:'#22C55E', label:'Strong' },
+  moderate: { bg:'rgba(245,158,11,0.10)', color:'#F59E0B', label:'Moderate' },
+  weak:     { bg:'rgba(239,68,68,0.10)',  color:'#EF4444', label:'Weak' },
+};
+const DOSHA_SEV_STYLE = {
+  strong:   { bg:'rgba(239,68,68,0.12)',  color:'#EF4444', label:'Strong' },
+  moderate: { bg:'rgba(245,158,11,0.12)', color:'#F59E0B', label:'Moderate' },
+  mild:     { bg:'rgba(96,165,250,0.10)', color:'#60A5FA', label:'Mild' },
+};
+const CATEGORY_ICONS = {
+  power:'👑', wealth:'💰', intellect:'🧠', wisdom:'📿', victory:'⚔️',
+  karmic:'🔮', vish:'☠️', grahan:'🌑', luminary:'☀️', general:'⚖️',
+};
+
+function YogasAndDoshasPanel({ chart, lang }) {
+  const [tab, setTab] = useState('yogas');
+  const yd = chart?.yogas_doshas;
+  if (!yd) return null;
+
+  const tabs = [
+    { key:'yogas',  label: lang==='hi' ? `योग (${yd.yoga_count})`  : `Yogas (${yd.yoga_count})`  },
+    { key:'doshas', label: lang==='hi' ? `दोष (${yd.dosha_count})` : `Doshas (${yd.dosha_count})` },
+  ];
+
+  const hasMajorDosha = yd.doshas.some(d => d.severity === 'strong');
+  const renderEntry = (entry, type, index) => {
+    const isDosha = type === 'dosha';
+    const st = isDosha
+      ? (DOSHA_SEV_STYLE[entry.severity] || DOSHA_SEV_STYLE.moderate)
+      : (YOGA_STRENGTH_STYLE[entry.strength] || YOGA_STRENGTH_STYLE.moderate);
+    const detail = getYogaDoshaDetail(entry, type);
+    const name = lang === 'hi' ? entry.name_hi : entry.name;
+    const secondaryName = lang === 'hi' ? entry.name : entry.name_hi;
+
+    return (
+      <div
+        key={`${entry.name}-${index}`}
+        style={{
+          border: `1px solid ${isDosha ? st.color + '33' : 'rgba(212,175,55,0.14)'}`,
+          borderRadius: 8,
+          padding: 13,
+          background: isDosha ? `${st.color}07` : 'rgba(17,20,40,0.55)',
+        }}
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-ivory/90 text-xs font-semibold font-devanagari">{name}</span>
+              <span style={{
+                color: '#D4AF37',
+                background: 'rgba(212,175,55,0.08)',
+                border: '1px solid rgba(212,175,55,0.18)',
+                borderRadius: 10,
+                padding: '1px 7px',
+                fontSize: 9,
+                fontWeight: 700,
+              }}>
+                {CATEGORY_ICONS[detail.category] || '✦'} {categoryLabel(detail.category, lang)}
+              </span>
+            </div>
+            <p className="text-ivory/35 text-[10px] mt-0.5">{secondaryName}</p>
+          </div>
+          <span style={{ background: st.bg, color: st.color, borderRadius:10, padding:'2px 8px', fontSize:9, fontWeight:700, whiteSpace:'nowrap' }}>
+            {strengthLabel(isDosha ? entry.severity : entry.strength, lang)}
+          </span>
+        </div>
+
+        <div style={{ display:'grid', gap:9 }}>
+          <div>
+            <p style={{ color:'#D4AF37', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:3 }}>
+              {t(lang, 'Detected in this chart', 'इस कुंडली में कारण')}
+            </p>
+            <p className="text-ivory/62 text-[10.5px] leading-relaxed font-devanagari">
+              {localizeAstroText(lang === 'hi' ? entry.trigger_hi : entry.trigger_en, lang)}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.08)', borderRadius:6, padding:'8px 9px' }}>
+              <p style={{ color:'rgba(245,240,232,0.38)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>
+                {t(lang, 'Formation Rule', 'बनने का नियम')}
+              </p>
+              <p className="text-ivory/65 text-[10px] leading-relaxed font-devanagari">
+                {detailText(detail, 'formation', lang)}
+              </p>
+            </div>
+            <div style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.08)', borderRadius:6, padding:'8px 9px' }}>
+              <p style={{ color:'rgba(245,240,232,0.38)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>
+                {t(lang, isDosha ? 'Likely Pressure' : 'Likely Result', isDosha ? 'संभावित दबाव' : 'संभावित फल')}
+              </p>
+              <p className="text-ivory/65 text-[10px] leading-relaxed font-devanagari">
+                {detailText(detail, 'result', lang)}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ background: isDosha ? `${st.color}0A` : 'rgba(34,197,94,0.04)', border:`1px solid ${isDosha ? st.color + '22' : 'rgba(34,197,94,0.14)'}`, borderRadius:6, padding:'8px 9px' }}>
+            <p style={{ color: isDosha ? st.color : '#22C55E', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>
+              {t(lang, isDosha ? 'Balancing Guidance' : 'How to Use It', isDosha ? 'संतुलन मार्गदर्शन' : 'इसे कैसे उपयोग करें')}
+            </p>
+            <p className="text-ivory/65 text-[10px] leading-relaxed font-devanagari">
+              {detailText(detail, 'guidance', lang)}
+            </p>
+          </div>
+        </div>
+
+        {entry.planets_involved?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-white/6">
+            <span className="text-ivory/30 text-[9px] mr-1">{t(lang, 'Planets:', 'ग्रह:')}</span>
+            {entry.planets_involved.map(pn => (
+              <span key={pn} style={{ fontSize:9, color: PLANET_META[pn]?.color || st.color, background:isDosha ? `${st.color}0F` : 'rgba(212,175,55,0.07)', borderRadius:8, padding:'1px 6px', fontWeight:700 }}>
+                {PLANET_META[pn]?.icon} {planetName(pn, lang)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+      className="card-royal p-5 mt-6">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-serif text-gold text-sm font-semibold">
+          ✨ {lang==='hi' ? 'योग एवं दोष' : 'Yogas & Doshas'}
+        </h2>
+        <div className="flex gap-2 text-[9px]">
+          <span style={{ color:'#22C55E' }}>✦ {yd.yoga_count} {lang==='hi'?'योग':'yoga'}</span>
+          <span style={{ color: hasMajorDosha ? '#EF4444' : '#F59E0B' }}>
+            ⚠ {yd.dosha_count} {lang==='hi'?'दोष':'dosha'}
+          </span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'1px solid rgba(212,175,55,0.1)', paddingBottom:10 }}>
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              padding:'4px 14px', borderRadius:16, fontSize:11, fontWeight:600, cursor:'pointer', border:'none',
+              background: tab === t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
+              color: tab === t.key ? '#D4AF37' : 'rgba(245,240,232,0.38)',
+              transition:'all 0.18s',
+            }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Yogas tab */}
+      {tab === 'yogas' && (
+        yd.yogas.length === 0
+          ? <p className="text-ivory/25 text-xs text-center py-6">{lang==='hi'?'कोई प्रमुख योग नहीं मिला।':'No major yogas detected in this chart.'}</p>
+          : <div className="space-y-3">
+              {yd.yogas.map((y, i) => renderEntry(y, 'yoga', i))}
+            </div>
+      )}
+
+      {/* Doshas tab */}
+      {tab === 'doshas' && (
+        yd.doshas.length === 0
+          ? <p className="text-ivory/25 text-xs text-center py-6">{lang==='hi'?'कोई प्रमुख दोष नहीं मिला।':'No major doshas detected in this chart.'}</p>
+          : <div className="space-y-3">
+              {yd.doshas.map((d, i) => renderEntry(d, 'dosha', i))}
+            </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function KundliDetail({ uuid }) {
@@ -975,7 +1304,7 @@ export default function KundliDetail({ uuid }) {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Unable to export PDF');
+      toast.error(e.response?.data?.message || t(lang, 'Unable to export PDF', 'PDF निर्यात नहीं हो पाया'));
     }
   };
 
@@ -1029,7 +1358,7 @@ export default function KundliDetail({ uuid }) {
 
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-ivory/30 mb-6">
-          <Link href="/dashboard" className="hover:text-gold transition-colors">Dashboard</Link>
+          <Link href="/dashboard" className="hover:text-gold transition-colors">{t(lang, 'Dashboard', 'डैशबोर्ड')}</Link>
           <span>/</span>
           <span className="text-gold/80">{kundli.name}</span>
         </div>
@@ -1053,11 +1382,11 @@ export default function KundliDetail({ uuid }) {
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
             <button onClick={handlePdf} className="btn-outline-gold text-xs px-4 py-2">
-              📄 PDF Report
+              📄 {t(lang, 'PDF Report', 'PDF रिपोर्ट')}
             </button>
             <button onClick={handleRecalc} disabled={recalcing}
               className="btn-outline-gold text-xs px-4 py-2">
-              {recalcing ? '⏳ Recalculating…' : '🔄 Recalculate'}
+              {recalcing ? `⏳ ${t(lang, 'Recalculating…', 'पुनः गणना हो रही है…')}` : `🔄 ${t(lang, 'Recalculate', 'पुनः गणना')}`}
             </button>
             <button onClick={() => setEditOpen(true)}
               style={{
@@ -1065,7 +1394,7 @@ export default function KundliDetail({ uuid }) {
                 background:'rgba(212,175,55,0.15)', border:'1px solid rgba(212,175,55,0.45)',
                 color:'#D4AF37', cursor:'pointer',
               }}>
-              ✏️ Edit Details
+              ✏️ {t(lang, 'Edit Details', 'विवरण संपादित करें')}
             </button>
           </div>
         </motion.div>
@@ -1091,13 +1420,13 @@ export default function KundliDetail({ uuid }) {
               className="card-royal p-5">
 
               {/* Toggle */}
-              <ChartToggle style={chartStyle} onChange={handleStyleChange} />
+              <ChartToggle style={chartStyle} onChange={handleStyleChange} lang={lang} />
 
               {/* Chart label */}
               <p className="font-serif text-gold text-sm font-semibold text-center mb-3">
-                🔯 {lang==='hi'?'लग्न कुंडली (D1)':'Lagna Chart (D1)'}
+                  🔯 {lang==='hi'?'लग्न कुंडली (D1)':'Lagna Chart (D1)'}
                 <span className="text-gold/40 text-[10px] ml-2 normal-case font-sans">
-                  {chartStyle === 'south' ? 'South Indian' : 'North Indian'}
+                  {chartStyleLabel(chartStyle, lang)}
                 </span>
               </p>
 
@@ -1121,10 +1450,10 @@ export default function KundliDetail({ uuid }) {
               <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.08 }}
                 className="card-royal p-5">
                 <p className="font-serif text-gold text-sm font-semibold text-center mb-3">
-                  🔯 D9 Navamsha
+                  🔯 {t(lang, 'D9 Navamsha', 'D9 नवांश')}
                   <span className="text-gold/40 text-[10px] ml-2 normal-case font-sans">
-                    {lang==='hi' ? chart.navamsha.ascendant?.rashi_hi : chart.navamsha.ascendant?.rashi_en} Lagna ·{' '}
-                    {chartStyle === 'south' ? 'South Indian' : 'North Indian'}
+                    {lang==='hi' ? chart.navamsha.ascendant?.rashi_hi : chart.navamsha.ascendant?.rashi_en} {t(lang, 'Lagna', 'लग्न')} ·{' '}
+                    {chartStyleLabel(chartStyle, lang)}
                   </span>
                 </p>
                 <AnimatePresence mode="wait">
@@ -1146,7 +1475,7 @@ export default function KundliDetail({ uuid }) {
                 className="grid grid-cols-2 gap-3">
                 {[
                   { l: lang==='hi'?'लग्न':'Ascendant',  v: lang==='hi'?chart.ascendant.rashi_hi:chart.ascendant.rashi_en,   s: chart.ascendant.degree_in_sign_dms, c:'#D4AF37' },
-                  { l: lang==='hi'?'नक्षत्र':'Nakshatra', v: lang==='hi'?chart.nakshatra.hi:chart.nakshatra.en,               s:`Pada ${chart.nakshatra.pada}`,        c:'#A78BFA' },
+                  { l: lang==='hi'?'नक्षत्र':'Nakshatra', v: lang==='hi'?chart.nakshatra.hi:chart.nakshatra.en,               s:t(lang, `Pada ${chart.nakshatra.pada}`, `चरण ${chart.nakshatra.pada}`),        c:'#A78BFA' },
                   { l: lang==='hi'?'चन्द्र':'Moon',      v: lang==='hi'?chart.planets.Moon.rashi_hi:chart.planets.Moon.rashi_en, s: chart.planets.Moon.degree_in_sign_dms, c:'#94A3B8' },
                   { l: lang==='hi'?'सूर्य':'Sun',         v: lang==='hi'?chart.planets.Sun.rashi_hi:chart.planets.Sun.rashi_en,  s: chart.planets.Sun.degree_in_sign_dms,  c:'#F59E0B' },
                 ].map(({ l, v, s, c }) => (
@@ -1194,8 +1523,8 @@ export default function KundliDetail({ uuid }) {
                               <div className="flex items-center gap-2">
                                 <span style={{ color:meta.color, fontSize:13, width:16 }}>{meta.icon}</span>
                                 <div>
-                                  <p className="text-ivory text-xs font-medium">{name}</p>
-                                  <p className="text-ivory/30 text-[9px] font-devanagari">{meta.hi}</p>
+                                  <p className="text-ivory text-xs font-medium font-devanagari">{planetName(name, lang)}</p>
+                                  <p className="text-ivory/30 text-[9px] font-devanagari">{lang === 'hi' ? name : meta.hi}</p>
                                 </div>
                               </div>
                             </td>
@@ -1209,14 +1538,14 @@ export default function KundliDetail({ uuid }) {
                               {pd.degree_in_sign_dms}
                             </td>
                             <td className="py-2.5 pr-3 text-ivory/45 text-[11px]">
-                              {houseNum ? `H${houseNum}` : '—'}
+                              {houseNum ? houseLabel(houseNum, lang) : '—'}
                             </td>
                             <td className="py-2.5">
                               <span style={{
                                 fontSize:10, padding:'2px 7px', borderRadius:12, fontWeight:600,
                                 background: ds.bg, color: ds.color,
                               }}>
-                                {pd.dignity.split('(')[0].trim() || pd.dignity}
+                                {dignityLabel(pd.dignity, lang)}
                               </span>
                             </td>
                           </tr>
@@ -1290,12 +1619,12 @@ export default function KundliDetail({ uuid }) {
                             )}
                           </div>
                           <span style={{ color:'rgba(245,240,232,0.35)', fontSize:10, fontFamily:'monospace' }}>
-                            {d.start} → {d.end}
+                          {d.start} → {d.end}
                           </span>
                         </div>
 
                         <span style={{ color:'rgba(245,240,232,0.25)', fontSize:10, flexShrink:0 }}>
-                          {d.full_years}Y
+                          {d.full_years}{lang === 'hi' ? ' वर्ष' : 'Y'}
                         </span>
                       </div>
                     );
@@ -1304,7 +1633,7 @@ export default function KundliDetail({ uuid }) {
                 {curDasha?.antardasha && (
                   <div className="mt-5 pt-4 border-t border-gold/10">
                     <h3 className="text-gold/80 text-xs uppercase tracking-[0.22em] mb-3">
-                      Current Antardasha
+                      {t(lang, 'Current Antardasha', 'वर्तमान अंतर्दशा')}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {curDasha.antardasha.map((ad) => {
@@ -1312,8 +1641,8 @@ export default function KundliDetail({ uuid }) {
                         return (
                           <div key={`${ad.lord}-${ad.start}`} className={`rounded border p-2 ${isCur ? 'border-gold/45 bg-gold/10' : 'border-gold/10 bg-white/3'}`}>
                             <div className="flex justify-between gap-2">
-                              <span className="text-ivory text-xs">{ad.lord}</span>
-                              {isCur && <span className="text-gold text-[9px] uppercase">Now</span>}
+                              <span className="text-ivory text-xs font-devanagari">{planetName(ad.lord, lang)}</span>
+                              {isCur && <span className="text-gold text-[9px] uppercase">{t(lang, 'Now', 'चालू')}</span>}
                             </div>
                             <p className="text-ivory/35 text-[10px] mt-1">{ad.start} → {ad.end}</p>
                           </div>
@@ -1330,41 +1659,47 @@ export default function KundliDetail({ uuid }) {
               <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.18 }}
                 className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="card-royal p-5">
-                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Mangal Dosha</h2>
-                  <p className="text-ivory/75 text-sm">{chart.mangal_dosha?.summary_en || 'Not calculated'}</p>
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">{t(lang, 'Mangal Dosha', 'मंगल दोष')}</h2>
+                  <p className="text-ivory/75 text-sm font-devanagari">
+                    {lang === 'hi'
+                      ? (chart.mangal_dosha?.has_dosha
+                        ? `मंगल दोष ${chart.mangal_dosha.checks?.filter((c) => c.has_dosha).map((c) => `${c.basis === 'Lagna' ? 'लग्न' : c.basis === 'Moon' ? 'चंद्र' : 'शुक्र'} से ${houseLabel(c.house, 'hi')}`).join(', ')} में दिखता है। प्रभाव: ${strengthLabel(chart.mangal_dosha.severity, 'hi')}।`
+                        : 'लग्न, चंद्र और शुक्र से प्रमुख मंगल दोष नहीं दिखता।')
+                      : (chart.mangal_dosha?.summary_en || 'Not calculated')}
+                  </p>
                   <div className="grid grid-cols-3 gap-2 mt-4">
                     {(chart.mangal_dosha?.checks || []).map((check) => (
                       <div key={check.basis} className={`rounded border p-2 text-center ${check.has_dosha ? 'border-gold/40 bg-gold/10' : 'border-gold/10 bg-white/3'}`}>
-                        <p className="text-[10px] text-ivory/35">{check.basis}</p>
-                        <p className="text-sm text-gold mt-1">H{check.house}</p>
+                        <p className="text-[10px] text-ivory/35">{check.basis === 'Lagna' ? t(lang, 'Lagna', 'लग्न') : check.basis === 'Moon' ? t(lang, 'Moon', 'चंद्र') : t(lang, 'Venus', 'शुक्र')}</p>
+                        <p className="text-sm text-gold mt-1">{houseLabel(check.house, lang)}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div className="card-royal p-5">
-                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Gochar</h2>
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">{t(lang, 'Gochar', 'गोचर')}</h2>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between border-b border-gold/8 pb-2">
-                      <span className="text-ivory/45">Sade Sati</span>
-                      <span className="text-ivory">{chart.gochar?.highlights?.sade_sati?.active ? chart.gochar.highlights.sade_sati.phase : 'Inactive'}</span>
+                      <span className="text-ivory/45">{t(lang, 'Sade Sati', 'साढ़ेसाती')}</span>
+                      <span className="text-ivory">{chart.gochar?.highlights?.sade_sati?.active ? localizeAstroText(chart.gochar.highlights.sade_sati.phase, lang) : t(lang, 'Inactive', 'सक्रिय नहीं')}</span>
                     </div>
                     <div className="flex justify-between border-b border-gold/8 pb-2">
-                      <span className="text-ivory/45">Jupiter</span>
-                      <span className="text-ivory">{chart.gochar?.highlights?.jupiter_support?.favorable ? 'Supportive' : 'Patient'}</span>
+                      <span className="text-ivory/45">{t(lang, 'Jupiter', 'गुरु')}</span>
+                      <span className="text-ivory">{chart.gochar?.highlights?.jupiter_support?.favorable ? t(lang, 'Supportive', 'सहायक') : t(lang, 'Patient', 'धैर्य चाहिए')}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-ivory/45">Rahu Ketu</span>
+                      <span className="text-ivory/45">{t(lang, 'Rahu Ketu', 'राहु केतु')}</span>
                       <span className="text-ivory">{chart.gochar?.highlights?.rahu_ketu_axis || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="card-royal p-5 md:col-span-2">
-                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Prediction Engine</h2>
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">{t(lang, 'Prediction Engine', 'भविष्यवाणी इंजन')}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {(chart.predictions?.summary_en || []).map((line, index) => (
-                      <p key={index} className="border border-gold/10 rounded p-3 text-sm text-ivory/70">{line}</p>
+                    {predictionSummaryLines(chart, lang).map((line, index) => (
+                      <p key={index} className="border border-gold/10 rounded p-3 text-sm text-ivory/70 font-devanagari">{line}</p>
                     ))}
                   </div>
                 </div>
@@ -1387,19 +1722,19 @@ export default function KundliDetail({ uuid }) {
                           : 'border-gold/10 hover:border-gold/20'
                       }`}>
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-[9px] text-ivory/35 uppercase tracking-wider font-medium">H{h.house_num}</span>
+                        <span className="text-[9px] text-ivory/35 uppercase tracking-wider font-medium">{houseLabel(h.house_num, lang)}</span>
                         <span className="text-[10px] text-ivory/55 font-devanagari">
                           {lang==='hi' ? h.rashi_hi : h.rashi_en?.split(' ')[0]}
                         </span>
                       </div>
                       <p className="text-[9px] text-ivory/30">
-                        {lang==='hi'?'स्वामी':'Lord'}: <span className="text-gold/55">{h.rashi_lord}</span>
+                        {lang==='hi'?'स्वामी':'Lord'}: <span className="text-gold/55">{planetName(h.rashi_lord, lang)}</span>
                       </p>
                       {h.planets.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {h.planets.map(p => (
                             <span key={p} style={{ color: PLANET_META[p]?.color || '#D4AF37', fontSize:10 }}>
-                              {PLANET_META[p]?.icon}{p.slice(0,2)}
+                              {PLANET_META[p]?.icon}{planetName(p, lang).slice(0,2)}
                             </span>
                           ))}
                         </div>
@@ -1412,6 +1747,11 @@ export default function KundliDetail({ uuid }) {
             {/* Personality Insights (from nakshatra DB) */}
             {nakshatraInsight && (
               <PersonalityInsights insight={nakshatraInsight} chart={chart} lang={lang} />
+            )}
+
+            {/* Life Portrait — who you are + current dasha meaning */}
+            {chart?.predictions?.portrait && (
+              <LifePortraitPanel chart={chart} lang={lang} />
             )}
 
           </div>
@@ -1445,15 +1785,15 @@ export default function KundliDetail({ uuid }) {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span style={{ color: meta.color, fontSize: 14 }}>{meta.icon}</span>
-                        <span className="text-ivory text-xs font-semibold">{d.planet}</span>
+                        <span className="text-ivory text-xs font-semibold font-devanagari">{planetName(d.planet, lang)}</span>
                         {d.has_digbala && (
                           <span style={{ fontSize:9, padding:'1px 6px', borderRadius:10, background:'rgba(34,197,94,0.2)', color:'#22C55E', fontWeight:700, textTransform:'uppercase' }}>
-                            Digbala ✓
+                            {t(lang, 'Digbala', 'दिग्बल')} ✓
                           </span>
                         )}
                         {d.has_digbala_loss && (
                           <span style={{ fontSize:9, padding:'1px 6px', borderRadius:10, background:'rgba(239,68,68,0.15)', color:'#EF4444', fontWeight:700, textTransform:'uppercase' }}>
-                            Lost
+                            {t(lang, 'Lost', 'ह्रास')}
                           </span>
                         )}
                       </div>
@@ -1465,9 +1805,9 @@ export default function KundliDetail({ uuid }) {
                     </div>
                     <div className="flex justify-between text-[9px] text-ivory/35">
                       <span>
-                        {lang==='hi' ? 'भाव' : 'House'} {d.planet_house} ({d.rashi_en})
+                        {houseLabel(d.planet_house, lang)} ({d.rashi_en})
                         {'  →  '}
-                        {lang==='hi' ? 'शक्तिशाली भाव' : 'Strong at'} H{d.strong_house}
+                        {lang==='hi' ? 'शक्तिशाली भाव' : 'Strong at'} {houseLabel(d.strong_house, lang)}
                       </span>
                       <span style={{ color: '#A78BFA' }}>
                         {d.strong_direction?.[lang === 'hi' ? 'hi' : 'en']}
@@ -1502,13 +1842,13 @@ export default function KundliDetail({ uuid }) {
                     className="border border-gold/12 rounded p-3 hover:border-gold/25 transition-colors">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gold/70 text-[10px] font-bold uppercase tracking-wider">
-                        H{bk.house}
+                        {houseLabel(bk.house, lang)}
                       </span>
                       <div className="flex gap-1">
                         {bk.karakas.map((p) => (
                           <span key={p}
                             style={{ fontSize:10, color: PLANET_META[p]?.color || '#D4AF37', fontWeight:700 }}>
-                            {PLANET_META[p]?.icon}{p.slice(0,2)}
+                            {PLANET_META[p]?.icon}{planetName(p, lang).slice(0,2)}
                           </span>
                         ))}
                       </div>
@@ -1525,13 +1865,13 @@ export default function KundliDetail({ uuid }) {
                         <div key={kp.planet}
                           className="flex items-center justify-between mt-1 border-t border-white/4 pt-1">
                           <span style={{ color: meta.color, fontSize:10 }}>
-                            {meta.icon} {kp.planet}
+                            {meta.icon} {planetName(kp.planet, lang)}
                           </span>
                           <span style={{ fontSize:9, color: qualityColor }}>
-                            H{kp.house} · {kp.rashi_en}
+                            {houseLabel(kp.house, lang)} · {lang === 'hi' ? localizeAstroText(kp.rashi_en, lang) : kp.rashi_en}
                             {kp.placement_quality !== 'other' && (
                               <span style={{ marginLeft:4, opacity:0.7 }}>
-                                ({kp.placement_quality})
+                                ({lang === 'hi' ? localizeAstroText(kp.placement_quality, lang) : kp.placement_quality})
                               </span>
                             )}
                             {kp.is_in_own_karak_house && (
@@ -1578,11 +1918,11 @@ export default function KundliDetail({ uuid }) {
                     }}>
                     <div className="flex items-center gap-2 mb-2">
                       <span style={{ color: meta.color, fontSize:13 }}>{meta.icon}</span>
-                      <span className="text-ivory text-xs font-semibold">{planet}</span>
-                      <span className="text-ivory/30 text-[9px]">H{info.from_house}</span>
+                      <span className="text-ivory text-xs font-semibold font-devanagari">{planetName(planet, lang)}</span>
+                      <span className="text-ivory/30 text-[9px]">{houseLabel(info.from_house, lang)}</span>
                       {hasSpecial && (
                         <span style={{ fontSize:8, padding:'1px 5px', borderRadius:8, background:'rgba(212,175,55,0.15)', color:'#D4AF37', marginLeft:'auto' }}>
-                          Special
+                          {t(lang, 'Special', 'विशेष')}
                         </span>
                       )}
                     </div>
@@ -1597,7 +1937,7 @@ export default function KundliDetail({ uuid }) {
                           <span key={offset}
                             style={{ fontSize:9, padding:'2px 7px', borderRadius:10, fontWeight:600,
                               background:`${natColor}18`, color:natColor, border:`1px solid ${natColor}33` }}>
-                            H{house} ({offset}th)
+                            {houseLabel(house, lang)} ({lang === 'hi' ? `${offset}वीं` : `${offset}th`})
                           </span>
                         );
                       })}
@@ -1617,12 +1957,12 @@ export default function KundliDetail({ uuid }) {
                   className={`border rounded p-2 text-center ${
                     planets.length ? 'border-gold/20 bg-gold/4' : 'border-gold/8'
                   }`}>
-                  <p className="text-[9px] text-ivory/35 uppercase tracking-wider mb-1">H{house}</p>
+                  <p className="text-[9px] text-ivory/35 uppercase tracking-wider mb-1">{houseLabel(house, lang)}</p>
                   {planets.length ? (
                     <div className="flex flex-wrap gap-0.5 justify-center">
                       {planets.map((p) => (
                         <span key={p} style={{ fontSize:9, color: PLANET_META[p]?.color || '#D4AF37', fontWeight:700 }}>
-                          {p.slice(0,2)}
+                          {planetName(p, lang).slice(0,2)}
                         </span>
                       ))}
                     </div>
@@ -1633,6 +1973,11 @@ export default function KundliDetail({ uuid }) {
               ))}
             </div>
           </motion.div>
+        )}
+
+        {/* ── Yogas & Doshas ──────────────────────────────────────────────── */}
+        {chart?.yogas_doshas && (
+          <YogasAndDoshasPanel chart={chart} lang={lang} />
         )}
 
         {/* Bottom nav */}

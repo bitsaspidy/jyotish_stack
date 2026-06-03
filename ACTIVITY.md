@@ -2,7 +2,7 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-02 (Session 3)
+> Last updated: 2026-06-03 (Session 13)
 
 ---
 
@@ -1082,4 +1082,330 @@ Data source: `nakshatras` table detailed notes (seeded in Session 9, migration 0
 
 ---
 
+---
+
+## Session 11 — 2026-06-03 | Life Portrait + Rich Prediction Engine
+
+### ✅ TASK-038 — Life Portrait Panel + Expanded Prediction Engine
+**Status:** Done
+**Files updated:**
+- `server/src/services/vedic-calc.service.js`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ui-main/src/views/Predictions.jsx`
+
+#### Server — `generateRuleBasedPredictions()` fully rewritten
+
+**New reference data added:**
+- `LAGNA_PORTRAIT` — 12 lagna portrait paragraphs (who you are, outer personality)
+- `MOON_SIGN_PORTRAIT` — 12 moon sign emotional portraits
+- `DASHA_LORD_MEANINGS` — 9 planets with full paragraphs for: career, relationships, health, finance, spirituality, opportunities, cautions
+- `SADE_SATI_DESC` — 4 phase descriptions (rising, peak, setting, none)
+
+**New prediction output structure:**
+```javascript
+predictions: {
+  portrait: {
+    lagna_en,       // paragraph: who you are from Lagna
+    moon_en,        // paragraph: your emotional world from Moon
+    nakshatra_en,   // paragraph: your soul nature from Nakshatra
+    combined_en,    // 2-sentence overall identity summary
+  },
+  current_period: {
+    mahadasha: { lord, end, nature },
+    antardasha: { lord, end, nature },
+    combined_en,    // full paragraph: what this dasha combination means
+  },
+  life_areas: {
+    career:        { outlook, description_en, keywords },
+    relationships: { outlook, description_en, keywords },
+    health:        { outlook, description_en, keywords },
+    finance:       { outlook, description_en, keywords },
+    spirituality:  { outlook, description_en, keywords },
+  },
+  gochar_narrative: {
+    sade_sati: { active, phase, description_en },
+    jupiter:   { favorable, description_en },
+    rahu_ketu: { axis, description_en },
+    overall_en,
+  },
+  current_challenges: [],  // list of things to watch
+  current_opportunities: [],  // list of things going well
+  remedies: [],            // dasha-based remedies (placeholder for PDF)
+  summary_en: [],          // legacy 5-line format (backwards compat)
+  categories: {},          // legacy field (backwards compat)
+}
+```
+
+#### KundliDetail — `LifePortraitPanel` component added
+- New panel with 2 tabs: **Who You Are** | **Current Period**
+- "Who You Are" tab: Lagna portrait, Moon portrait, Nakshatra soul paragraphs (narrative, not raw data)
+- "Current Period" tab: Mahadasha + Antardasha badges with dates, combined meaning paragraph, mahadasha nature
+- Inserted after PersonalityInsights panel in the right column
+- Data sourced from `chart.predictions.portrait` and `chart.predictions.current_period`
+
+#### Predictions page — fully rebuilt
+- **Identity Banner**: Name, Lagna, Moon, Nakshatra + combined portrait sentence
+- **Who You Are**: Lagna portrait, Moon portrait, Nakshatra soul — all rich paragraphs
+- **What This Period Means**: Dasha badges + detailed combined meaning paragraph
+- **Life Area Readings** (5 collapsible cards): Career, Relationships, Health, Finance, Spirituality — each with outlook badge and detailed paragraph
+- **Opportunities & Challenges**: Tabbed card with bullet items
+- **Transit Influences**: Sade Sati (active/inactive with phase description), Jupiter transit, Rahu-Ketu axis — all with detailed paragraphs
+- **Remedies**: Dasha-appropriate remedies (placeholder for PDF; will be enhanced when owner provides remedy PDF)
+
+**Remedy structure is ready** — `predictions.remedies[]` in the API, `<RemediesCard>` in the UI. When the owner provides the remedy PDF, populate this array from the DB.
+
+**Verification:**
+```
+node --check server/src/services/vedic-calc.service.js  ✓
+npm run test:server  → 12/12 passed
+npm run build:main   → 25/25 pages
+```
+
+---
+
+## Session 11 (continued) — Remedy PDF Integration
+
+### ✅ TASK-039 — Vedic Jyotish Remedial Manual → DB + UI
+**Status:** Done
+**Source:** `Remedy Class 1 Notes - 4th May 2026.pdf` (AstroAnsh by Saiansh Arya)
+**Files created/updated:**
+- `server/src/migrations/012_remedy_data.js`
+- `server/src/seeds/009_remedy_data.js`
+- `server/src/routes/kundli.routes.js`
+- `ui-main/src/views/Predictions.jsx`
+
+#### 4 subtasks completed:
+
+**A — Migration (012_remedy_data.js)**
+3 new tables:
+- `remedy_planets` — 9 Navagrahas with Ishta Devata, mantras EN+HI, special notes EN+HI
+- `remedy_problems` — 7 specific life problems with prescribed mantras from Section 7 of PDF
+- `remedy_puja_steps` — 5 steps of the daily puja sequence from Section 6 of PDF
+
+**B — Seed (009_remedy_data.js)**
+From PDF — all data bilingual (EN + HI):
+- 9 rows in `remedy_planets`:
+  Sun→Rama/SuryaNarayan, Moon→Krishna/Shiva, Mars→Hanuman/Kartikeya/Narsimha,
+  Mercury→Vishnu, Jupiter→Vishnu/Brihaspati, Venus→Lakshmi/Parvati,
+  Saturn→Shani/Bhairava/Rudra, Rahu→Durga/Kali, Ketu→Ganesha
+- 7 rows in `remedy_problems`:
+  Diseases, Debts, Miscarriage, Anger/Aggression, Vastu Dosh, Wealth, Intelligence/Learning
+- 5 rows in `remedy_puja_steps`:
+  Step 0 (Ganesh invocation), 1 (Ishta Devata), 2 (Lagna Lord), 3 (Atmakarak), T&C (Shakti Pujan)
+
+**C — Server (kundli.routes.js)**
+- Added `fetchDashaRemedies(dashaLord, lagnaLord)` helper
+- Queries `remedy_planets` for current Mahadasha lord + Lagna lord
+- Includes complete `puja_sequence` from `remedy_puja_steps`
+- Returns `remedy_data: { dasha_planet, lagna_planet, puja_sequence }` in both:
+  - `GET /api/kundli/:id`
+  - `POST /api/kundli/:id/recalculate`
+
+**D — UI (Predictions.jsx)**
+`RemediesCard` component rebuilt with 3 tabs:
+- **Dasha Remedy** — Current Mahadasha planet: Ishta Devata (EN+HI), prescribed mantras (EN+HI), special notes (EN+HI)
+- **Lagna Remedy** — Lagna lord planet: same structure
+- **Puja Sequence** — Step-by-step daily puja with step number circles, action EN+HI, description EN+HI, conditional step marked orange
+
+**DB verification:**
+```
+remedy_planets: 9 ✓
+remedy_problems: 7 ✓
+remedy_puja_steps: 5 ✓
+```
+**Build:** 25/25 pages ✓
+
+**Note for next PDF uploads:** When owner provides Remedy Class 2, 3, etc., add new rows to `remedy_problems` and `remedy_planets` via new seed files without touching the migration. The UI picks them up automatically.
+
 *Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 12 — 2026-06-03 | Yogas & Doshas — Reference DB + Live Detection + UI Panel
+
+### ✅ TASK-040 — Yogas & Doshas from AstroAnsh Class 11 & 12 PDF
+**Status:** Done
+**Source:** `AstroAnsh Class 11 and 12 Premium Notes - Yogas and Doshas.pdf` (31 pages, BPHS-based)
+
+**Files created/updated:**
+- `server/src/migrations/013_yogas_doshas.js`
+- `server/src/seeds/010_yogas_doshas.js`
+- `server/src/services/vedic-calc.service.js`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ACTIVITY.md`
+
+#### A — Migration (013_yogas_doshas.js)
+2 new reference tables:
+- `yogas_library` — 12 yogas with EN+HI definitions, formation rules, symptoms, effects, cancellation conditions
+- `doshas_library` — 14 dosha rows (13 types; Grahan split into Surya + Chandra) with same structure + technical_note
+
+#### B — Seed (010_yogas_doshas.js)
+Complete bilingual data from PDF:
+
+**12 Yogas seeded:**
+| Yoga | Category |
+|------|----------|
+| Gajakesari Yoga | power |
+| Budh-Aditya Yoga | intellect |
+| Neech Bhanga Raj Yoga | power |
+| Saraswati Yoga | wisdom |
+| Kalaneedhi Yoga | wealth |
+| Chandra-Mangal Laxmi Yoga | wealth |
+| Dhan Yoga (incl. Laxmi, Adhi, Maha Dhan) | wealth |
+| Raj Yoga | power |
+| Vipreet Raj Yoga (Harsha/Sarala/Vimala) | power |
+| Parivartan Yoga (Raj/Dhan/Dusthana) | general |
+| Guru-Aditya Yoga | wisdom |
+| Shatru Hanta Yoga | victory |
+
+**14 Dosha rows seeded:**
+| Dosha | Category |
+|-------|----------|
+| Pitru Dosha | karmic |
+| Surya-Shani Vish Dosha | vish |
+| Mangal-Shani Vish Dosha | vish |
+| Moon-Shani Vish Dosha | vish |
+| Amavasya Dosha | luminary |
+| Angarak Dosha (Mars+Rahu) | vish |
+| Shaapit Dosha (Saturn+Rahu) | karmic |
+| Surya Grahan Dosha | grahan |
+| Chandra Grahan Dosha | grahan |
+| Guru Chandaal Dosha | karmic |
+| Venus-Mangal Vish Dosha | vish |
+| Venus-Rahu Vish Dosha | vish |
+| Kemdrum Dosha | luminary |
+| Paap Kartari Dosha | general |
+
+#### C — Detection Engine (`vedic-calc.service.js`)
+New `detectYogasAndDoshas(chart)` function added. Wired into `calculateVedicChart()` → `chart.yogas_doshas`.
+
+**Private helpers added:** `_signAdd()`, `_getAspects()`, `_aspects()`, `_isConjunct()`, `_mutuallyRelated()`, `_isParivartana()`, `_houseSignNum()`, `_houseLord()`, `_planetHouse()`
+
+**All 12 yogas detected with live chart rules:**
+- Gajakesari: Moon-Jupiter Kendra from each other
+- Budh-Aditya: Sun-Mercury conjunct (checks combust threshold)
+- Neech Bhanga: debilitated planet + any 1 of 3 cancellation conditions
+- Saraswati: Jupiter+Venus+Mercury all in Kendra/Trikona/2nd AND mutually related
+- Kalaneedhi: Venus/Jupiter in H2 or H5 with Mercury aspect/conjunction
+- Chandra-Mangal: Moon and Mars conjunct or in mutual aspect
+- Dhan Yoga group: Laxmi (9th lord exalted in Kendra/Trikona), Adhi (benefics 6/7/8 from Moon), Dhan (wealth lord pairs connected)
+- Raj Yoga: Kendra lord ↔ Trikona lord mutual relation
+- Vipreet Raj Yoga: Harsha (6th lord in 8/12), Sarala (8th lord in 6/12), Vimala (12th lord in 6/8)
+- Parivartan: sign exchange pairs with Raj/Dhan/Dusthana classification
+- Guru-Aditya: Sun-Jupiter conjunct
+- Shatru Hanta: multiple conditions (6th lord in 12, Mars in H6 strong, Sun in H6 Leo, etc.)
+
+**All 13 dosha types detected:**
+- Pitru: Rahu/Ketu/malefics in 9th or Sun debilitated
+- Vish Doshas (Sun-Shani, Mangal-Shani, Moon-Shani): same-house conjunction
+- Amavasya: Sun-Moon within 12° same sign (checks Jupiter aspect relief)
+- Angarak: Mars-Rahu same house
+- Shaapit: Saturn-Rahu same house
+- Grahan: Sun/Moon eclipsed by Rahu or Ketu
+- Guru Chandaal: Jupiter + Rahu or Ketu
+- Venus-Mangal / Venus-Rahu Vish
+- Kemdrum: Moon alone (no planets in 2nd or 12th from it)
+- Paap Kartari: Kendra houses hemmed by malefics on both sides
+
+Each detected yoga/dosha includes: `name`, `name_hi`, `strength/severity`, `trigger_en`, `trigger_hi`, `planets_involved`.
+
+**Test — Rahul Sharma (1990-05-15, 10:30 IST, New Delhi):**
+```
+Yogas (5): Gajakesari(weak), Dhan Yoga(moderate), Raj Yoga(strong), Vipreet Raj Yoga(moderate), Shatru Hanta(strong)
+Doshas (1): Shaapit Dosha (strong) — Saturn+Rahu in Capricorn H7
+```
+
+#### D — UI (KundliDetail.jsx)
+New `YogasAndDoshasPanel` component added. Renders below Graha Drishti panel.
+- Header shows yoga count (green) and dosha count (red/amber)
+- Two tabs: Yogas | Doshas
+- **Yogas tab:** Each yoga card shows name (EN+HI), strength badge (green/amber/red), trigger description, planet chips
+- **Doshas tab:** Each dosha card shows with severity-colored border, severity badge, trigger description, planet chips
+- Empty state message for both tabs
+- Planet chips colored with PLANET_META colors for instant identification
+
+**DB verification:**
+```
+yogas_library:  12 rows ✓
+doshas_library: 14 rows ✓
+```
+**Tests:** 12/12 server tests passing ✓
+**Build:** 25/25 pages ✓
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 13 — 2026-06-03 | Kundli Yogas/Doshas Detail Expansion + Hindi UI Coverage
+
+### ✅ TASK-041 — Expanded Yogas & Doshas UI and Hindi Translation Coverage
+**Status:** Done  
+**Agent:** Alex (Codex GPT-5)
+
+**Objective:** Improve the Kundli Yogas & Doshas panel from a compact trigger list into a more descriptive interpretation surface, and fix Hindi mode so major Kundli/Predictions UI areas no longer remain English-only.
+
+**Files created/updated:**
+- `ui-main/src/lib/astroI18n.js` — new shared astrology i18n helper module
+- `ui-main/src/views/KundliDetail.jsx` — richer Yogas/Doshas cards + broader Hindi labels/values
+- `ui-main/src/views/Predictions.jsx` — Hindi-aware prediction, gochar, remedy, opportunity/challenge rendering
+- `MEMORY.md` — updated Session 13 memory notes
+- `ACTIVITY.md` — this entry
+
+#### A — Shared i18n helper (`astroI18n.js`)
+Added centralized helpers for:
+- Planet names EN/HI
+- House labels and `until` text
+- Chart style labels (North/South Indian)
+- Strength/severity/outlook badges
+- Dignity labels
+- Nitya Yoga and Karana Hindi names
+- Yoga/Dosha detail lookup with category, formation rule, likely result, and guidance in EN+HI
+- Hindi fallback text for Life Portrait, Current Period, Life Areas, Gochar, summary lines, and list items
+
+#### B — KundliDetail UI
+Improved Hindi coverage across:
+- Chart loading captions and chart explanatory captions
+- Chart style toggle labels
+- Edit Birth Details modal labels, placeholders, search/save/cancel/error/success messages
+- Basic Details / Ghat Chakra / Astro Details row labels
+- Nitya Yoga and Karana values in Hindi
+- Planet table planet names, house labels, and dignity status
+- Dasha and Antardasha timeline labels
+- Mangal Dosha, Gochar, and Prediction Engine summary cards
+- House grid, Digbala, Bhav Karak, and Graha Drishti planet/house/status labels
+
+#### C — Yogas & Doshas panel
+Rebuilt each detected Yoga/Dosha card to show:
+- Primary name in selected language + secondary name
+- Strength/severity badge translated
+- Category badge (power, wealth, karmic, vish, etc.)
+- "Detected in this chart" trigger
+- Formation rule
+- Likely result / likely pressure
+- Practical guidance / balancing guidance
+- Planet chips translated in Hindi mode
+
+#### D — Predictions page
+Improved Hindi coverage for:
+- Active period sidebar
+- Identity banner
+- Life Portrait paragraphs using Hindi fallback generation
+- Current period interpretation
+- Life area cards and keyword chips
+- Opportunities and challenges list text
+- Gochar cards
+- Vedic remedy tabs, mantras, notes, and puja sequence with Hindi-first rendering in Hindi mode
+
+**Verification:**
+```bash
+npm.cmd run test:server   # 12/12 tests passed
+npm.cmd run build:main    # Next.js production build passed, 25/25 pages generated
+```
+
+**Browser smoke check:**
+- Existing `localhost:3000` dev process had stale/missing Next assets after `.next` was rebuilt.
+- Started a fresh `ui-main` dev server on `http://localhost:3005`.
+- `GET /kundli` returned 200 and API `GET /health` returned `{"success":true,"status":"ok"}`.
+- Playwright smoke check reached the protected `/kundli` route and redirected to `/login` as expected.
+- Fresh browser console on port 3005 showed only `favicon.ico` 404; no runtime errors from changed UI code were observed before auth.
+- Default documented admin login returned `403` in the current local DB, so protected Kundli detail visual inspection was not completed through the browser.

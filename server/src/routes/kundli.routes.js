@@ -75,6 +75,27 @@ function fileSafe(value) {
   return String(value || 'report').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'report';
 }
 
+// Fetch remedy data from DB for the current Mahadasha lord + Lagna lord
+async function fetchDashaRemedies(dashaLord, lagnaLord) {
+  try {
+    const planets = [...new Set([dashaLord, lagnaLord].filter(Boolean))];
+    const rows = await db('remedy_planets').whereIn('planet', planets);
+    const pujaSteps = await db('remedy_puja_steps').orderBy('sort_order');
+
+    const parsed = rows.map((r) => {
+      const parse = (v) => { try { return JSON.parse(v); } catch { return []; } };
+      return { ...r, mantras_en: parse(r.mantras_en), mantras_hi: parse(r.mantras_hi) };
+    });
+    const stepsOut = pujaSteps.map((s) => ({ ...s }));
+
+    return {
+      dasha_planet: parsed.find((r) => r.planet === dashaLord) || null,
+      lagna_planet: parsed.find((r) => r.planet === lagnaLord) || null,
+      puja_sequence: stepsOut,
+    };
+  } catch { return null; }
+}
+
 // Fetch detailed nakshatra insight from DB for a given nakshatra number (1-27)
 async function fetchNakshatraInsight(nakNum) {
   if (!nakNum) return null;
@@ -299,6 +320,11 @@ router.get('/:id', async (req, res) => {
   const nakNum = profile.calculated_data?.nakshatra?.num;
   profile.nakshatra_insight = await fetchNakshatraInsight(nakNum);
 
+  // Attach remedy data — current Mahadasha lord + Lagna lord
+  const cd = profile.calculated_data;
+  const currentDasha = Array.isArray(cd?.dasha) ? cd.dasha.find((d) => d.is_current) || cd.dasha[0] : null;
+  profile.remedy_data = await fetchDashaRemedies(currentDasha?.lord, cd?.ascendant?.rashi_lord);
+
   return ok(res, { profile });
 });
 
@@ -318,6 +344,10 @@ router.post('/:id/recalculate', async (req, res) => {
   // Attach nakshatra insight from DB
   const nakNum = chart?.nakshatra?.num;
   freshProfile.nakshatra_insight = await fetchNakshatraInsight(nakNum);
+
+  // Attach remedy data
+  const currentDasha = Array.isArray(chart?.dasha) ? chart.dasha.find((d) => d.is_current) || chart.dasha[0] : null;
+  freshProfile.remedy_data = await fetchDashaRemedies(currentDasha?.lord, chart?.ascendant?.rashi_lord);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });

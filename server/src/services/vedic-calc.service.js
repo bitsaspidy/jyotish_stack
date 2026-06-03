@@ -780,31 +780,296 @@ function calculateTransitSummary(natalChart, p, atDate = new Date()) {
   };
 }
 
+// ─── Prediction Reference Data ────────────────────────────────────────────────
+
+const LAGNA_PORTRAIT = {
+  1:  { en: 'You are a natural pioneer with Aries Lagna, ruled by Mars. You carry fierce energy, raw courage, and an unstoppable drive to initiate. People around you sense your confidence before you even speak. You are at your best when there is a challenge to overcome or a new trail to blaze. Your weakness is impatience — you want things done immediately. The world needs your fire; balance it with wisdom and patience.' },
+  2:  { en: 'Taurus Lagna, ruled by Venus, gives you a grounded, reliable, and deeply sensory nature. You build things that last — relationships, wealth, and reputation. You move steadily, and once your mind is set, very little can move you. You have a natural appreciation for beauty and the finer things in life. Your gift is persistence; your challenge is releasing stubborn attachment.' },
+  3:  { en: 'With Gemini Lagna, ruled by Mercury, you are sharp, curious, and endlessly adaptable. Your mind connects ideas, people, and possibilities that others miss. You communicate naturally and can hold multiple perspectives at once. You thrive in variety and wither in monotony. Your challenge is scattered energy — depth requires slowing the restless mind and committing fully.' },
+  4:  { en: 'Cancer Lagna, ruled by the Moon, makes you deeply intuitive, emotionally perceptive, and profoundly nurturing. You carry the world in your heart and feel things that words cannot reach. Home, family, and belonging are your anchors. Your sensitivity is your superpower, but it can cause you to absorb others\' pain. Learning to set emotional boundaries is your lifelong practice.' },
+  5:  { en: 'Leo Lagna, ruled by the Sun, gives you a natural radiance that draws people in. You were born to lead, create, and inspire. There is a kingly quality to your presence — warm and generous when secure, proud when not. You need recognition because your soul genuinely wants to make an impact. Your challenge is the ego: when the self becomes too large, it blocks the very light you were born to share.' },
+  6:  { en: 'Virgo Lagna, ruled by Mercury, makes you one of the most perceptive and service-oriented souls in the zodiac. You see the details others miss. Your analytical mind, love of order, and dedication to craft make you excellent in any precision field. You genuinely care about doing things right. Your growth edge: imperfection is not failure, and you too deserve rest and self-compassion.' },
+  7:  { en: 'Libra Lagna, ruled by Venus, gives you a diplomatic, fair-minded, and relationship-oriented nature. You instinctively seek balance and harmony — in yourself, in relationships, and in the world around you. You work best in partnership. Your challenge is decision-making: the scales can tip endlessly without a strong inner anchor of conviction.' },
+  8:  { en: 'Scorpio Lagna, ruled by Mars and Ketu, makes you one of the most intense, perceptive, and transformative souls alive. Nothing is surface-level for you — you sense what lies beneath every word and silence. You have an extraordinary capacity for regeneration: you destroy what no longer serves and rise stronger. Your challenge is trust; vulnerability is the path to your greatest power.' },
+  9:  { en: 'Sagittarius Lagna, ruled by Jupiter, gives you an expansive, philosophical, and freedom-loving spirit. You see the big picture when others see only fragments. Truth, wisdom, and meaning are your north stars. You are generous and magnetic in your optimism. Your challenge is commitment: the horizon is always more exciting than the destination.' },
+  10: { en: 'Capricorn Lagna, ruled by Saturn, gives you an extraordinary capacity for discipline, long-term vision, and patient achievement. You understand that real things take time, and you are willing to do the work. Authority and responsibility sit naturally with you. Your reputation is built slowly but endures. Your challenge: allow joy and playfulness into the serious architecture of your life.' },
+  11: { en: 'Aquarius Lagna, ruled by Saturn and Rahu, makes you a visionary, humanitarian, and natural innovator. You think in systems, often ahead of your time, and may feel misunderstood — because you are seeing what others have not yet imagined. You care deeply about collective progress. Your challenge is connecting that grand vision to the human beings right in front of you.' },
+  12: { en: 'Pisces Lagna, ruled by Jupiter and Ketu, gives you boundless compassion, deep intuition, and a natural connection to the unseen. You live in two worlds — the visible and the mystical. You feel music in silence, meaning in symbols, and the divine in ordinary moments. You are deeply creative and spiritually sensitive. Your challenge: grounding your gifts in the practical world.' },
+};
+
+const MOON_SIGN_PORTRAIT = {
+  1:  { en: 'Your Moon in Aries makes your emotional world fiery and immediate. You feel and react quickly — sometimes before thinking. You need action as emotional release. When you are sad, moving helps. When you are happy, you want to share it right away. You heal through courage and initiative.' },
+  2:  { en: 'Your Moon in Taurus gives you an emotional world rooted in comfort, beauty, and stability. You are calmed by nature, good food, music, and physical touch. You are deeply loyal once you trust someone, but change unsettles your inner landscape. Patience is your emotional superpower.' },
+  3:  { en: 'Your Moon in Gemini makes your emotional world quick, curious, and communicative. You process feelings through conversation and ideas. Your mood can shift in moments — not from instability, but because your mind needs constant stimulation. Writing, talking, and connecting are how you heal.' },
+  4:  { en: 'Your Moon in Cancer is in its own sign — you are emotionally rich, deeply intuitive, and powerfully connected to home and family. Your feelings run very deep even when your face shows composure. You need a safe sanctuary. When loved ones are well, you are well.' },
+  5:  { en: 'Your Moon in Leo gives you a warm, expressive emotional nature. You feel with a big heart and want your feelings to matter. You are generous with affection and need appreciation in return. Creative expression — art, performance, or leadership — is how your emotional energy flows best.' },
+  6:  { en: 'Your Moon in Virgo means you process emotions analytically — you think through your feelings before expressing them. You care deeply about being useful and doing things right. Anxiety can arise when things feel out of control. Serving others is genuinely healing for you.' },
+  7:  { en: 'Your Moon in Libra creates an emotional world oriented around relationship, fairness, and beauty. You are most at peace in harmonious partnership. Conflict genuinely troubles you. You need beauty around you — in your space, your relationships, and your daily rhythms — to feel emotionally well.' },
+  8:  { en: 'Your Moon in Scorpio gives you an intense, private emotional world. You feel everything deeply but share very little until you fully trust. You are drawn to the hidden and the transformative. You have extraordinary resilience — you have survived things that would break others, and emerged wiser.' },
+  9:  { en: 'Your Moon in Sagittarius gives you an emotionally optimistic, free-spirited nature. You feel best when learning, traveling, or expanding your horizons. Your mood lifts when you see meaning in events. You cannot thrive in emotionally suffocating environments — freedom is your emotional oxygen.' },
+  10: { en: 'Your Moon in Capricorn gives you a reserved, self-contained emotional world. You may feel more than you show. You find emotional security in achievement and structure — having a plan makes you feel safe. Learning to receive support, not just give it, is your growth edge.' },
+  11: { en: 'Your Moon in Aquarius makes your emotional world intellectual, idealistic, and group-oriented. You care about humanity but may struggle with one-on-one emotional intimacy. You feel best when contributing to something larger than yourself. Friendship is as meaningful to you as romantic love.' },
+  12: { en: 'Your Moon in Pisces gives you the most empathic, boundless emotional nature of all signs. You absorb the feelings of everyone around you — regularly clearing this energy is essential. You are deeply creative and spiritually attuned. Solitude, water, and music restore your soul.' },
+};
+
+const DASHA_LORD_MEANINGS = {
+  Sun: {
+    nature: 'Soul, authority, father, government, and vitality.',
+    career_en: 'This is a period of authority and recognition. Careers in government, leadership, administration, and public life are highlighted. Your confidence shines — people see and respect your abilities. Work that puts you in a position of responsibility is strongly favored. Push forward on goals that require courage and visibility.',
+    relationships_en: 'Your relationship with father figures, authorities, and mentors comes to the fore. You may feel a stronger need to express your individuality in relationships. The soul-level purpose of partnerships deepens. Be careful not to let ego create unnecessary distance with those you love.',
+    health_en: 'Heart, eyes, spine, and bone health need attention this period. Avoid overexertion and ego-driven stress. Pitta imbalances can affect vitality. Morning sunlight, Surya Namaskar, and time in nature support your system. Do not ignore signals from your heart and spine.',
+    finance_en: 'Income through government, authority, or established organizations is favored. Investments in stable assets are appropriate. Steady dignified effort brings reward — speculation and shortcuts are not aligned with Sun\'s energy.',
+    spiritual_en: 'This is a time to develop personal integrity and dharma-aligned purpose. Gayatri mantra, Surya Namaskar at sunrise, and practices that cultivate the authentic Self serve you deeply. Offer water to the Sun every morning.',
+    opportunities: ['Career recognition', 'Leadership roles', 'Government connections', 'Father-child healing', 'Authority and respect'],
+    cautions: ['Ego conflicts with superiors', 'Heart or eye strain', 'Arrogance in relationships', 'Overwork and burnout'],
+  },
+  Moon: {
+    nature: 'Mind, mother, emotions, public life, and fluctuations.',
+    career_en: 'Public-facing work, creative arts, hospitality, healthcare, and fields requiring emotional intelligence are highlighted. Careers connected to the public, water, or nurturing roles are especially supported. Your public image and popularity can grow significantly this period.',
+    relationships_en: 'Emotional bonds deepen and become central. Your relationship with mother or maternal figures is especially significant. You seek deeper nurturing and emotional security. Sensitivity rises — practice active listening without losing yourself in others\' emotions.',
+    health_en: 'Mind and emotional balance are paramount. The digestive system, lungs, and fluid balance need care. Prioritize sleep, mental peace, and emotional processing. Evening walks, cool foods, and meditation under the night sky are restorative. Do not suppress feelings — they need expression.',
+    finance_en: 'Finances may fluctuate like the waxing and waning Moon. Income through creative or public-facing work is possible. Avoid emotionally-driven financial decisions — wait for mental clarity before making major commitments.',
+    spiritual_en: 'This is a time for emotional healing and lunar practices. Chandra mantra, full moon meditations, and devotion to the Divine Mother are powerful. Let yourself feel fully — the Moon rewards authentic emotional honesty.',
+    opportunities: ['Public recognition', 'Creative breakthroughs', 'Emotional healing', 'Maternal connections', 'Popularity growth'],
+    cautions: ['Mood swings and instability', 'Overthinking', 'Digestive sensitivity', 'Emotional dependency', 'Financial fluctuations'],
+  },
+  Mars: {
+    nature: 'Energy, courage, property, siblings, and competitive spirit.',
+    career_en: 'Mars dasha ignites ambition and raw action. Careers in engineering, medicine, military, real estate, sports, law enforcement, and any field requiring courage and physical effort are strongly supported. This is the time to fight for your goals — bold, decisive moves are rewarded. Do not hesitate when opportunity knocks.',
+    relationships_en: 'Passion and conflict both intensify. Relationships with siblings and competitive peers need balanced communication. Romantic relationships gain fire and intensity. Channel Mars energy into productive passion rather than reactive conflict — the line between the two is important to watch.',
+    health_en: 'Blood, muscles, inflammation, and accidents require careful attention. Avoid rash physical decisions and overheating the body. Regular, vigorous physical exercise is essential — it channels Mars energy safely. Time any surgical procedures carefully if needed.',
+    finance_en: 'Real estate, property investments, and bold business ventures can bring significant gains. Focused and decisive action on clear financial goals pays off. Avoid purely impulsive financial risks — calculated boldness is very different from gambling.',
+    spiritual_en: 'Channel your Mars energy into disciplined spiritual practice. Hanuman devotion, physical sadhana, martial arts with conscious intention, and serving in protective or healing roles transform Mars into dharmic fire.',
+    opportunities: ['Property and real estate gains', 'Career bold moves', 'Physical and athletic performance', 'Courageous leadership', 'Competitive success'],
+    cautions: ['Anger and impatience', 'Accident risk', 'Sibling or peer conflicts', 'Inflammation and blood-related issues'],
+  },
+  Mercury: {
+    nature: 'Intelligence, communication, business, and analytical ability.',
+    career_en: 'Mercury\'s dasha is excellent for business, writing, teaching, accounting, data, media, and any communication-intensive field. Your quick mind and adaptability open doors rapidly. Multiple income streams and business partnerships are favored. This is a time when your words and ideas carry unusual weight and influence.',
+    relationships_en: 'Intellectual compatibility becomes the foundation of meaningful relationships. Conversations, shared ideas, and mental rapport are the glue in your closest bonds. Avoid analyzing relationships to death — remember that feeling is also a form of knowing, and presence matters as much as understanding.',
+    health_en: 'The nervous system, skin, and respiratory health need attention. Mental overload and anxiety can surface this period. Ground yourself through physical activity, nature walks, and creative expression. Limit mental multitasking and excessive screen time.',
+    finance_en: 'Business acumen is sharp. Multiple income streams, trade, and smart investments are favored. Keep accounts, agreements, and financial records clear and transparent. Mercury rewards those who are both clever and deeply honest.',
+    spiritual_en: 'Study of sacred texts, mantras, and astrology is deeply supported. Vishnu devotion, learning from teachers, and using your voice and writing in service of truth are aligned practices for this period.',
+    opportunities: ['Business expansion', 'Learning breakthroughs', 'Communication influence', 'Multiple income streams', 'Educational advancement'],
+    cautions: ['Scattered energy', 'Overthinking and indecision', 'Nervous tension and anxiety', 'Over-commitment to too many things'],
+  },
+  Jupiter: {
+    nature: 'Wisdom, grace, expansion, children, guru, and higher knowledge.',
+    career_en: 'Jupiter\'s dasha is among the most blessed for career growth. Teaching, counseling, law, finance, philosophy, and any field requiring wisdom and leadership are strongly favored. Mentors, senior figures, and institutions open doors. This is a period of genuine, lasting growth — the kind that comes from doing meaningful work with wisdom and integrity.',
+    relationships_en: 'Relationships are blessed with wisdom and growth. Marriage, commitment, and starting a family are all favored. Children and the role of teacher-student become important themes. Your relationships expand your world philosophically and spiritually — look for connections that make you a better person.',
+    health_en: 'Generally excellent vitality during Jupiter dasha. The liver, fat tissue, and weight may need monitoring — overindulgence can become a comfortable habit. Move the body regularly and avoid excess in eating and comfort. Overall, Jupiter protects health and actively promotes healing.',
+    finance_en: 'Financial expansion, inheritance, and wealth multiplication are strongly indicated. This is one of the most auspicious periods for material prosperity. Investments in education, growth-oriented ventures, and long-term assets are especially rewarding. Share your abundance generously — it returns multiplied.',
+    spiritual_en: 'This is THE great spiritual expansion period. Guru connection, pilgrimages, higher learning, scripture study, and philosophical seeking are powerfully supported. Jupiter is the great benefic — your spiritual life flourishes when you seek sincerely and give generously.',
+    opportunities: ['Career and income expansion', 'Wealth and financial growth', 'Marriage or children', 'Guru or mentor connection', 'Wisdom and higher knowledge'],
+    cautions: ['Overconfidence and complacency', 'Weight gain', 'Liver health', 'Overextension across too many goals', 'Laziness in the abundance'],
+  },
+  Venus: {
+    nature: 'Love, beauty, luxury, art, marriage, and material pleasures.',
+    career_en: 'Venus dasha illuminates creative fields — arts, design, music, fashion, beauty, luxury goods, entertainment, and relationship-based work. Even in non-creative fields, your social grace and aesthetic sense become career assets. Partnerships and collaborations flourish. This is a time when your personal charisma opens doors that raw competence might not.',
+    relationships_en: 'This is THE relationship dasha. Marriage, romantic love, deep partnerships, and all forms of intimacy are strongly favored. Comfort, beauty, and harmony become the central themes of your closest bonds. Relationships that begin now carry lasting significance. Existing partnerships deepen with new appreciation and warmth.',
+    health_en: 'Kidneys, reproductive system, throat, and blood sugar need attention. Overindulgence in sweets, rich food, and luxurious living can create imbalance over time. Regular gentle movement, hydration, and beauty in your physical environment support your wellbeing.',
+    finance_en: 'Material abundance increases noticeably. Income through beauty, luxury, creative work, and partnerships rises. This is a time to enjoy life — while continuing to save wisely. Investments in aesthetics, property, and beauty-related ventures are favored.',
+    spiritual_en: 'Lakshmi devotion, artistic expression as spiritual practice, and recognizing beauty as a face of the divine are the paths for Venus dasha. Beauty is not separate from the sacred — it is one of its clearest, most accessible expressions.',
+    opportunities: ['Love and romantic connections', 'Creative and artistic recognition', 'Material abundance and luxury', 'Business partnerships', 'Marriage and commitment'],
+    cautions: ['Overindulgence in pleasures', 'Kidney and reproductive health', 'Sugar and dietary imbalance', 'Attachment to luxury', 'Laziness in abundance'],
+  },
+  Saturn: {
+    nature: 'Discipline, karma, delay, patience, service, and structured achievement.',
+    career_en: 'Saturn dasha demands sustained, disciplined effort over time. Careers in law, agriculture, social service, engineering, labor management, and structured organizations gain traction — slowly but durably. This is not a period of quick wins; it is a period of building something that will last a lifetime. Be patient: Saturn always rewards genuine, consistent effort.',
+    relationships_en: 'Relationships face a test of commitment, responsibility, and maturity. Saturn delays but does not permanently deny — relationships that survive this period are built to last a lifetime. Older or more experienced partners may enter your life. Karmic relationship patterns surface for honest resolution.',
+    health_en: 'Joints, bones, teeth, skin, and the nervous system (from accumulated fatigue) all need care this period. Chronic patterns from past habits may surface to be addressed directly. Prioritize consistent sleep, regular routine, warm nourishing food, and moderate daily exercise. Do not ignore early signals from your body — Saturn rewards those who listen early.',
+    finance_en: 'Finances require patient management and careful planning. Quick gains are rare in Saturn dasha; slow, steady accumulation is the rewarded path. Avoid unnecessary debt and impulsive expenditures. The financial seeds planted during this period take time to bear fruit — but when they do, they are lasting and solid.',
+    spiritual_en: 'Saturn dasha is one of the most profound for karma-clearing and spiritual maturation. Service to the less fortunate, Shani devotion on Saturdays, accepting responsibility gracefully, and building lasting dharmic foundations are the practices of this period. Saturn rewards sincere effort and genuine humility over time.',
+    opportunities: ['Disciplined and lasting growth', 'Karma clearing and resolution', 'Building enduring foundations', 'Professional credibility and seniority', 'Service-oriented impact'],
+    cautions: ['Delays and frustrations requiring patience', 'Depressive or heavy episodes', 'Joint and bone issues', 'Pessimism or isolation', 'Fatigue from sustained effort'],
+  },
+  Rahu: {
+    nature: 'Ambition, foreign connections, technology, illusion, and sudden transformation.',
+    career_en: 'Rahu opens unconventional and ambitious career paths. Technology, media, foreign organizations, research, and anything outside the norm for your background are especially active. Sudden career leaps — both upward and occasionally sideways — are possible. Unusual experiences expand your worldview in ways planned effort never could.',
+    relationships_en: 'Relationships can feel intense, karmic, and sometimes destabilizing in Rahu dasha. Foreign or unconventional connections may form with compelling force. Old karmic relationship patterns surface urgently for resolution. If a new relationship arrives with overwhelming intensity, examine it carefully before surrendering completely.',
+    health_en: 'Mysterious or difficult-to-diagnose issues, unusual allergies, and mental confusion can arise. Addictive tendencies and obsessive patterns need watching. Rahu amplifies whatever it touches — excess of any kind creates imbalance. Grounding practices, clean diet, and regular time in nature are essential stabilizers.',
+    finance_en: 'Sudden financial gains and equally sudden losses are possible. Foreign income, speculative ventures, and unconventional income sources may arise. Keep one foot firmly grounded in financial reality — Rahu\'s promises can be spectacular, but also illusory. Diversify rather than bet everything on a single opportunity.',
+    spiritual_en: 'Rahu dasha is a time to confront illusion, work through deep material desires, and recognize the karmic currents running beneath your life. The worldly experiences of this period carry spiritual lessons — often disguised as challenges. This dasha frequently leads to genuine awakening, reached through experience rather than philosophy alone.',
+    opportunities: ['Unconventional and sudden success', 'Foreign connections and travel', 'Technology and innovation breakthroughs', 'Rapid worldly expansion', 'Karmic completion through experience'],
+    cautions: ['Illusion and self-deception', 'Obsessive patterns and addictions', 'Health mysteries and chronic issues', 'Sudden reversals of fortune', 'Overambition and overreach'],
+  },
+  Ketu: {
+    nature: 'Spirituality, detachment, past-life karma, and inner awakening.',
+    career_en: 'Ketu naturally draws focus inward and away from worldly ambition. Research, healing, spiritual work, technology (especially deep specialization, software, or AI), and anything requiring solitary focused effort are supported. Worldly career ambition may feel less compelling — and this is not failure, but an invitation to go deeper into your unique mastery.',
+    relationships_en: 'Ketu creates a natural pull toward solitude and inner work. Old karmic relationships may complete or close gracefully in this period. New relationships tend to be spiritually oriented, often bringing unexpected insight. This is a time to understand what you truly need from connection, versus what you were conditioned to seek.',
+    health_en: 'Mysterious or sudden health events, fevers, and healing crises can mark Ketu periods — what was hidden beneath the surface may come up to be cleared. Ayurvedic treatments, spiritual healing, and reducing toxic inputs (food, relationships, environment) support you greatly. Trust intuition about your body.',
+    finance_en: 'Financial focus naturally decreases during Ketu dasha. Some gains arrive through unexpected or research-oriented channels. A genuine detachment from money can paradoxically attract what you genuinely need. This is not the time for aggressive wealth-building — consolidate, conserve, and trust.',
+    spiritual_en: 'Ketu dasha is the most powerful period for moksha-seeking, inner awakening, and past-life resolution. Ganesha practices, deep meditation, study of non-dual philosophy, and silent retreats carry immense power. The inner life is where the real action of this period lives — give it the attention it deserves fully.',
+    opportunities: ['Spiritual awakening and depth', 'Research and specialized mastery', 'Inner clarity and self-knowledge', 'Karmic completion', 'Moksha-oriented living'],
+    cautions: ['Detachment from life and people', 'Isolation and withdrawal', 'Mysterious health events', 'Loss of worldly direction or ambition'],
+  },
+};
+
+const SADE_SATI_DESC = {
+  rising:  'You are in the Rising phase of Sade Sati — Saturn transits the 12th house from your natal Moon. This is a time of internal preparation, gradual release of old patterns, and sometimes increased expenses or travel. Dreams become vivid; hidden things surface. This phase asks you to let go of what no longer serves your deeper purpose.',
+  peak:    'You are in the Peak phase of Sade Sati — Saturn transits directly over your natal Moon sign. This is the most intense phase: reality, responsibility, and karmic lessons arrive with full weight. Challenges in health, relationships, or career may arise together. But those who meet this period with discipline, humility, and consistent effort emerge with their most durable achievements and deepest character.',
+  setting: 'You are in the Setting phase of Sade Sati — Saturn transits the 2nd house from your natal Moon. The heaviest weight is gradually lifting. Speech, finances, and family dynamics come into focus. This phase rewards the discipline maintained during the peak — slow consolidation and steady recovery are the themes now.',
+  none:    'Saturn is not currently in Sade Sati from your Moon sign. This is an easier period in terms of Saturnine pressure from transit.',
+};
+
 function generateRuleBasedPredictions(chart) {
   const currentDasha = chart.dasha.find((d) => d.is_current) || chart.dasha[0];
   const currentAntardasha = currentDasha?.antardasha?.find((d) => d.is_current) || currentDasha?.antardasha?.[0];
   const sadeSati = chart.gochar?.highlights?.sade_sati;
   const jupiter = chart.gochar?.highlights?.jupiter_support;
   const mangal = chart.mangal_dosha;
-  return {
-    summary_en: [
-      `${chart.ascendant.rashi_en} lagna with Moon in ${chart.planets.Moon.rashi_en} shows a ${chart.nakshatra.en} temperament.`,
-      `Current Vimshottari focus: ${currentDasha?.lord || 'unknown'} mahadasha and ${currentAntardasha?.lord || 'unknown'} antardasha.`,
-      jupiter?.favorable ? 'Jupiter transit is supportive for growth and guidance.' : 'Jupiter transit asks for patient, disciplined expansion.',
-      sadeSati?.active ? `Saturn Sade Sati is active (${sadeSati.phase} phase), so discipline and steady routine matter.` : 'Saturn is not in the main Sade Sati zone from Moon.',
-      mangal?.has_dosha ? `Mangal Dosha is ${mangal.severity}; relationship decisions should use full compatibility review.` : 'Mangal Dosha is not prominent from Lagna, Moon, or Venus.',
-    ],
-    summary_hi: [
-      `${chart.ascendant.rashi_en} lagna aur ${chart.nakshatra.en} nakshatra vyakti ke mool swabhav ko dikhate hain.`,
-      `Vartaman dasha: ${currentDasha?.lord || 'unknown'} mahadasha, ${currentAntardasha?.lord || 'unknown'} antardasha.`,
-    ],
-    categories: {
-      career: jupiter?.favorable ? 'Good period for learning, mentors, and planned expansion.' : 'Avoid overextension; build skills steadily.',
-      relationships: mangal?.has_dosha ? 'Use patience and formal compatibility checks before commitment.' : 'Relationship flow is comparatively balanced from Mangal Dosha perspective.',
-      health: sadeSati?.active ? 'Protect sleep, joints, digestion, and stress rhythm.' : 'Maintain routine; no major Saturn pressure from Moon is indicated.',
-      remedies: sadeSati?.active ? ['Saturday discipline and service', 'Simple Saturn mantra practice', 'Avoid impulsive commitments'] : ['Daily Surya arghya', 'Moon-calming meditation', 'Regular charity'],
+
+  const ascNum = chart.ascendant?.rashi_num || 1;
+  const moonNum = chart.planets?.Moon?.rashi_num || 1;
+  const dashaLord = currentDasha?.lord || 'Sun';
+  const antarLord = currentAntardasha?.lord || 'Sun';
+  const dm = DASHA_LORD_MEANINGS[dashaLord] || DASHA_LORD_MEANINGS.Sun;
+  const am = DASHA_LORD_MEANINGS[antarLord] || DASHA_LORD_MEANINGS.Sun;
+  const lagnaPortrait = LAGNA_PORTRAIT[ascNum] || LAGNA_PORTRAIT[1];
+  const moonPortrait = MOON_SIGN_PORTRAIT[moonNum] || MOON_SIGN_PORTRAIT[1];
+  const sadeSatiPhase = sadeSati?.active ? sadeSati.phase : 'none';
+  const sadeSatiText = SADE_SATI_DESC[sadeSatiPhase] || SADE_SATI_DESC.none;
+
+  // Who you are — narrative portrait
+  const portrait = {
+    lagna_en: lagnaPortrait.en,
+    moon_en: moonPortrait.en,
+    nakshatra_en: `Your birth Nakshatra is ${chart.nakshatra?.en || 'unknown'}, ruled by ${chart.nakshatra?.lord || 'unknown'}, in Pada ${chart.nakshatra?.pada || 1}. This Nakshatra shapes your instinctive nature, the quality of your mind in its most natural state, and the flavor of your emotional responses.`,
+    combined_en: `You are a ${chart.ascendant?.rashi_en || ''} ascendant with Moon in ${chart.planets?.Moon?.rashi_en || ''}. Born under ${chart.nakshatra?.en || ''} Nakshatra, you carry the energy of ${chart.nakshatra?.lord || ''} in your soul-nature. Your outer world is shaped by ${chart.ascendant?.rashi_lord || ''} energy, while your inner emotional world moves with the Moon in ${chart.planets?.Moon?.rashi_en || ''}.`,
+  };
+
+  // Current dasha analysis
+  const dashaEnd = currentDasha?.end ? currentDasha.end.slice(0, 10) : 'unknown';
+  const antarEnd = currentAntardasha?.end ? currentAntardasha.end.slice(0, 10) : 'unknown';
+  const isSameLord = dashaLord === antarLord;
+  const periodCombined = isSameLord
+    ? `You are running ${dashaLord}–${dashaLord} — the purest and most concentrated expression of ${dashaLord} energy. All qualities of ${dashaLord} — both its gifts and its challenges — are amplified at this time.`
+    : `You are running ${dashaLord} Mahadasha with ${antarLord} Antardasha. The broad ${dashaLord} themes (${dm.nature}) are currently colored by ${antarLord} energy (${am.nature}). This combination creates a unique blend — ${dashaLord} sets the overarching direction, while ${antarLord} influences the texture and events of day-to-day life right now.`;
+
+  const current_period = {
+    mahadasha: { lord: dashaLord, end: dashaEnd, nature: dm.nature },
+    antardasha: { lord: antarLord, end: antarEnd, nature: am.nature },
+    combined_en: periodCombined,
+  };
+
+  // Life areas — primary dasha meanings, with antardasha modifier notes
+  const asterLordNote = isSameLord ? '' : ` ${antarLord} Antardasha adds its own flavor — expect themes of ${am.nature} to weave through this area as well.`;
+
+  const life_areas = {
+    career: {
+      outlook: jupiter?.favorable ? 'positive' : (sadeSati?.active ? 'challenging' : 'mixed'),
+      description_en: dm.career_en + (jupiter?.favorable ? ' Jupiter\'s transit is currently supportive — mentors, growth, and learning are accessible.' : ' Jupiter\'s transit asks for patient, steady effort rather than quick leaps right now.') + asterLordNote,
+      keywords: dm.opportunities.slice(0, 3),
+    },
+    relationships: {
+      outlook: mangal?.has_dosha ? 'needs attention' : (dashaLord === 'Venus' ? 'positive' : 'mixed'),
+      description_en: dm.relationships_en + (mangal?.has_dosha ? ` Note: Mangal Dosha (${mangal.severity} severity) is present in your chart — use patience and thorough compatibility review before major relationship commitments.${asterLordNote}` : ' Mangal Dosha is not prominent from Lagna, Moon, or Venus — the energy flow in relationships is relatively balanced from that standpoint.' + asterLordNote),
+      keywords: ['Emotional depth', 'Commitment', 'Communication'],
+    },
+    health: {
+      outlook: sadeSati?.active ? 'needs attention' : 'stable',
+      description_en: dm.health_en + (sadeSati?.active ? ` Additionally, ${sadeSatiText} Pay particular attention to consistent routine, sleep, and stress management.${asterLordNote}` : ' Saturn is not in Sade Sati from your Moon — no compounding Saturnine health pressure from transit at this time.' + asterLordNote),
+      keywords: dm.cautions.slice(-2),
+    },
+    finance: {
+      outlook: (dashaLord === 'Jupiter' || dashaLord === 'Venus') ? 'positive' : (sadeSati?.active ? 'challenging' : 'mixed'),
+      description_en: dm.finance_en + asterLordNote,
+      keywords: ['Consistent effort', 'Planning', 'Patience'],
+    },
+    spirituality: {
+      outlook: (dashaLord === 'Ketu' || dashaLord === 'Jupiter' || dashaLord === 'Saturn') ? 'deeply active' : 'supported',
+      description_en: dm.spiritual_en + (dashaLord === 'Ketu' || dashaLord === 'Jupiter' ? ' The inner and spiritual dimensions of life are especially alive and responsive right now.' : '') + asterLordNote,
+      keywords: ['Practice', 'Devotion', 'Inner growth'],
     },
   };
+
+  // Transit summary
+  const gochar_narrative = {
+    sade_sati: { active: sadeSati?.active, phase: sadeSatiPhase, description_en: sadeSatiText },
+    jupiter: {
+      favorable: jupiter?.favorable,
+      description_en: jupiter?.favorable
+        ? `Transit Jupiter is currently in a favorable position from your Moon (${planets_house_desc(jupiter?.house_from_moon)}). This supports expansion, learning, guidance from mentors, and overall optimism. Make use of this window.`
+        : `Transit Jupiter is not in its most favorable position from your Moon right now (${planets_house_desc(jupiter?.house_from_moon)}). Growth is still possible, but it requires more conscious effort and patience. Quality over speed.`,
+    },
+    rahu_ketu: {
+      axis: chart.gochar?.highlights?.rahu_ketu_axis || 'unknown',
+      description_en: `The current Rahu-Ketu transit axis is ${chart.gochar?.highlights?.rahu_ketu_axis || 'unknown'}. Rahu\'s sign brings new karmic desires and worldly pull; Ketu\'s sign shows where release, completion, and spiritual insight are available.`,
+    },
+    overall_en: sadeSati?.active
+      ? `The overall transit picture is demanding. Sade Sati (${sadeSatiPhase} phase) adds weight to Saturn\'s life lessons. This is not the time for shortcuts — integrity, patience, and consistent daily practice are your strongest tools.`
+      : `The overall transit picture is manageable. ${jupiter?.favorable ? 'Jupiter\'s support from transit is a genuine asset this period.' : 'While Jupiter is not in peak support, daily practice and consistent effort continue to bear fruit.'} Stay grounded and deliberate.`,
+  };
+
+  // Challenges and opportunities
+  const current_challenges = [
+    ...dm.cautions.slice(0, 2).map((c) => `${dashaLord} Mahadasha — watch for: ${c}`),
+    sadeSati?.active ? `Sade Sati (${sadeSatiPhase}) — ${sadeSatiPhase === 'peak' ? 'maximum Saturn pressure; patience and routine are essential' : 'Saturn transition phase; release and consolidation needed'}` : null,
+    mangal?.has_dosha ? `Mangal Dosha (${mangal.severity}) — relationship and property decisions need careful review` : null,
+  ].filter(Boolean);
+
+  const current_opportunities = [
+    ...dm.opportunities.slice(0, 3).map((o) => `${dashaLord} Mahadasha opens: ${o}`),
+    jupiter?.favorable ? 'Jupiter transit supports mentors, learning, and expansion — act on it now' : null,
+    !sadeSati?.active ? 'No Sade Sati pressure — a clearer window for building and planning' : null,
+  ].filter(Boolean);
+
+  // Remedies — placeholder structure (will be populated from PDF when provided)
+  const base_remedies = sadeSati?.active
+    ? ['Saturday service and discipline — donate black sesame and mustard oil', 'Shani Chalisa or Shani mantra recitation', 'Regular routine: fixed sleep, meals, and exercise', 'Avoid major impulsive decisions during peak Sade Sati']
+    : dashaLord === 'Sun'
+    ? ['Daily Surya Arghya at sunrise — offer water to the Sun', 'Gayatri mantra japa — 108 times in the morning', 'Practice authentic self-expression in all areas of life', 'Honor your father and father figures']
+    : dashaLord === 'Moon'
+    ? ['Offer water to the Moon on Purnima (full moon nights)', 'Chandra mantra for mental peace — "Om Som Somaya Namah"', 'Reduce stimulating food; favor cooling, calming diet', 'Regular journaling or creative expression to process emotions']
+    : dashaLord === 'Mars'
+    ? ['Hanuman Chalisa recitation on Tuesdays', 'Donate red lentils or jaggery on Tuesdays', 'Channel aggression into vigorous daily exercise', 'Practice patience consciously in difficult moments']
+    : dashaLord === 'Mercury'
+    ? ['Vishnu Sahasranama or Budh mantra on Wednesdays', 'Green moong donation on Wednesdays', 'Meditate on clarity and stillness to balance mental restlessness', 'Write — journal, letters, or your thoughts — to process Mercury energy']
+    : dashaLord === 'Jupiter'
+    ? ['Guru Vandana — honor teachers and elders in your life', 'Yellow sapphire or yellow topaz (consult qualified astrologer)', 'Donate yellow food (turmeric, dal) on Thursdays', 'Deepen your study of sacred knowledge — philosophy, scriptures, or wisdom traditions']
+    : dashaLord === 'Venus'
+    ? ['Friday fasting or Lakshmi puja on Fridays', 'Donate white food (rice, sugar, white flowers) on Fridays', 'Create beauty in your home and environment consciously', 'Practice gratitude for the abundance already present']
+    : dashaLord === 'Saturn'
+    ? ['Shani puja on Saturdays — mustard oil lamp at Shani temple', 'Donate black sesame, black cloth, or mustard oil on Saturdays', 'Dedicated service to the elderly or underprivileged', 'Iron discipline in daily routine — consistent sleep, exercise, and diet']
+    : dashaLord === 'Rahu'
+    ? ['Rahu mantra: "Om Raam Rahave Namah" — 108 times on Saturdays', 'Donate blue or black items on Saturdays', 'Grounding practices — barefoot in nature, deep breathing', 'Develop discernment: question intense new desires carefully before acting']
+    : ['Ganesha puja — Om Gam Ganapataye Namah, especially on Tuesdays', 'Donate colored items (multi-colored) to the needy', 'Meditation and inner silence — Ketu responds to stillness', 'Reduce physical and digital noise; create space for insight to arise'];
+
+  // Legacy-compatible fields
+  const summary_en = [
+    portrait.combined_en,
+    `Current Vimshottari focus: ${dashaLord} Mahadasha (until ${dashaEnd}) and ${antarLord} Antardasha (until ${antarEnd}).`,
+    current_period.combined_en,
+    sadeSati?.active ? `Sade Sati is active (${sadeSatiPhase} phase) — discipline and steady routine matter deeply.` : 'Saturn is not in Sade Sati from your Moon — no compounding transit pressure.',
+    mangal?.has_dosha ? `Mangal Dosha (${mangal.severity} severity) — relationship decisions benefit from careful review.` : 'Mangal Dosha is not prominent from Lagna, Moon, or Venus.',
+  ];
+
+  return {
+    portrait,
+    current_period,
+    life_areas,
+    gochar_narrative,
+    current_challenges,
+    current_opportunities,
+    remedies: base_remedies,
+    summary_en,
+    summary_hi: [
+      `${chart.ascendant?.rashi_en || ''} lagna aur ${chart.nakshatra?.en || ''} nakshatra vyakti ke mool swabhav ko dikhate hain.`,
+      `Vartaman dasha: ${dashaLord} mahadasha (${dashaEnd} tak), ${antarLord} antardasha.`,
+    ],
+    categories: {
+      career: life_areas.career.description_en,
+      relationships: life_areas.relationships.description_en,
+      health: life_areas.health.description_en,
+      remedies: base_remedies,
+    },
+  };
+}
+
+function planets_house_desc(n) {
+  if (!n) return 'current position';
+  const ord = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
+  return `${ord[n] || n} house from Moon`;
 }
 
 function toDMS(deg) {
@@ -1432,7 +1697,548 @@ function calculateVedicChart(p) {
     planetDetails.Moon, nakshatra, ascendant, sid.Sun, sid.Moon
   );
 
+  // ── Yogas & Doshas ──
+  chart.yogas_doshas = detectYogasAndDoshas(chart);
+
   return chart;
+}
+
+// ─── Yoga & Dosha Detection ───────────────────────────────────────────────────
+// Source: AstroAnsh Class 11 & 12 Premium Notes — Yogas and Doshas (BPHS-based)
+
+function _signAdd(signNum, delta) {
+  return ((signNum - 1 + delta + 1200) % 12) + 1;
+}
+
+function _getAspects(name) {
+  if (name === 'Mars') return [4, 7, 8];
+  if (name === 'Jupiter' || name === 'Rahu' || name === 'Ketu') return [5, 7, 9];
+  if (name === 'Saturn') return [3, 7, 10];
+  return [7];
+}
+
+function _aspects(fromPlanet, fromName, toSignNum) {
+  const h = houseFromSign(fromPlanet.rashi_num, toSignNum);
+  return _getAspects(fromName).includes(h);
+}
+
+function _isConjunct(p1, p2) { return p1.rashi_num === p2.rashi_num; }
+
+function _mutuallyRelated(planets, n1, n2) {
+  const p1 = planets[n1], p2 = planets[n2];
+  if (!p1 || !p2) return false;
+  if (_isConjunct(p1, p2)) return true;
+  if (_aspects(p1, n1, p2.rashi_num)) return true;
+  if (_aspects(p2, n2, p1.rashi_num)) return true;
+  return false;
+}
+
+function _isParivartana(planets, n1, n2) {
+  const p1 = planets[n1], p2 = planets[n2];
+  if (!p1 || !p2) return false;
+  return p1.rashi_lord === n2 && p2.rashi_lord === n1;
+}
+
+function _houseSignNum(ascRashiNum, houseNum) {
+  return _signAdd(ascRashiNum, houseNum - 1);
+}
+
+function _houseLord(ascRashiNum, houseNum) {
+  return RASHIS[_houseSignNum(ascRashiNum, houseNum) - 1].lord;
+}
+
+function _planetHouse(ascRashiNum, planet) {
+  return houseFromSign(ascRashiNum, planet.rashi_num);
+}
+
+function detectYogasAndDoshas(chart) {
+  const { ascendant, planets: p } = chart;
+  const asc = ascendant.rashi_num;
+  const yogas = [];
+  const doshas = [];
+
+  function yoga(name, name_hi, strength, trigger_en, trigger_hi, involved) {
+    yogas.push({ name, name_hi, strength, trigger_en, trigger_hi, planets_involved: involved });
+  }
+  function dosha(name, name_hi, severity, trigger_en, trigger_hi, involved) {
+    doshas.push({ name, name_hi, severity, trigger_en, trigger_hi, planets_involved: involved });
+  }
+
+  // ── 1. Gajakesari Yoga ─────────────────────────────────────────────────────
+  {
+    const jup = p.Jupiter, moon = p.Moon;
+    if (jup && moon) {
+      const h = houseFromSign(moon.rashi_num, jup.rashi_num);
+      if ([1, 4, 7, 10].includes(h)) {
+        const jupH  = _planetHouse(asc, jup);
+        const moonH = _planetHouse(asc, moon);
+        const debil = jup.dignity?.includes('Debilitation') || moon.dignity?.includes('Debilitation');
+        const dust  = [6, 8, 12].includes(jupH) || [6, 8, 12].includes(moonH);
+        const str   = debil || dust ? 'weak'
+          : (jup.dignity?.includes('Exaltation') || jup.dignity?.includes('Own Sign') ? 'strong' : 'moderate');
+        yoga('Gajakesari Yoga', 'गजकेसरी योग', str,
+          `Jupiter (H${jupH}) and Moon (H${moonH}) are in Kendra from each other.`,
+          `गुरु (भाव ${jupH}) और चंद्र (भाव ${moonH}) एक-दूसरे से केंद्र में।`,
+          ['Jupiter', 'Moon']);
+      }
+    }
+  }
+
+  // ── 2. Budh-Aditya Yoga ────────────────────────────────────────────────────
+  {
+    const sun = p.Sun, mer = p.Mercury;
+    if (sun && mer && _isConjunct(sun, mer)) {
+      const h    = _planetHouse(asc, sun);
+      const diff = Math.abs(sun.degree_in_sign - mer.degree_in_sign);
+      const cmb  = diff < 3;
+      const str  = cmb ? 'weak' : ([3, 5, 6].includes(sun.rashi_num) ? 'strong' : 'moderate');
+      yoga('Budh-Aditya Yoga', 'बुध-आदित्य योग', str,
+        `Sun and Mercury conjunct in ${sun.rashi_en} (H${h})${cmb ? ' — Mercury combust (<3°)' : ''}.`,
+        `सूर्य और बुध ${sun.rashi_hi} (भाव ${h}) में युत${cmb ? ' — बुध अस्त' : ''}।`,
+        ['Sun', 'Mercury']);
+    }
+  }
+
+  // ── 3. Neech Bhanga Raj Yoga ───────────────────────────────────────────────
+  {
+    const debilMap  = { Sun:7, Moon:8, Mars:4, Mercury:12, Jupiter:10, Venus:6, Saturn:1 };
+    const debilLord = { Sun:'Venus', Moon:'Mars', Mars:'Moon', Mercury:'Jupiter', Jupiter:'Saturn', Venus:'Mercury', Saturn:'Mars' };
+    const exaltInD  = { Sun:'Saturn', Moon:null, Mars:'Jupiter', Mercury:'Venus', Jupiter:'Mars', Venus:'Mercury', Saturn:'Sun' };
+
+    for (const [pn, ds] of Object.entries(debilMap)) {
+      const pl = p[pn];
+      if (!pl || pl.rashi_num !== ds) continue;
+      const h = _planetHouse(asc, pl);
+      const cancels = [];
+
+      // Condition 1: lord of debilitation sign in Kendra from Lagna or Moon
+      const dl = debilLord[pn], dlp = p[dl];
+      if (dlp) {
+        if ([1,4,7,10].includes(_planetHouse(asc, dlp))) cancels.push(`${dl} (debil-sign lord) in Kendra from Lagna`);
+        else if (p.Moon && [1,4,7,10].includes(houseFromSign(p.Moon.rashi_num, dlp.rashi_num))) cancels.push(`${dl} in Kendra from Moon`);
+      }
+      // Condition 3: planet exalted in debil sign is in Kendra
+      const ep = exaltInD[pn];
+      if (ep && p[ep] && [1,4,7,10].includes(_planetHouse(asc, p[ep]))) {
+        cancels.push(`${ep} (exalted in debil-sign) in Kendra`);
+      }
+      // Condition 4: debilitated planet conjunct/aspected by dispositor
+      const disp = pl.rashi_lord, dispp = p[disp];
+      if (dispp && (_isConjunct(pl, dispp) || _aspects(dispp, disp, pl.rashi_num))) {
+        cancels.push(`Dispositor ${disp} conjuncts/aspects ${pn}`);
+      }
+
+      if (cancels.length > 0) {
+        yoga('Neech Bhanga Raj Yoga', 'नीच भंग राज योग',
+          cancels.length >= 2 ? 'strong' : 'moderate',
+          `${pn} debilitated in ${pl.rashi_en} (H${h}) — cancelled by: ${cancels.join('; ')}.`,
+          `${pn} ${pl.rashi_hi} (भाव ${h}) में नीच — रद्द: ${cancels.join('; ')}।`,
+          [pn, dl].filter(Boolean));
+      }
+    }
+  }
+
+  // ── 4. Saraswati Yoga ─────────────────────────────────────────────────────
+  {
+    const jup = p.Jupiter, ven = p.Venus, mer = p.Mercury;
+    if (jup && ven && mer) {
+      const good = [1, 2, 4, 5, 7, 9, 10];
+      const jH = _planetHouse(asc, jup), vH = _planetHouse(asc, ven), mH = _planetHouse(asc, mer);
+      if (good.includes(jH) && good.includes(vH) && good.includes(mH)) {
+        const rel = _mutuallyRelated(p, 'Jupiter', 'Venus') || _mutuallyRelated(p, 'Jupiter', 'Mercury') || _mutuallyRelated(p, 'Venus', 'Mercury');
+        if (rel) {
+          const str = [jup, ven, mer].some(pl => pl.dignity?.includes('Debilitation')) ? 'moderate' : 'strong';
+          yoga('Saraswati Yoga', 'सरस्वती योग', str,
+            `Jupiter (H${jH}), Venus (H${vH}), Mercury (H${mH}) — all in Kendra/Trikona/2nd, mutually related.`,
+            `गुरु (भाव ${jH}), शुक्र (भाव ${vH}), बुध (भाव ${mH}) — केंद्र/त्रिकोण/2 में, परस्पर संबंधित।`,
+            ['Jupiter', 'Venus', 'Mercury']);
+        }
+      }
+    }
+  }
+
+  // ── 5. Kalaneedhi Yoga ────────────────────────────────────────────────────
+  {
+    const mer = p.Mercury;
+    for (const pn of ['Venus', 'Jupiter']) {
+      const pl = p[pn];
+      if (!pl || !mer) continue;
+      const h = _planetHouse(asc, pl);
+      if ([2, 5].includes(h) && (_isConjunct(pl, mer) || _aspects(mer, 'Mercury', pl.rashi_num))) {
+        yoga('Kalaneedhi Yoga', 'कलानीधि योग',
+          pl.dignity?.includes('Debilitation') ? 'weak' : 'moderate',
+          `${pn} in H${h} receives Mercury's ${_isConjunct(pl, mer) ? 'conjunction' : 'aspect'}.`,
+          `${pn} भाव ${h} में — बुध की ${_isConjunct(pl, mer) ? 'युति' : 'दृष्टि'}।`,
+          [pn, 'Mercury']);
+      }
+    }
+  }
+
+  // ── 6. Chandra-Mangal Laxmi Yoga ──────────────────────────────────────────
+  {
+    const moon = p.Moon, mars = p.Mars;
+    if (moon && mars && _mutuallyRelated(p, 'Moon', 'Mars')) {
+      const moonH = _planetHouse(asc, moon), marsH = _planetHouse(asc, mars);
+      const debil = moon.rashi_num === 8 || mars.rashi_num === 4;
+      const dust  = [6, 8, 12].includes(moonH) || [6, 8, 12].includes(marsH);
+      yoga('Chandra-Mangal Laxmi Yoga', 'चंद्र-मंगल लक्ष्मी योग',
+        dust || debil ? 'weak' : 'moderate',
+        `Moon (H${moonH}) and Mars (H${marsH}) ${_isConjunct(moon, mars) ? 'conjunct' : 'in mutual aspect'}.`,
+        `चंद्र (भाव ${moonH}) और मंगल (भाव ${marsH}) ${_isConjunct(moon, mars) ? 'युत' : 'परस्पर दृष्टि'}।`,
+        ['Moon', 'Mars']);
+    }
+  }
+
+  // ── 7. Dhan Yoga group ────────────────────────────────────────────────────
+  {
+    // A) Dhan Yoga
+    const dhanLords = [...new Set([2, 5, 9, 11].map(h => _houseLord(asc, h)))];
+    const dhanPairs = [];
+    for (let i = 0; i < dhanLords.length; i++) {
+      for (let j = i + 1; j < dhanLords.length; j++) {
+        const n1 = dhanLords[i], n2 = dhanLords[j];
+        if (_mutuallyRelated(p, n1, n2) || _isParivartana(p, n1, n2)) dhanPairs.push(`${n1}+${n2}`);
+      }
+    }
+    if (dhanPairs.length >= 2) {
+      yoga('Dhan Yoga', 'धन योग', dhanPairs.length >= 3 ? 'strong' : 'moderate',
+        `Wealth house lords (2,5,9,11) connected: ${dhanPairs.join(', ')}.`,
+        `धन भावों (2,5,9,11) के स्वामी संबंधित: ${dhanPairs.join(', ')}।`,
+        dhanLords);
+    }
+
+    // B) Laxmi Yoga: 9th lord exalted in Kendra/Trikona + strong Lagna lord
+    const l9 = _houseLord(asc, 9), p9 = p[l9];
+    if (p9 && p9.dignity?.includes('Exaltation')) {
+      const h9 = _planetHouse(asc, p9);
+      if ([1, 4, 5, 7, 9, 10].includes(h9)) {
+        const ll = _houseLord(asc, 1), pll = p[ll];
+        if (pll && !pll.dignity?.includes('Debilitation')) {
+          yoga('Laxmi Yoga', 'लक्ष्मी योग', 'strong',
+            `9th lord ${l9} exalted in H${h9} (Kendra/Trikona) with strong Lagna lord ${ll}.`,
+            `नवमेश ${l9} उच्च में भाव ${h9} में, बलवान लग्नेश ${ll}।`,
+            [l9, ll]);
+        }
+      }
+    }
+
+    // C) Adhi Yoga: Jupiter/Venus/Mercury all in 6/7/8 from Moon
+    if (p.Moon) {
+      const beneficsIn = ['Jupiter', 'Venus', 'Mercury'].filter(n => {
+        const pl = p[n];
+        return pl && [6, 7, 8].includes(houseFromSign(p.Moon.rashi_num, pl.rashi_num));
+      });
+      if (beneficsIn.length >= 2) {
+        yoga('Adhi Yoga', 'अधि योग', beneficsIn.length === 3 ? 'strong' : 'moderate',
+          `${beneficsIn.join(', ')} in 6th/7th/8th from Moon.`,
+          `${beneficsIn.join(', ')} चंद्र से 6/7/8वें भाव में।`,
+          [...beneficsIn, 'Moon']);
+      }
+    }
+  }
+
+  // ── 8. Raj Yoga ───────────────────────────────────────────────────────────
+  {
+    const kendraLords  = [...new Set([1, 4, 7, 10].map(h => _houseLord(asc, h)))];
+    const trikonaLords = [...new Set([1, 5, 9].map(h => _houseLord(asc, h)))];
+    const rajPairs = [];
+    for (const kl of kendraLords) {
+      for (const tl of trikonaLords) {
+        if (kl !== tl && p[kl] && p[tl] && _mutuallyRelated(p, kl, tl)) {
+          rajPairs.push({ kl, tl, kH: _planetHouse(asc, p[kl]), tH: _planetHouse(asc, p[tl]) });
+        }
+      }
+    }
+    if (rajPairs.length > 0) {
+      yoga('Raj Yoga', 'राज योग', rajPairs.length >= 2 ? 'strong' : 'moderate',
+        `Kendra-Trikona lord connection: ${rajPairs.map(r => `${r.kl}(H${r.kH})+${r.tl}(H${r.tH})`).join(', ')}.`,
+        `केंद्र-त्रिकोण स्वामी संबंध: ${rajPairs.map(r => `${r.kl}(भाव ${r.kH})+${r.tl}(भाव ${r.tH})`).join(', ')}।`,
+        [...new Set(rajPairs.flatMap(r => [r.kl, r.tl]))]);
+    }
+  }
+
+  // ── 9. Vipreet Raj Yoga ───────────────────────────────────────────────────
+  {
+    const vr = [
+      { ln: 6, valid: [8, 12], sub: 'Harsha Yoga',  sub_hi: 'हर्ष योग'  },
+      { ln: 8, valid: [6, 12], sub: 'Sarala Yoga',  sub_hi: 'सरल योग'  },
+      { ln: 12, valid: [6, 8], sub: 'Vimala Yoga', sub_hi: 'विमल योग' },
+    ];
+    for (const { ln, valid, sub, sub_hi } of vr) {
+      const lord = _houseLord(asc, ln), pl = p[lord];
+      if (pl && valid.includes(_planetHouse(asc, pl))) {
+        yoga('Vipreet Raj Yoga', 'विपरीत राज योग', 'moderate',
+          `${sub}: ${ln}th lord (${lord}) in H${_planetHouse(asc, pl)}.`,
+          `${sub_hi}: ${ln}वें भाव का स्वामी (${lord}) भाव ${_planetHouse(asc, pl)} में।`,
+          [lord]);
+      }
+    }
+  }
+
+  // ── 10. Parivartan Yoga ───────────────────────────────────────────────────
+  {
+    const pNames = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+    for (let i = 0; i < pNames.length; i++) {
+      for (let j = i + 1; j < pNames.length; j++) {
+        const n1 = pNames[i], n2 = pNames[j];
+        if (!_isParivartana(p, n1, n2)) continue;
+        const h1 = _planetHouse(asc, p[n1]), h2 = _planetHouse(asc, p[n2]);
+        const d1 = [6,8,12].includes(h1), d2 = [6,8,12].includes(h2);
+        const k1 = [1,4,7,10].includes(h1) || [5,9].includes(h1);
+        const k2 = [1,4,7,10].includes(h2) || [5,9].includes(h2);
+        const sub = (d1 || d2) ? 'Dusthana Parivartan Yoga' : (k1 && k2) ? 'Raj Parivartan Yoga' : 'Parivartan Yoga';
+        yoga(sub, 'परिवर्तन योग',
+          sub === 'Dusthana Parivartan Yoga' ? 'weak' : sub === 'Raj Parivartan Yoga' ? 'strong' : 'moderate',
+          `${n1} (H${h1}) ↔ ${n2} (H${h2}) sign exchange — ${sub}.`,
+          `${n1} (भाव ${h1}) ↔ ${n2} (भाव ${h2}) राशि विनिमय — ${sub}.`,
+          [n1, n2]);
+      }
+    }
+  }
+
+  // ── 11. Guru-Aditya Yoga ──────────────────────────────────────────────────
+  {
+    const jup = p.Jupiter, sun = p.Sun;
+    if (jup && sun && _isConjunct(jup, sun)) {
+      const h   = _planetHouse(asc, sun);
+      const str = (sun.dignity?.includes('Debilitation') || jup.dignity?.includes('Debilitation')) ? 'weak'
+        : ([5, 9, 12, 4].includes(sun.rashi_num) ? 'strong' : 'moderate');
+      yoga('Guru-Aditya Yoga', 'गुरु-आदित्य योग', str,
+        `Jupiter and Sun conjunct in ${sun.rashi_en} (H${h}).`,
+        `गुरु और सूर्य ${sun.rashi_hi} (भाव ${h}) में युत।`,
+        ['Jupiter', 'Sun']);
+    }
+  }
+
+  // ── 12. Shatru Hanta Yoga ─────────────────────────────────────────────────
+  {
+    const l6 = _houseLord(asc, 6), pl6 = p[l6];
+    const mars = p.Mars, sun = p.Sun;
+    const conds = [];
+    if (pl6 && _planetHouse(asc, pl6) === 12) conds.push(`6th lord (${l6}) in H12`);
+    if (mars && _planetHouse(asc, mars) === 6 && [1, 8, 10].includes(mars.rashi_num)) conds.push('Mars in H6 own/exalted');
+    if (sun && _planetHouse(asc, sun) === 6 && sun.rashi_num === 5) conds.push('Sun in H6 in Leo');
+    if (pl6 && mars && l6 !== 'Mars' && _mutuallyRelated(p, l6, 'Mars')) conds.push(`6th lord (${l6}) conjunct/aspected by Mars`);
+    if (conds.length > 0) {
+      yoga('Shatru Hanta Yoga', 'शत्रु हंत योग', conds.length >= 2 ? 'strong' : 'moderate',
+        conds.join('; '),
+        `शत्रु हंत योग: ${conds.join('; ')}`,
+        [l6, 'Mars'].filter(Boolean));
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // DOSHAS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  const MALEFICS = ['Saturn', 'Mars', 'Rahu', 'Ketu'];
+
+  // ── 1. Pitru Dosha ────────────────────────────────────────────────────────
+  {
+    const rahu = p.Rahu, ketu = p.Ketu, sun = p.Sun;
+    const sign9 = _houseSignNum(asc, 9);
+    const triggers = [];
+    if (rahu && rahu.rashi_num === sign9) triggers.push('Rahu in 9th house');
+    if (ketu && ketu.rashi_num === sign9) triggers.push('Ketu in 9th house');
+    if (sun && sun.dignity?.includes('Debilitation')) triggers.push('Sun debilitated');
+    for (const n of ['Saturn', 'Mars']) {
+      const pl = p[n]; if (pl && pl.rashi_num === sign9) triggers.push(`${n} in 9th house`);
+    }
+    if (triggers.length > 0) {
+      dosha('Pitru Dosha', 'पितृ दोष',
+        triggers.length >= 3 ? 'strong' : triggers.length >= 2 ? 'moderate' : 'mild',
+        `Triggers: ${triggers.join('; ')}.`,
+        `कारण: ${triggers.join('; ')}।`,
+        ['Sun', ...MALEFICS.filter(n => triggers.some(t => t.includes(n)))]);
+    }
+  }
+
+  // ── 2. Surya-Shani Vish Dosha ─────────────────────────────────────────────
+  {
+    const sun = p.Sun, sat = p.Saturn;
+    if (sun && sat && _isConjunct(sun, sat)) {
+      const h = _planetHouse(asc, sun);
+      dosha('Surya-Shani Vish Dosha', 'सूर्य-शनि विष दोष',
+        [1, 9, 10].includes(h) ? 'strong' : 'moderate',
+        `Sun and Saturn conjunct in ${sun.rashi_en} (H${h}).`,
+        `सूर्य और शनि ${sun.rashi_hi} (भाव ${h}) में युत।`,
+        ['Sun', 'Saturn']);
+    }
+  }
+
+  // ── 3. Mangal-Shani Vish Dosha ────────────────────────────────────────────
+  {
+    const mars = p.Mars, sat = p.Saturn;
+    if (mars && sat && _isConjunct(mars, sat)) {
+      const h = _planetHouse(asc, mars);
+      const fire = [1, 5, 9].includes(mars.rashi_num);
+      dosha('Mangal-Shani Vish Dosha', 'मंगल-शनि विष दोष',
+        (fire || [1, 3, 10].includes(h)) ? 'strong' : 'moderate',
+        `Mars and Saturn conjunct in ${mars.rashi_en} (H${h}).`,
+        `मंगल और शनि ${mars.rashi_hi} (भाव ${h}) में युत।`,
+        ['Mars', 'Saturn']);
+    }
+  }
+
+  // ── 4. Moon-Shani Vish Dosha ──────────────────────────────────────────────
+  {
+    const moon = p.Moon, sat = p.Saturn;
+    if (moon && sat && _isConjunct(moon, sat)) {
+      const h = _planetHouse(asc, moon);
+      dosha('Moon-Shani Vish Dosha', 'चंद्र-शनि विष दोष',
+        moon.rashi_num === 8 ? 'strong' : 'moderate',
+        `Moon and Saturn conjunct in ${moon.rashi_en} (H${h}).`,
+        `चंद्र और शनि ${moon.rashi_hi} (भाव ${h}) में युत।`,
+        ['Moon', 'Saturn']);
+    }
+  }
+
+  // ── 5. Amavasya Dosha ─────────────────────────────────────────────────────
+  {
+    const sun = p.Sun, moon = p.Moon;
+    if (sun && moon && _isConjunct(sun, moon)) {
+      const diff = Math.abs(sun.degree_in_sign - moon.degree_in_sign);
+      if (diff <= 12) {
+        const h = _planetHouse(asc, sun);
+        const sev = [6, 8, 12].includes(h) ? 'strong' : diff <= 3 ? 'strong' : diff <= 6 ? 'moderate' : 'mild';
+        // Check if Jupiter aspects for partial relief
+        const jupRelief = p.Jupiter && _aspects(p.Jupiter, 'Jupiter', sun.rashi_num);
+        dosha('Amavasya Dosha', 'अमावस्या दोष', jupRelief && sev !== 'strong' ? 'mild' : sev,
+          `Sun-Moon Amavasya conjunction in ${sun.rashi_en} (H${h}), ${diff.toFixed(1)}° apart${jupRelief ? ' — partially relieved by Jupiter aspect' : ''}.`,
+          `सूर्य-चंद्र अमावस्या युति ${sun.rashi_hi} (भाव ${h}) में, ${diff.toFixed(1)}° अंतर${jupRelief ? ' — गुरु दृष्टि से आंशिक राहत' : ''}।`,
+          ['Sun', 'Moon']);
+      }
+    }
+  }
+
+  // ── 6. Angarak Dosha ──────────────────────────────────────────────────────
+  {
+    const mars = p.Mars, rahu = p.Rahu;
+    if (mars && rahu && _isConjunct(mars, rahu)) {
+      const h = _planetHouse(asc, mars);
+      dosha('Angarak Dosha', 'अंगारक दोष',
+        ([1, 5, 9].includes(mars.rashi_num) || [1, 4, 7].includes(h)) ? 'strong' : 'moderate',
+        `Mars and Rahu conjunct in ${mars.rashi_en} (H${h}).`,
+        `मंगल और राहु ${mars.rashi_hi} (भाव ${h}) में युत।`,
+        ['Mars', 'Rahu']);
+    }
+  }
+
+  // ── 7. Shaapit Dosha ──────────────────────────────────────────────────────
+  {
+    const sat = p.Saturn, rahu = p.Rahu;
+    if (sat && rahu && _isConjunct(sat, rahu)) {
+      const h = _planetHouse(asc, sat);
+      dosha('Shaapit Dosha', 'शापित दोष',
+        [1, 4, 7, 9, 10].includes(h) ? 'strong' : 'moderate',
+        `Saturn and Rahu conjunct in ${sat.rashi_en} (H${h}).`,
+        `शनि और राहु ${sat.rashi_hi} (भाव ${h}) में युत।`,
+        ['Saturn', 'Rahu']);
+    }
+  }
+
+  // ── 8. Grahan Dosha ───────────────────────────────────────────────────────
+  {
+    const sun = p.Sun, moon = p.Moon, rahu = p.Rahu, ketu = p.Ketu;
+    for (const shadow of [rahu, ketu].filter(Boolean)) {
+      const shadowName = shadow === rahu ? 'Rahu' : 'Ketu';
+      if (sun && _isConjunct(sun, shadow)) {
+        dosha('Surya Grahan Dosha', 'सूर्य ग्रहण दोष', 'moderate',
+          `Sun eclipsed by ${shadowName} in ${sun.rashi_en} (H${_planetHouse(asc, sun)}).`,
+          `सूर्य ${shadowName} द्वारा ग्रहण ${sun.rashi_hi} (भाव ${_planetHouse(asc, sun)}) में।`,
+          ['Sun', shadowName]);
+      }
+      if (moon && _isConjunct(moon, shadow)) {
+        dosha('Chandra Grahan Dosha', 'चंद्र ग्रहण दोष', 'moderate',
+          `Moon eclipsed by ${shadowName} in ${moon.rashi_en} (H${_planetHouse(asc, moon)}).`,
+          `चंद्र ${shadowName} द्वारा ग्रहण ${moon.rashi_hi} (भाव ${_planetHouse(asc, moon)}) में।`,
+          ['Moon', shadowName]);
+      }
+    }
+  }
+
+  // ── 9. Guru Chandaal Dosha ────────────────────────────────────────────────
+  {
+    const jup = p.Jupiter;
+    for (const shadowName of ['Rahu', 'Ketu']) {
+      const shadow = p[shadowName];
+      if (jup && shadow && _isConjunct(jup, shadow)) {
+        const h = _planetHouse(asc, jup);
+        dosha('Guru Chandaal Dosha', 'गुरु चांडाल दोष',
+          [1, 5, 9, 12].includes(h) ? 'strong' : 'moderate',
+          `Jupiter conjunct ${shadowName} in ${jup.rashi_en} (H${h}).`,
+          `गुरु ${shadowName} के साथ ${jup.rashi_hi} (भाव ${h}) में युत।`,
+          ['Jupiter', shadowName]);
+      }
+    }
+  }
+
+  // ── 10. Venus-Mangal / Venus-Rahu Vish Dosha ──────────────────────────────
+  {
+    const ven = p.Venus, mars = p.Mars, rahu = p.Rahu;
+    if (ven && mars && _isConjunct(ven, mars)) {
+      dosha('Venus-Mangal Vish Dosha', 'शुक्र-मंगल विष दोष', 'moderate',
+        `Venus and Mars conjunct in ${ven.rashi_en} (H${_planetHouse(asc, ven)}).`,
+        `शुक्र और मंगल ${ven.rashi_hi} (भाव ${_planetHouse(asc, ven)}) में युत।`,
+        ['Venus', 'Mars']);
+    }
+    if (ven && rahu && _isConjunct(ven, rahu)) {
+      dosha('Venus-Rahu Vish Dosha', 'शुक्र-राहु विष दोष', 'moderate',
+        `Venus and Rahu conjunct in ${ven.rashi_en} (H${_planetHouse(asc, ven)}).`,
+        `शुक्र और राहु ${ven.rashi_hi} (भाव ${_planetHouse(asc, ven)}) में युत।`,
+        ['Venus', 'Rahu']);
+    }
+  }
+
+  // ── 11. Kemdrum Dosha ─────────────────────────────────────────────────────
+  {
+    const moon = p.Moon;
+    if (moon) {
+      const s2  = _signAdd(moon.rashi_num, 1);
+      const s12 = _signAdd(moon.rashi_num, -1);
+      const pList = ['Sun', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+      const has2  = pList.some(n => p[n] && p[n].rashi_num === s2);
+      const has12 = pList.some(n => p[n] && p[n].rashi_num === s12);
+      if (!has2 && !has12) {
+        const jupAspect = p.Jupiter && _aspects(p.Jupiter, 'Jupiter', moon.rashi_num);
+        const benKendra = ['Jupiter', 'Venus', 'Mercury'].some(n => {
+          const pl = p[n]; return pl && [1, 4, 5, 7, 9, 10].includes(_planetHouse(asc, pl));
+        });
+        const sev = jupAspect || benKendra ? 'mild' : moon.rashi_num === 8 ? 'strong' : 'moderate';
+        dosha('Kemdrum Dosha', 'केमद्रुम दोष', sev,
+          `Moon (H${_planetHouse(asc, moon)}) has no planets in 2nd (sign ${s2}) or 12th (sign ${s12}) from it${jupAspect ? ' — partially relieved by Jupiter' : ''}.`,
+          `चंद्र (भाव ${_planetHouse(asc, moon)}) के 2 (राशि ${s2}) और 12 (राशि ${s12}) में कोई ग्रह नहीं${jupAspect ? ' — गुरु दृष्टि से आंशिक राहत' : ''}।`,
+          ['Moon']);
+      }
+    }
+  }
+
+  // ── 12. Paap Kartari Dosha ────────────────────────────────────────────────
+  {
+    const classicalMalefics = ['Saturn', 'Mars', 'Rahu', 'Ketu'];
+    for (const houseNum of [1, 4, 7, 10]) {
+      const hSign   = _houseSignNum(asc, houseNum);
+      const sBefore = _signAdd(hSign, -1);
+      const sAfter  = _signAdd(hSign, 1);
+      const mBefore = classicalMalefics.filter(n => p[n] && p[n].rashi_num === sBefore);
+      const mAfter  = classicalMalefics.filter(n => p[n] && p[n].rashi_num === sAfter);
+      if (mBefore.length > 0 && mAfter.length > 0) {
+        const allHemming = [...new Set([...mBefore, ...mAfter])];
+        dosha('Paap Kartari Dosha', 'पाप कर्तरी दोष',
+          houseNum === 1 ? 'strong' : 'moderate',
+          `H${houseNum} hemmed — ${mBefore.join(',')} before and ${mAfter.join(',')} after.`,
+          `भाव ${houseNum} घिरा — ${mBefore.join(',')} पहले और ${mAfter.join(',')} बाद।`,
+          allHemming);
+      }
+    }
+  }
+
+  return {
+    yogas,
+    doshas,
+    yoga_count:  yogas.length,
+    dosha_count: doshas.length,
+  };
 }
 
 module.exports = {
@@ -1456,6 +2262,7 @@ module.exports = {
   calculateAllVargaCharts,
   calculateNavamshaChart,
   analyzeMangalDosha,
+  detectYogasAndDoshas,
   calculateAshtakoot,
   calculateTransitSummary,
   generateRuleBasedPredictions,
