@@ -4,7 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 const { ok, fail } = require('../utils/response');
-const { calculateVedicChart } = require('../services/vedic-calc.service');
+const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-calc.service');
+const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
 
 router.use(authenticate);
 
@@ -54,6 +55,54 @@ async function calcAndSave(profile) {
   }
 }
 
+function parseJsonMaybe(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+async function ensureCalculatedChart(profile) {
+  const existing = parseJsonMaybe(profile.calculated_data);
+  if (existing) return existing;
+  return calcAndSave(profile);
+}
+
+function fileSafe(value) {
+  return String(value || 'report').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'report';
+}
+
+// Fetch detailed nakshatra insight from DB for a given nakshatra number (1-27)
+async function fetchNakshatraInsight(nakNum) {
+  if (!nakNum) return null;
+  try {
+    const row = await db('nakshatras')
+      .where({ id: nakNum })
+      .select(
+        'name','name_hi','deity_en','deity_hi','guna','general_nature',
+        'characteristics_en','characteristics_hi',
+        'negative_traits_en','negative_traits_hi',
+        'professions_en','professions_hi',
+        'health_issues_en','health_issues_hi',
+        'health_root_cause_en','health_root_cause_hi',
+        'health_guidance_en','health_guidance_hi'
+      )
+      .first();
+    if (!row) return null;
+    // professions are stored as JSON strings
+    if (row.professions_en && typeof row.professions_en === 'string') {
+      try { row.professions_en = JSON.parse(row.professions_en); } catch { row.professions_en = []; }
+    }
+    if (row.professions_hi && typeof row.professions_hi === 'string') {
+      try { row.professions_hi = JSON.parse(row.professions_hi); } catch { row.professions_hi = []; }
+    }
+    return row;
+  } catch { return null; }
+}
+
 // ── POST /api/kundli — create ────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   const { name, date_of_birth, time_of_birth, place_of_birth,
@@ -77,11 +126,158 @@ router.post('/', async (req, res) => {
 });
 
 // ── GET /api/kundli — list ───────────────────────────────────────────────────
+// Exclude calculated_data (large JSON blob) — callers fetch it via GET /:id
 router.get('/', async (req, res) => {
   const profiles = await db('kundli_profiles')
     .where({ user_id: req.user.id })
+    .select('id','uuid','user_id','name','date_of_birth','time_of_birth',
+            'place_of_birth','latitude','longitude','timezone_offset',
+            'gender','is_public','created_at','updated_at')
     .orderBy('created_at', 'desc');
   return ok(res, { profiles });
+});
+
+// ── POST /api/kundli/matchmaking/request ──
+router.post('/matchmaking/request', async (req, res) => {
+  try {
+    const { boy_kundli_id, girl_kundli_id } = req.body;
+    if (!boy_kundli_id || !girl_kundli_id) {
+      return fail(res, 'boy_kundli_id and girl_kundli_id required', 400);
+    }
+    if (boy_kundli_id === girl_kundli_id) {
+      return fail(res, 'Boy and girl Kundli profiles must be different', 400);
+    }
+
+    const boy = await db('kundli_profiles')
+      .where({ uuid: boy_kundli_id, user_id: req.user.id })
+      .first();
+    const girl = await db('kundli_profiles')
+      .where({ uuid: girl_kundli_id, user_id: req.user.id })
+      .first();
+    if (!boy || !girl) return fail(res, 'One or both Kundli profiles not found', 404);
+
+    const boyChart = await ensureCalculatedChart(boy);
+    const girlChart = await ensureCalculatedChart(girl);
+    if (!boyChart || !girlChart) {
+      return fail(res, 'Unable to calculate one or both Kundli profiles', 500);
+    }
+
+    const result = calculateAshtakoot(boyChart, girlChart);
+    const requestUuid = uuidv4();
+    const [id] = await db('matchmaking_requests').insert({
+      uuid: requestUuid,
+      user_id: req.user.id,
+      kundli_boy_id: boy.id,
+      kundli_girl_id: girl.id,
+      result: JSON.stringify(result),
+      status: 'completed',
+    });
+
+    return ok(res, {
+      request: {
+        id,
+        uuid: requestUuid,
+        status: 'completed',
+        boy_name: boy.name,
+        girl_name: girl.name,
+        boy_uuid: boy.uuid,
+        girl_uuid: girl.uuid,
+        result,
+      },
+      result,
+    }, 'Matchmaking calculated successfully', 201);
+  } catch (e) {
+    console.error('[Matchmaking] Error:', e.message);
+    return fail(res, 'Unable to calculate matchmaking', 500);
+  }
+});
+
+// ── GET /api/kundli/matchmaking/list ──
+router.get('/matchmaking/list', async (req, res) => {
+  const rows = await db('matchmaking_requests as mr')
+    .join('kundli_profiles as boy',  'mr.kundli_boy_id',  'boy.id')
+    .join('kundli_profiles as girl', 'mr.kundli_girl_id', 'girl.id')
+    .where({ 'mr.user_id': req.user.id })
+    .select(
+      'mr.*',
+      'boy.name as boy_name',
+      'boy.uuid as boy_uuid',
+      'girl.name as girl_name',
+      'girl.uuid as girl_uuid'
+    )
+    .orderBy('mr.created_at', 'desc');
+
+  const requests = rows.map((row) => ({
+    ...row,
+    result: parseJsonMaybe(row.result),
+  }));
+
+  return ok(res, { requests });
+});
+
+// ── GET /api/kundli/matchmaking/:id/report.pdf ──
+router.get('/matchmaking/:id/report.pdf', async (req, res) => {
+  try {
+    const request = await db('matchmaking_requests as mr')
+      .join('kundli_profiles as boy', 'mr.kundli_boy_id', 'boy.id')
+      .join('kundli_profiles as girl', 'mr.kundli_girl_id', 'girl.id')
+      .where({ 'mr.uuid': req.params.id, 'mr.user_id': req.user.id })
+      .select(
+        'mr.*',
+        'boy.name as boy_name',
+        'boy.uuid as boy_uuid',
+        'boy.calculated_data as boy_calculated_data',
+        'girl.name as girl_name',
+        'girl.uuid as girl_uuid',
+        'girl.calculated_data as girl_calculated_data'
+      )
+      .first();
+    if (!request) return fail(res, 'Matchmaking request not found', 404);
+
+    let result = parseJsonMaybe(request.result);
+    if (!result) {
+      const boy = await db('kundli_profiles').where({ uuid: request.boy_uuid, user_id: req.user.id }).first();
+      const girl = await db('kundli_profiles').where({ uuid: request.girl_uuid, user_id: req.user.id }).first();
+      const boyChart = await ensureCalculatedChart(boy);
+      const girlChart = await ensureCalculatedChart(girl);
+      if (!boyChart || !girlChart) return fail(res, 'Unable to calculate matchmaking report', 500);
+
+      result = calculateAshtakoot(boyChart, girlChart);
+      request.status = 'completed';
+      await db('matchmaking_requests')
+        .where({ id: request.id })
+        .update({ result: JSON.stringify(result), status: 'completed' });
+    }
+
+    const pdf = matchmakingReportPdf(request, result);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileSafe(`${request.boy_name}-${request.girl_name}-match`)}.pdf"`);
+    return res.send(pdf);
+  } catch (e) {
+    console.error('[MatchmakingReport] Error:', e.message);
+    return fail(res, 'Unable to generate matchmaking report', 500);
+  }
+});
+
+// ── GET /api/kundli/:id/report.pdf ──
+router.get('/:id/report.pdf', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate Kundli report', 500);
+
+    const pdf = kundliReportPdf(profile, chart);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileSafe(`${profile.name}-kundli`)}.pdf"`);
+    return res.send(pdf);
+  } catch (e) {
+    console.error('[KundliReport] Error:', e.message);
+    return fail(res, 'Unable to generate Kundli report', 500);
+  }
 });
 
 // ── GET /api/kundli/:id — fetch single (auto-calculates if needed) ────────────
@@ -97,10 +293,11 @@ router.get('/:id', async (req, res) => {
     profile.calculated_data = chart ? JSON.stringify(chart) : null;
   }
 
-  // Parse JSON if stored as string
-  if (typeof profile.calculated_data === 'string') {
-    try { profile.calculated_data = JSON.parse(profile.calculated_data); } catch {}
-  }
+  profile.calculated_data = parseJsonMaybe(profile.calculated_data);
+
+  // Attach nakshatra insight from DB (Moon nakshatra detailed notes)
+  const nakNum = profile.calculated_data?.nakshatra?.num;
+  profile.nakshatra_insight = await fetchNakshatraInsight(nakNum);
 
   return ok(res, { profile });
 });
@@ -116,10 +313,11 @@ router.post('/:id/recalculate', async (req, res) => {
   const freshProfile = await db('kundli_profiles').where({ id: profile.id }).first();
   const chart = await calcAndSave(freshProfile);
 
-  if (typeof freshProfile.calculated_data === 'string') {
-    try { freshProfile.calculated_data = JSON.parse(freshProfile.calculated_data); } catch {}
-  }
   freshProfile.calculated_data = chart;
+
+  // Attach nakshatra insight from DB
+  const nakNum = chart?.nakshatra?.num;
+  freshProfile.nakshatra_insight = await fetchNakshatraInsight(nakNum);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });
@@ -156,34 +354,6 @@ router.delete('/:id', async (req, res) => {
   if (!profile) return fail(res, 'Kundli not found', 404);
   await db('kundli_profiles').where({ id: profile.id }).del();
   return ok(res, {}, 'Kundli deleted');
-});
-
-// ── POST /api/kundli/matchmaking/request ─────────────────────────────────────
-router.post('/matchmaking/request', async (req, res) => {
-  const { boy_kundli_id, girl_kundli_id } = req.body;
-  if (!boy_kundli_id || !girl_kundli_id)
-    return fail(res, 'boy_kundli_id and girl_kundli_id required', 400);
-
-  const boy  = await db('kundli_profiles').where({ uuid: boy_kundli_id }).first();
-  const girl = await db('kundli_profiles').where({ uuid: girl_kundli_id }).first();
-  if (!boy || !girl) return fail(res, 'One or both Kundli profiles not found', 404);
-
-  const [id] = await db('matchmaking_requests').insert({
-    uuid: uuidv4(), user_id: req.user.id,
-    kundli_boy_id: boy.id, kundli_girl_id: girl.id, status: 'pending',
-  });
-  return ok(res, { id }, 'Matchmaking request created', 201);
-});
-
-// ── GET /api/kundli/matchmaking/list ─────────────────────────────────────────
-router.get('/matchmaking/list', async (req, res) => {
-  const requests = await db('matchmaking_requests as mr')
-    .join('kundli_profiles as boy',  'mr.kundli_boy_id',  'boy.id')
-    .join('kundli_profiles as girl', 'mr.kundli_girl_id', 'girl.id')
-    .where({ 'mr.user_id': req.user.id })
-    .select('mr.*', 'boy.name as boy_name', 'girl.name as girl_name')
-    .orderBy('mr.created_at', 'desc');
-  return ok(res, { requests });
 });
 
 module.exports = router;

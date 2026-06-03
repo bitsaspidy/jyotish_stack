@@ -654,3 +654,432 @@ Current Dasha: Sun (1990 → 1994-12)
 - Recalculate button
 
 *Maintained by: AI Agent (Claude Sonnet 4.6) · Project: Jyotish Stack AI*
+
+---
+
+## Session 5 - 2026-06-02 | Calculation Verification
+
+### Done TASK-026 - Retrograde Motion + Server Tests
+**Status:** Done
+**Agent:** Alex (Codex)
+
+**Files updated:**
+- `server/src/services/vedic-calc.service.js`
+- `server/tests/vedic-calc.test.js`
+- `server/package.json`
+- `package.json`
+- `MEMORY.md`
+
+**Changes:**
+- Replaced hardcoded `is_retrograde: false` with apparent sidereal daily-motion detection.
+- Added `daily_motion` to each planet output for audit/debug.
+- Sun and Moon are forced non-retrograde.
+- Mercury, Venus, Mars, Jupiter, Saturn, Rahu, and Ketu use negative daily motion to determine retrograde state.
+- Exported calculation helpers: `tropicalLongitudeForPlanet`, `siderealLongitudeForPlanet`, `dailyMotionForPlanet`, `isRetrogradePlanet`.
+- Added Node built-in test runner coverage for the documented Rahul Sharma chart, retrograde flags, daily motion helper consistency, and rashi/nakshatra boundaries.
+
+**Reference note:**
+- A temporary `swisseph` install was attempted for one-time Swiss Ephemeris reference output, but failed on Windows during npm execution. No Swiss package was added to production or dev dependencies.
+- Current tests lock the documented project reference chart from Session 4. Exact Swiss/Panchang certification still requires owner-approved reference values or a licensed reference workflow.
+
+**Verification:**
+```bash
+node --check server/src/services/vedic-calc.service.js
+node --check server/tests/vedic-calc.test.js
+npm run test:server
+```
+
+Result: 4/4 server calculation tests passed.
+
+---
+
+## Session 6 - 2026-06-02 | Product Completion Slice
+
+### Done TASK-027 - D9, Antardasha, Matchmaking, Gochar, Predictions, PDF, UI Flows
+**Status:** Done
+**Agent:** Alex (Codex)
+
+**Files updated/created:**
+- `server/src/services/vedic-calc.service.js`
+- `server/src/services/report.service.js`
+- `server/src/routes/kundli.routes.js`
+- `server/tests/vedic-calc.test.js`
+- `ui-main/src/views/KundliManager.jsx`
+- `ui-main/src/views/Matchmaking.jsx`
+- `ui-main/src/views/Predictions.jsx`
+- `ui-main/src/views/KundliDetail.jsx`
+- `ui-main/src/app/kundli/page.jsx`
+- `ui-main/src/app/kundli/new/page.jsx`
+- `ui-main/src/app/matchmaking/page.jsx`
+- `ui-main/src/app/predictions/page.jsx`
+- `MEMORY.md`
+- `ACTIVITY.md`
+
+**Calculation changes:**
+- Added D9/Navamsha chart generation for ascendant, planets, and whole-sign D9 houses.
+- Added Vimshottari Antardasha under every Mahadasha and deterministic current-period marking.
+- Added Mangal Dosha checks from Lagna, Moon, and Venus with severity/cancellation summary.
+- Added Ashtakoot Guna Milan scoring with 8 kootas, total out of 36, verdict, and Mangal compatibility.
+- Added Gochar transit summary with current graha positions, Sade Sati, Jupiter support, and Rahu-Ketu axis.
+- Added rule-based prediction summaries and category guidance from dasha, gochar, and Mangal Dosha.
+
+**API changes:**
+- `POST /api/kundli/matchmaking/request` now calculates and stores completed Ashtakoot results.
+- `GET /api/kundli/matchmaking/list` now sits before `/:id`, fixing route shadowing.
+- Matchmaking now checks ownership for both Kundli profiles.
+- Added authenticated PDF exports:
+  - `GET /api/kundli/:id/report.pdf`
+  - `GET /api/kundli/matchmaking/:id/report.pdf`
+
+**UI changes:**
+- Replaced Coming Soon pages with real flows for `/kundli`, `/kundli/new`, `/matchmaking`, and `/predictions`.
+- Kundli detail now shows D9/Navamsha, Antardasha, Mangal Dosha, Gochar, prediction summaries, and PDF export.
+- Kundli manager supports create/list/open/report export.
+- Matchmaking supports select profiles, calculate Ashtakoot, view history, and export PDF.
+- Predictions page shows current Mahadasha/Antardasha, gochar highlights, categories, remedies, and export.
+
+**Verification:**
+```bash
+node --check server/src/services/vedic-calc.service.js
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/report.service.js
+node --check server/tests/vedic-calc.test.js
+npm run test:server
+npm run build:main
+```
+
+Result:
+- Server tests: 9/9 passed.
+- `ui-main` production build: passed, 25/25 pages generated.
+
+**Still pending:**
+- Owner-approved Panchang/Swiss Ephemeris certification values for production trust.
+- Dashakoot compatibility.
+- Detailed Nakshatra report.
+- Daily Rashi horoscope and annual Varshphal.
+- True AI-generated personalized predictions beyond the current rule engine.
+
+---
+
+## Session 7 - 2026-06-02 | Varga Reference Tables + Extended Divisional Calculations
+
+### Done TASK-028 - Owner PDF Varga Data, Database Seed, Calculation Upgrade
+**Status:** Done
+**Agent:** Alex (Codex)
+
+**Source provided:**
+- `C:\Users\Asus Vivobook\.codex\attachments\e7cfcb97-d802-4794-8cc3-829c19e68760\pasted-text.txt`
+- Copied PDF text covering Shodash/extended Varga charts, master family references, and relationship/family chart usage.
+
+**Files updated/created:**
+- `server/src/data/varga-reference.js`
+- `server/src/migrations/007_varga_reference_data.js`
+- `server/src/seeds/007_varga_reference_data.js`
+- `server/src/services/vedic-calc.service.js`
+- `server/tests/vedic-calc.test.js`
+- `MEMORY.md`
+- `ACTIVITY.md`
+
+**Database changes:**
+- Added `varga_charts` for D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, and D60 definitions.
+- Added `varga_family_references` for master relationship/family topics from the pasted PDF text.
+- Added `varga_chart_relationships` for chart-specific family, spouse, parents, siblings, children, health, karma, and spiritual references.
+- Seeded reference data with 18 chart definitions, 15 family reference rows, and 62 chart relationship rows.
+
+**Calculation changes:**
+- `calculateVedicChart()` now returns `varga_charts` and `divisional_charts` for all 18 supported Varga charts.
+- Existing `chart.navamsha` and `chart.divisional_charts.d9` are preserved for UI/API compatibility.
+- Added reusable helpers: `vargaPlacementFromDeg()`, `calculateVargaChart()`, and `calculateAllVargaCharts()`.
+- Added special rules for D2 Hora and D30 Trimshamsha, plus standard sequence rules for supported equal-division Vargas.
+
+**Important accuracy note:**
+- High divisional charts, especially D16, D20, D24, D27, D40, D45, and D60, are highly birth-time-sensitive.
+- These formulas are implemented from the owner-provided pasted Varga reference plus standard rule variants, but production trust still needs owner-approved classical references and Panchang/Swiss Ephemeris case validation.
+
+**Verification:**
+```bash
+node --check server/src/services/vedic-calc.service.js
+node --check server/src/data/varga-reference.js
+node --check server/src/migrations/007_varga_reference_data.js
+node --check server/src/seeds/007_varga_reference_data.js
+node --check server/tests/vedic-calc.test.js
+npm run test:server
+npm run migrate
+node node_modules/knex/bin/cli.js --knexfile server/knexfile.js seed:run --specific=007_varga_reference_data.js
+npm run build:main
+git diff --check
+```
+
+Result:
+- Server tests: 12/12 passed.
+- Migration 007 applied successfully after fixing a MySQL constraint-name length issue.
+- Local DB seed counts verified: `varga_charts=18`, `varga_family_references=15`, `varga_chart_relationships=62`.
+- `ui-main` production build: passed, 25/25 pages generated.
+- `git diff --check`: no whitespace errors; only expected LF/CRLF warnings on Windows.
+
+---
+
+## Session 8 — 2026-06-02 | Bug Fixes + Drishti/BhavKarak/Digbala + Edit Modal + Nakshatra PDF
+
+### ✅ TASK-029 — MySQL Sort Memory Crash Fix
+**Status:** Done  
+**Files:** `server/src/routes/kundli.routes.js`, `server/src/migrations/008_kundli_list_index.js`
+
+**Problem:** `GET /api/kundli` crashed with `ER_OUT_OF_SORTMEMORY` because `SELECT *` fetched huge `calculated_data` JSON blobs and MySQL exhausted its sort buffer executing `ORDER BY created_at DESC`.
+
+**Fix 1:** List endpoint now selects 12 lightweight columns explicitly, excluding `calculated_data` (which is only needed in `GET /:id`).  
+**Fix 2:** Migration 008 added composite index `(user_id, created_at)` so MySQL can satisfy the WHERE filter and ORDER BY from the index alone — no filesort.
+
+---
+
+### ✅ TASK-030 — toDMS Carry-over Bug Fix
+**Status:** Done  
+**File:** `server/src/services/vedic-calc.service.js`
+
+**Problem:** `toDMS()` did not carry over when `Math.round()` pushed seconds to 60 (or minutes to 60), producing invalid strings like `22°59'60"` or display anomalies.
+
+**Fix:** Added carry-over after rounding:
+```js
+if (s >= 60) { s -= 60; m += 1; }
+if (m >= 60) { m -= 60; d += 1; }
+```
+Verified: `toDMS(29.9999999)` → `30°00'00"` ✓
+
+---
+
+### ✅ TASK-031 — Graha Drishti, Bhav Karak, Digbala
+**Status:** Done  
+**Source:** `Drishti, Bhav Karak and Digbala.pdf`
+
+**Files created/updated:**
+- `server/src/services/vedic-calc.service.js` — 3 new functions + wired into `calculateVedicChart()`
+- `server/src/migrations/009_drishti_bhavkarak_digbala.js` — 3 new reference tables
+- `server/src/seeds/008_drishti_bhavkarak_digbala.js` — full seed for all rules
+- `ui-main/src/views/KundliDetail.jsx` — 3 new panels in Kundli detail page
+
+**New functions:**
+
+| Function | Description |
+|----------|-------------|
+| `calculateGrahaDrishti(ascRashiNum, planets)` | Returns `by_planet` (each planet → houses it aspects) and `by_house` (each house → planets aspecting it). Full aspect offsets from PDF. |
+| `calculateBhavKarak(ascRashiNum, planets)` | For each of 12 houses: karak planets + their live placement quality (trikona/kendra/other) + Karako Bhava Nashaya flag. |
+| `calculateDigbala(ascRashiNum, planets)` | Directional strength for 7 planets: `has_digbala`, `has_digbala_loss`, `strength_percent` (0–100 linear from strong house). |
+
+**Drishti aspect rules (from PDF):**
+| Planet | Aspects |
+|--------|---------|
+| Sun, Moon, Mercury, Venus | 7th only |
+| Mars | 4th, 7th, 8th (aggressive) |
+| Jupiter | 5th, 7th, 9th (auspicious) |
+| Saturn | 3rd, 7th, 10th (restricting) |
+| Rahu, Ketu | 5th, 7th, 9th (karmic) |
+
+**Digbala strong houses (from PDF):**
+| Planet | Strong House | Direction |
+|--------|-------------|-----------|
+| Jupiter, Mercury | 1st | East |
+| Sun, Mars | 10th | South |
+| Saturn | 7th | West |
+| Moon, Venus | 4th | North |
+
+**DB tables added:** `graha_drishti_rules` (19 rows), `bhav_karak` (17 rows), `digbala_rules` (7 rows).  
+**UI panels added:** Digbala (strength bars), Bhav Karak (12-house grid), Graha Drishti (by-planet + by-house views).
+
+---
+
+### ✅ TASK-032 — Edit Birth Details + Location Picker
+**Status:** Done  
+**File:** `ui-main/src/views/KundliDetail.jsx`
+
+**Feature:** `✏️ Edit Details` button opens a modal with full birth detail editing.
+
+**Location picker:** Nominatim (OpenStreetMap) geocoding — completely free, no API key.  
+- Type city name → search → dropdown of results → select → auto-fills latitude, longitude, timezone (IST heuristic for India).  
+- OpenStreetMap iframe embed shows live map pin at selected coordinates.  
+- `timezone_offset` dropdown covers all standard UTC offsets (half-hour granularity).
+
+**Save flow:** `PATCH /api/kundli/:id` → `POST /api/kundli/:id/recalculate` → `fetchKundli()` re-loads fresh chart.
+
+**Stale cache cleared:** 2 existing kundli `calculated_data` nulled so they recalculate on next visit.
+
+---
+
+### ✅ TASK-033 — Nakshatra Table Data (AstroAnsh Class 8 PDF)
+**Status:** Done  
+**Source:** `AstroAnsh Class 8 — Nakshatra Table Sheet.pdf`
+
+**Files updated/created:**
+- `server/src/migrations/010_nakshatra_gandmool.js` — adds `is_gandmool` BOOLEAN column to `nakshatras`
+- `server/src/seeds/005_nakshatras.js` — re-seeded with exact deity names + `is_gandmool` for all 27
+- `server/src/services/vedic-calc.service.js` — `NAKSHATRAS` array updated with `deity_en`, `deity_hi`, `is_gandmool`
+- `MEMORY.md` — Section 13 added with full nakshatra reference table
+- `ACTIVITY.md` — This entry
+
+**Data added per nakshatra:**
+- `deity_en` — English deity name (from PDF, e.g. "Tvashtar / Vishwakarma" for Chitra)
+- `deity_hi` — Hindi deity name
+- `is_gandmool` — boolean (true for 6 nakshatras)
+
+**Gandmool nakshatras (6 of 27):**
+- Ketu's 3 (ALL gandmool): Ashwini (1), Magha (10), Mula (19)
+- Mercury's 3 (ALL gandmool): Ashlesha (9), Jyeshtha (18), Revati (27)
+
+**Corrections from PDF:**
+- Chitra deity updated from "Vishwakarma" → "Tvashtar / Vishwakarma" (PDF shows both names)
+- Dhanishtha deity corrected from "Ashtavasus" → "Vasus" (PDF text)
+- Purva Ashadha deity clarified as "Apas (Water)" / "आपः / जल"
+
+**DB verification:**
+```
+Total rows: 27
+Gandmool nakshatras (6): 1-Ashwini, 9-Ashlesha, 10-Magha, 18-Jyeshtha, 19-Mula, 27-Revati
+```
+
+**Service verification:** `nakshatraFromDeg()` now returns `deity_en`, `deity_hi`, `is_gandmool` in every nakshatra object.
+
+---
+
+---
+
+## Session 9 — 2026-06-03 | Detailed Nakshatra Notes (EN + HI)
+
+### ✅ TASK-034 — Nakshatra Detailed Notes Added to Database
+**Status:** Done
+**Source:**
+- `DETAILED_NAKSHATRA_NOTES.md` — English detailed notes (all 27 nakshatras, AstroAnsh Class 9)
+- `AstroAnsh Class 9 - Detailed Nakshtra Notes Hindi.pdf` — Hindi translation (PDF text extraction unavailable on this machine; Hindi content written from classical Jyotish knowledge)
+
+**Files created/updated:**
+- `server/src/migrations/011_nakshatra_detailed_notes.js` — adds 12 new columns to `nakshatras` table
+- `server/src/seeds/005_nakshatras.js` — re-seeded with full EN + HI detailed notes for all 27
+
+**12 new columns added to `nakshatras`:**
+| Column | Type | Description |
+|--------|------|-------------|
+| `characteristics_en` | TEXT | Core personality traits (English) |
+| `characteristics_hi` | TEXT | Core personality traits (Hindi) |
+| `negative_traits_en` | TEXT | Negative tendencies (English) |
+| `negative_traits_hi` | TEXT | Negative tendencies (Hindi) |
+| `professions_en` | LONGTEXT (JSON) | Array of {category, roles[]} (English) |
+| `professions_hi` | LONGTEXT (JSON) | Array of {category, roles[]} (Hindi) |
+| `health_issues_en` | TEXT | Common health issues (English) |
+| `health_issues_hi` | TEXT | Common health issues (Hindi) |
+| `health_root_cause_en` | TEXT | Root causes of health issues (English) |
+| `health_root_cause_hi` | TEXT | Root causes of health issues (Hindi) |
+| `health_guidance_en` | TEXT | Health guidance (English) |
+| `health_guidance_hi` | TEXT | Health guidance (Hindi) |
+
+**Data coverage per nakshatra:**
+- 4–6 core characteristics (EN + HI)
+- 3–4 negative traits (EN + HI)
+- 4 profession categories × 4–7 roles each (EN + HI, JSON)
+- Health issues, root causes, and guidance (EN + HI)
+
+**DB verification:**
+```
+Total rows: 27
+Spot checks: Punarvasu (7), Revati (27) — all 12 new fields populated ✓
+Gandmool flag: Revati is_gandmool = 1 ✓
+```
+
+**Run commands:**
+```bash
+npm run migrate                    # applies 011_nakshatra_detailed_notes
+node node_modules/knex/bin/cli.js --knexfile server/knexfile.js seed:run --specific=005_nakshatras.js
+```
+
+---
+
+---
+
+## Session 10 — 2026-06-03 | Kundli UI Upgrade: Navamsha Toggle + Basic Details + Personality Insights
+
+### ✅ TASK-035 — Panchang + Astro Details Engine
+**Status:** Done  
+**File:** `server/src/services/vedic-calc.service.js`
+
+**New functions added:**
+| Function | Returns |
+|----------|---------|
+| `hinduMasa(sunSidLon)` | Lunar month name (EN + HI) |
+| `calculateNityaYoga(sun, moon)` | 27 Nitya Yogas from Sun+Moon |
+| `calculateTithi(sun, moon)` | Paksha + tithi name EN/HI |
+| `calculateKarana(sun, moon)` | Karana name (movable/fixed) |
+| `calculateVara(y,m,d,h,min,tz)` | Day of week EN + HI |
+| `calculatePahar(hour, min, sunriseMins)` | Watch of day (1-8) |
+| `sunriseSunset(lat, lon, y, m, d, tz)` | Sunrise/sunset HH:MM AM/PM |
+| `calculateAstroDetails(...)` | Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya |
+| `calculatePanchang(...)` | Combined panchang bundle |
+
+**New lookup tables:** `NAK_AKSHAR` (syllables per nakshatra/pada), `MASA_NAMES`, `NITYA_YOGA_NAMES`, Vara names, Karana names.
+
+**Calculation accuracy verified against Jodhpur 23/01/1989:**
+| Field | Calculated | Expected |
+|-------|-----------|----------|
+| Masa | Pausa ✓ | Pausa |
+| Tithi | Krishna Dwitiya ✓ | Krishna Dwitiya |
+| Yoga | Ayushman ✓ | Ayushman |
+| Karana | Taitila ✓ | Taitila |
+| Sunrise | 07:27 AM ✓ | ~07:25 AM |
+| Sunset | 06:15 PM ✓ | ~06:13 PM |
+| Varna | Brahmin/Vipra ✓ | Vipra |
+| Vashya | Jalachara ✓ | Jalchar |
+| Gana | Rakshasa ✓ | Rakshasa |
+| Nadi | Antya ✓ | Ant |
+| Tatva | Water ✓ | Water |
+| Yunja | Madhya ✓ | Madhya |
+| Naam Akshar | Du ✓ | Du |
+| Paya | Silver ✓ | Silver |
+
+**`calculateVedicChart()` now returns:**
+- `chart.panchang` — masa, tithi, vara, yoga, karana, pahar, moon_phase, sunrise, sunset
+- `chart.astro_details` — all 14 astro fields (varna through paya)
+
+---
+
+### ✅ TASK-036 — Nakshatra Insight from DB (Route Update)
+**Status:** Done  
+**File:** `server/src/routes/kundli.routes.js`
+
+**Changes:**
+- Added `fetchNakshatraInsight(nakNum)` helper — queries `nakshatras` table for Moon's nakshatra (1-27), returns characteristics, professions (parsed JSON), health data in EN + HI
+- `GET /api/kundli/:id` — now includes `profile.nakshatra_insight` in response
+- `POST /api/kundli/:id/recalculate` — now includes `profile.nakshatra_insight` in response
+
+---
+
+### ✅ TASK-037 — KundliDetail UI: 3 Feature Upgrades
+**Status:** Done  
+**File:** `ui-main/src/views/KundliDetail.jsx`
+
+#### 1. Navamsha Chart — North/South Style Toggle
+- Navamsha (D9) now mirrors the D1 Lagna chart style (North or South Indian)
+- Toggling "◇ North Indian / ◈ South Indian" applies to **both** charts simultaneously
+- Default changed to **North Indian** (was South Indian before)
+
+#### 2. Basic Details Panel — Tabbed Card (3 sections)
+Replaced flat "Birth Details" card with a tabbed panel:
+
+| Tab | Fields |
+|-----|--------|
+| **Basic Details** | Name, Place, Date, Time, Lat, Lon, Timezone, Sunrise, Sunset, Ayanamsha |
+| **Ghat Chakra** | Month (Masa), Tithi, Day (Vara), Nakshatra, Nitya Yoga, Karana, Pahar, Moon Phase |
+| **Astro Details** | Ascendant, Ascendant Lord, Varna, Vashya, Yoni, Gan, Nadi, Sign Lord, Sign, Nakshatra, Nakshatra Lord, Charan, Yoga, Karan, Tithi, Yunja, Tatva, Name Alphabet, Paya |
+
+#### 3. Personality Insights Panel — Nakshatra-Based (3 tabs)
+
+| Tab | Content |
+|-----|---------|
+| **Traits** | Core characteristics + What to Avoid (negative traits) — EN or HI from DB |
+| **Career** | 4 profession categories as pill-tag chips — EN or HI from DB |
+| **Health** | Common health issues, root causes, guidance — EN or HI from DB |
+
+Data source: `nakshatras` table detailed notes (seeded in Session 9, migration 011).
+
+**Bug fix:** Cleared stale `.next` webpack cache after multiple file changes — fresh build runs clean (25/25 pages ✓).
+
+**Server tests:** 12/12 passing.
+
+---
+
+*Last updated: 2026-06-03 | Agent: Claude Sonnet 4.6*

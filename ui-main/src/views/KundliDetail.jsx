@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
@@ -336,6 +337,574 @@ function ChartToggle({ style, onChange }) {
   );
 }
 
+// ─── Edit Kundli Modal ────────────────────────────────────────────────────────
+// Location search: Nominatim (OpenStreetMap) — 100% free, no API key needed.
+// Map preview:     OSM embed iframe.
+
+function EditKundliModal({ kundli, onClose, onSaved }) {
+  const dob = String(kundli.date_of_birth || '').slice(0, 10);
+  const [form, setForm] = useState({
+    name:             kundli.name          || '',
+    date_of_birth:    dob,
+    time_of_birth:    (kundli.time_of_birth || '00:00:00').slice(0, 5),
+    place_of_birth:   kundli.place_of_birth || '',
+    latitude:         String(kundli.latitude  || ''),
+    longitude:        String(kundli.longitude || ''),
+    timezone_offset:  String(kundli.timezone_offset || '5.5'),
+    gender:           kundli.gender        || 'male',
+  });
+
+  const [locQuery,    setLocQuery]    = useState('');
+  const [locResults,  setLocResults]  = useState([]);
+  const [searching,   setSearching]   = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const searchRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handler(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setLocResults([]);
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  // ── Nominatim geocoding search (free, no API key) ──
+  async function handleLocationSearch(e) {
+    e.preventDefault();
+    if (!locQuery.trim()) return;
+    setSearching(true);
+    setLocResults([]);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locQuery)}&format=json&limit=6&addressdetails=1`;
+      const res  = await fetch(url, {
+        headers: { 'Accept-Language': 'en', 'Accept': 'application/json' },
+      });
+      const data = await res.json();
+      setLocResults(data);
+    } catch {
+      toast.error('Location search failed. Check internet connection.');
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function selectResult(r) {
+    const lat = parseFloat(r.lat);
+    const lon = parseFloat(r.lon);
+    // Auto-estimate UTC offset from longitude (nearest half-hour)
+    let tz = Math.round((lon / 15) * 2) / 2;
+    // India heuristic: IST = +5.5
+    if (lat >= 6 && lat <= 37 && lon >= 68 && lon <= 98) tz = 5.5;
+    const label = r.display_name;
+    set('place_of_birth', label);
+    setForm(f => ({
+      ...f,
+      place_of_birth:  label,
+      latitude:        lat.toFixed(6),
+      longitude:       lon.toFixed(6),
+      timezone_offset: String(tz),
+    }));
+    setLocQuery(label.split(',')[0]);
+    setLocResults([]);
+  }
+
+  // ── Map preview src (OSM embed, no key) ──
+  const lat = parseFloat(form.latitude);
+  const lon = parseFloat(form.longitude);
+  const hasCoords = !isNaN(lat) && !isNaN(lon);
+  const mapSrc = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${(lon-0.05).toFixed(5)},${(lat-0.05).toFixed(5)},${(lon+0.05).toFixed(5)},${(lat+0.05).toFixed(5)}&layer=mapnik&marker=${lat},${lon}`
+    : null;
+
+  // ── Save ──
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.name || !form.date_of_birth || !form.time_of_birth) {
+      toast.error('Name, date and time are required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.patch(`/kundli/${kundli.uuid}`, {
+        name:            form.name,
+        date_of_birth:   form.date_of_birth,
+        time_of_birth:   form.time_of_birth + ':00',
+        place_of_birth:  form.place_of_birth,
+        latitude:        parseFloat(form.latitude),
+        longitude:       parseFloat(form.longitude),
+        timezone_offset: parseFloat(form.timezone_offset),
+        gender:          form.gender,
+      });
+      // Force fresh recalculation with new birth data
+      await api.post(`/kundli/${kundli.uuid}/recalculate`);
+      toast.success('Birth details saved & chart recalculated!');
+      onSaved();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Save failed. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputCls = 'w-full bg-[#0f1128] border border-gold/20 rounded-lg px-3 py-2 text-ivory text-sm focus:outline-none focus:border-gold/60 placeholder-ivory/25 transition-colors';
+  const labelCls = 'text-ivory/45 text-[10px] uppercase tracking-widest block mb-1';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+      style={{ background: 'rgba(6,7,15,0.88)', backdropFilter: 'blur(6px)', paddingTop: 60, paddingBottom: 60 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+        className="card-royal w-full max-w-2xl mx-4 p-6 relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-serif text-gold text-lg font-bold">✏️ Edit Birth Details</h2>
+          <button onClick={onClose}
+            style={{ color:'rgba(245,240,232,0.4)', fontSize:20, lineHeight:1, background:'none', border:'none', cursor:'pointer' }}>
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSave} className="space-y-5">
+          {/* Name + Gender */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Full Name *</label>
+              <input className={inputCls} value={form.name}
+                onChange={e => set('name', e.target.value)} required />
+            </div>
+            <div>
+              <label className={labelCls}>Gender *</label>
+              <select className={inputCls} value={form.gender}
+                onChange={e => set('gender', e.target.value)}>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Date + Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Date of Birth *</label>
+              <input type="date" className={inputCls} value={form.date_of_birth}
+                onChange={e => set('date_of_birth', e.target.value)} required />
+            </div>
+            <div>
+              <label className={labelCls}>Time of Birth *</label>
+              <input type="time" className={inputCls} value={form.time_of_birth}
+                onChange={e => set('time_of_birth', e.target.value)} required />
+            </div>
+          </div>
+
+          {/* Location search */}
+          <div ref={searchRef}>
+            <label className={labelCls}>Search Place of Birth (OpenStreetMap — free)</label>
+            <div className="flex gap-2">
+              <input
+                className={`${inputCls} flex-1`}
+                placeholder="e.g. Jodhpur, Rajasthan, India"
+                value={locQuery}
+                onChange={e => setLocQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLocationSearch(e); }}}
+              />
+              <button type="button" onClick={handleLocationSearch} disabled={searching}
+                style={{
+                  padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.4)',
+                  color: '#D4AF37', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>
+                {searching ? '⏳' : '🔍 Search'}
+              </button>
+            </div>
+
+            {/* Results dropdown */}
+            {locResults.length > 0 && (
+              <div style={{
+                position: 'absolute', zIndex: 100, left: 0, right: 0,
+                background: '#0f1128', border: '1px solid rgba(212,175,55,0.3)',
+                borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: 'auto',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              }}>
+                {locResults.map((r, i) => (
+                  <button key={i} type="button"
+                    onClick={() => selectResult(r)}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 14px', fontSize: 12, color: 'rgba(245,240,232,0.75)',
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      borderBottom: i < locResults.length - 1 ? '1px solid rgba(212,175,55,0.08)' : 'none',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <span style={{ color: '#D4AF37', marginRight: 6 }}>📍</span>
+                    {r.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Place label (editable) */}
+          <div>
+            <label className={labelCls}>Place of Birth (Label)</label>
+            <input className={inputCls} value={form.place_of_birth}
+              onChange={e => set('place_of_birth', e.target.value)}
+              placeholder="City, State, Country" />
+          </div>
+
+          {/* Lat / Lon / Timezone */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className={labelCls}>Latitude °N</label>
+              <input type="number" step="0.000001" className={inputCls}
+                value={form.latitude}
+                onChange={e => set('latitude', e.target.value)}
+                placeholder="26.2800" />
+            </div>
+            <div>
+              <label className={labelCls}>Longitude °E</label>
+              <input type="number" step="0.000001" className={inputCls}
+                value={form.longitude}
+                onChange={e => set('longitude', e.target.value)}
+                placeholder="73.0200" />
+            </div>
+            <div>
+              <label className={labelCls}>UTC Offset (hrs)</label>
+              <select className={inputCls} value={form.timezone_offset}
+                onChange={e => set('timezone_offset', e.target.value)}>
+                {['-12','-11','-10','-9.5','-9','-8','-7','-6','-5','-4.5','-4',
+                  '-3.5','-3','-2','-1','0','1','2','3','3.5','4','4.5','5','5.5',
+                  '5.75','6','6.5','7','8','8.75','9','9.5','10','10.5','11','12',
+                  '12.75','13','14'].map(v => (
+                  <option key={v} value={v}>UTC {+v >= 0 ? '+' : ''}{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* OSM Map preview */}
+          {hasCoords && mapSrc && (
+            <div>
+              <label className={labelCls}>Location Preview (OpenStreetMap)</label>
+              <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(212,175,55,0.2)', height: 200 }}>
+                <iframe
+                  src={mapSrc}
+                  width="100%" height="200"
+                  style={{ border: 'none', display: 'block' }}
+                  loading="lazy"
+                  title="Birth place map"
+                />
+              </div>
+              <p style={{ fontSize:10, color:'rgba(245,240,232,0.25)', marginTop:4 }}>
+                📌 {lat.toFixed(4)}°N, {lon.toFixed(4)}°E ·
+                <a href={`https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=12/${lat}/${lon}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ color:'#D4AF37', marginLeft:4, textDecoration:'underline' }}>
+                  Open full map ↗
+                </a>
+              </p>
+            </div>
+          )}
+
+          {/* Save */}
+          <div className="flex gap-3 justify-end pt-2 border-t border-gold/10">
+            <button type="button" onClick={onClose}
+              style={{
+                padding:'8px 20px', borderRadius:8, fontSize:12, cursor:'pointer',
+                background:'transparent', border:'1px solid rgba(212,175,55,0.25)', color:'rgba(245,240,232,0.5)',
+              }}>
+              Cancel
+            </button>
+            <button type="submit" disabled={saving}
+              style={{
+                padding:'8px 24px', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer',
+                background: saving ? 'rgba(212,175,55,0.2)' : 'linear-gradient(135deg,#D4AF37,#B8960C)',
+                border:'none', color: saving ? '#D4AF37' : '#0B0D1A',
+                opacity: saving ? 0.7 : 1,
+              }}>
+              {saving ? '⏳ Saving & Recalculating…' : '💾 Save & Recalculate Chart'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Basic Details Panel ─────────────────────────────────────────────────────
+// Shows 3 tabs: Basic Details | Ghat Chakra (Panchang) | Astro Details
+
+const BD_TABS = [
+  { key: 'basic',  label: 'Basic Details',  label_hi: 'जन्म विवरण' },
+  { key: 'ghat',   label: 'Ghat Chakra',    label_hi: 'घट चक्र'   },
+  { key: 'astro',  label: 'Astro Details',  label_hi: 'ज्योतिष विवरण' },
+];
+
+function InfoRow({ label, value }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div style={{
+      display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+      padding:'6px 0', borderBottom:'1px solid rgba(212,175,55,0.07)',
+    }}>
+      <span style={{ color:'rgba(245,240,232,0.38)', fontSize:11, flexShrink:0, minWidth:120 }}>{label}</span>
+      <span style={{ color:'#F5F0E8', fontSize:12, textAlign:'right', fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>{value}</span>
+    </div>
+  );
+}
+
+function BasicDetailsPanel({ kundli, chart, lang }) {
+  const [tab, setTab] = useState('basic');
+  if (!kundli) return null;
+
+  const dob  = String(kundli.date_of_birth).slice(0, 10);
+  const time = (kundli.time_of_birth || '').slice(0, 5);
+  const tz   = kundli.timezone_offset;
+  const p    = chart?.panchang;
+  const ad   = chart?.astro_details;
+
+  const fmt12 = (t) => {
+    if (!t) return '—';
+    const [h, m] = t.split(':').map(Number);
+    if (isNaN(h)) return t;
+    const ap  = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 || 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ap}`;
+  };
+
+  const dateFormatted = (() => {
+    const parts = dob.split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dob;
+  })();
+
+  return (
+    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.12 }}
+      className="card-royal p-5">
+      {/* Tab bar */}
+      <div style={{ display:'flex', gap:4, marginBottom:16, borderBottom:'1px solid rgba(212,175,55,0.1)', paddingBottom:10 }}>
+        {BD_TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              padding:'4px 11px', borderRadius:16, fontSize:10, fontWeight:600, cursor:'pointer', border:'none',
+              background: tab === t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
+              color: tab === t.key ? '#D4AF37' : 'rgba(245,240,232,0.38)',
+              transition:'all 0.18s',
+            }}>
+            {lang === 'hi' ? t.label_hi : t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'basic' && (
+        <div>
+          <InfoRow label="Name"       value={kundli.name} />
+          <InfoRow label="Place"      value={kundli.place_of_birth} />
+          <InfoRow label="Date"       value={dateFormatted} />
+          <InfoRow label="Time"       value={fmt12(time)} />
+          <InfoRow label="Latitude"   value={`${parseFloat(kundli.latitude).toFixed(2)}°`} />
+          <InfoRow label="Longitude"  value={`${parseFloat(kundli.longitude).toFixed(2)}°`} />
+          <InfoRow label="Timezone"   value={`GMT+${tz}`} />
+          <InfoRow label="Sunrise"    value={p?.sunrise || '—'} />
+          <InfoRow label="Sunset"     value={p?.sunset  || '—'} />
+          <InfoRow label="Ayanamsha"  value={chart ? `${chart.meta.ayanamsa_dms} (Lahiri)` : '—'} />
+        </div>
+      )}
+
+      {tab === 'ghat' && (
+        <div>
+          <InfoRow label="Month"      value={p ? (lang==='hi' ? p.masa.name_hi : p.masa.name) : '—'} />
+          <InfoRow label="Tithi"      value={p ? (lang==='hi' ? p.tithi.display_hi : p.tithi.display_en) : '—'} />
+          <InfoRow label="Day"        value={p ? (lang==='hi' ? p.vara.day_hi : p.vara.day_en) : '—'} />
+          <InfoRow label="Nakshatra"  value={chart ? (lang==='hi' ? chart.nakshatra.hi : chart.nakshatra.en) : '—'} />
+          <InfoRow label="Yoga"       value={p ? p.yoga.name : '—'} />
+          <InfoRow label="Karan"      value={p ? p.karana.name : '—'} />
+          <InfoRow label="Pahar"      value={p?.pahar != null ? String(p.pahar) : '—'} />
+          <InfoRow label="Moon Phase" value={p?.moon_phase != null ? String(p.moon_phase) : '—'} />
+        </div>
+      )}
+
+      {tab === 'astro' && ad && (
+        <div>
+          <InfoRow label="Ascendant"       value={lang==='hi' ? ad.ascendant_rashi_hi : ad.ascendant_rashi_en} />
+          <InfoRow label="Ascendant Lord"  value={ad.ascendant_lord} />
+          <InfoRow label="Varna"           value={lang==='hi' ? ad.varna.name_hi : ad.varna.name} />
+          <InfoRow label="Vashya"          value={lang==='hi' ? ad.vashya.name_hi : ad.vashya.name} />
+          <InfoRow label="Yoni"            value={ad.yoni.name} />
+          <InfoRow label="Gan"             value={lang==='hi' ? ad.gana.name_hi : ad.gana.name} />
+          <InfoRow label="Nadi"            value={lang==='hi' ? ad.nadi.name_hi : ad.nadi.name} />
+          <InfoRow label="Sign Lord"       value={ad.moon_sign_lord} />
+          <InfoRow label="Sign"            value={lang==='hi' ? ad.moon_sign_hi : ad.moon_sign_en} />
+          <InfoRow label="Nakshatra"       value={lang==='hi' ? ad.moon_nakshatra_hi : ad.moon_nakshatra_en} />
+          <InfoRow label="Nakshatra Lord"  value={ad.moon_nakshatra_lord} />
+          <InfoRow label="Charan"          value={String(ad.moon_pada)} />
+          <InfoRow label="Yoga"            value={ad.yoga.name} />
+          <InfoRow label="Karan"           value={ad.karana.name} />
+          <InfoRow label="Tithi"           value={lang==='hi' ? ad.tithi.display_hi : ad.tithi.display_en} />
+          <InfoRow label="Yunja"           value={lang==='hi' ? ad.yunja.yunja_hi : ad.yunja.yunja} />
+          <InfoRow label="Tatva"           value={lang==='hi' ? ad.tatva.hi : ad.tatva.en} />
+          <InfoRow label="Name Alphabet"   value={ad.naam_akshar} />
+          <InfoRow label="Paya"            value={lang==='hi' ? ad.paya.paya_hi : ad.paya.paya} />
+        </div>
+      )}
+      {tab === 'astro' && !ad && (
+        <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:16 }}>
+          {lang==='hi' ? 'कुंडली पुनः गणना करें' : 'Recalculate to see Astro Details'}
+        </p>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Personality Insights Panel ───────────────────────────────────────────────
+
+const PI_TABS = [
+  { key:'traits',    label:'Traits',    label_hi:'स्वभाव'    },
+  { key:'career',    label:'Career',    label_hi:'करियर'     },
+  { key:'health',    label:'Health',    label_hi:'स्वास्थ्य' },
+];
+
+function PersonalityInsights({ insight, chart, lang }) {
+  const [tab, setTab] = useState('traits');
+  if (!insight) return null;
+
+  const nakName = lang === 'hi' ? insight.name_hi : insight.name;
+  const deityName = lang === 'hi' ? insight.deity_hi : insight.deity_en;
+
+  const professions = lang === 'hi'
+    ? (insight.professions_hi || [])
+    : (insight.professions_en || []);
+
+  return (
+    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
+      className="card-royal p-5">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h2 className="font-serif text-gold text-sm font-semibold">
+            ✨ {lang==='hi' ? 'नक्षत्र अंतर्दृष्टि' : 'Nakshatra Insights'}
+          </h2>
+          <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, marginTop:2 }}>
+            {nakName} {lang==='hi' ? '• देवता:' : '• Deity:'} {deityName}
+          </p>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ display:'flex', gap:4, marginBottom:14, borderBottom:'1px solid rgba(212,175,55,0.1)', paddingBottom:10 }}>
+        {PI_TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              padding:'4px 12px', borderRadius:16, fontSize:10, fontWeight:600, cursor:'pointer', border:'none',
+              background: tab === t.key ? 'rgba(212,175,55,0.18)' : 'transparent',
+              color: tab === t.key ? '#D4AF37' : 'rgba(245,240,232,0.38)',
+              transition:'all 0.18s',
+            }}>
+            {lang==='hi' ? t.label_hi : t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Traits */}
+      {tab === 'traits' && (
+        <div className="space-y-4">
+          {/* Positive traits */}
+          <div>
+            <p style={{ color:'#22C55E', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+              {lang==='hi' ? '✅ मुख्य गुण' : '✅ Core Traits'}
+            </p>
+            <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
+              {lang==='hi' ? insight.characteristics_hi : insight.characteristics_en}
+            </p>
+          </div>
+          {/* Negative traits */}
+          {(insight.negative_traits_en || insight.negative_traits_hi) && (
+            <div>
+              <p style={{ color:'#EF4444', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                {lang==='hi' ? '⚠️ सावधानियां' : '⚠️ What to Avoid'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
+                {lang==='hi' ? insight.negative_traits_hi : insight.negative_traits_en}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Career */}
+      {tab === 'career' && (
+        <div className="space-y-4">
+          {professions.length > 0 ? professions.map((cat, i) => (
+            <div key={i}>
+              <p style={{ color:'#D4AF37', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>
+                {cat.category}
+              </p>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                {(cat.roles || []).map((role, j) => (
+                  <span key={j} style={{
+                    padding:'3px 9px', borderRadius:12, fontSize:10, fontWeight:500,
+                    background:'rgba(212,175,55,0.08)', border:'1px solid rgba(212,175,55,0.2)',
+                    color:'rgba(245,240,232,0.7)', fontFamily:'var(--font-devanagari),Inter,sans-serif',
+                  }}>{role}</span>
+                ))}
+              </div>
+            </div>
+          )) : (
+            <p style={{ color:'rgba(245,240,232,0.3)', fontSize:12, textAlign:'center', padding:12 }}>
+              {lang==='hi' ? 'डेटा उपलब्ध नहीं' : 'Career data not available. Recalculate chart.'}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Health */}
+      {tab === 'health' && (
+        <div className="space-y-4">
+          {(insight.health_issues_en || insight.health_issues_hi) && (
+            <div>
+              <p style={{ color:'#F59E0B', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                {lang==='hi' ? '🔶 स्वास्थ्य समस्याएं' : '🔶 Common Health Issues'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
+                {lang==='hi' ? insight.health_issues_hi : insight.health_issues_en}
+              </p>
+            </div>
+          )}
+          {(insight.health_root_cause_en || insight.health_root_cause_hi) && (
+            <div>
+              <p style={{ color:'#94A3B8', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                {lang==='hi' ? '🔍 मूल कारण' : '🔍 Root Cause'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
+                {lang==='hi' ? insight.health_root_cause_hi : insight.health_root_cause_en}
+              </p>
+            </div>
+          )}
+          {(insight.health_guidance_en || insight.health_guidance_hi) && (
+            <div>
+              <p style={{ color:'#22C55E', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                {lang==='hi' ? '💚 स्वास्थ्य मार्गदर्शन' : '💚 Health Guidance'}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
+                {lang==='hi' ? insight.health_guidance_hi : insight.health_guidance_en}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function KundliDetail({ uuid }) {
@@ -343,11 +912,13 @@ export default function KundliDetail({ uuid }) {
   const { lang } = useLang();
   const router   = useRouter();
 
-  const [kundli,    setKundli]    = useState(null);
-  const [error,     setError]     = useState(null);
-  const [fetching,  setFetching]  = useState(true);
-  const [recalcing, setRecalcing] = useState(false);
-  const [chartStyle, setChartStyle] = useState('south'); // 'south' | 'north'
+  const [kundli,           setKundli]           = useState(null);
+  const [nakshatraInsight, setNakshatraInsight] = useState(null);
+  const [error,            setError]            = useState(null);
+  const [fetching,         setFetching]         = useState(true);
+  const [recalcing,        setRecalcing]        = useState(false);
+  const [editOpen,         setEditOpen]         = useState(false);
+  const [chartStyle,       setChartStyle]       = useState('north'); // 'south' | 'north'
 
   // Persist chart style preference
   useEffect(() => {
@@ -366,7 +937,10 @@ export default function KundliDetail({ uuid }) {
     if (!user || !uuid) return;
     setFetching(true);
     api.get(`/kundli/${uuid}`)
-      .then(({ data }) => setKundli(data.profile))
+      .then(({ data }) => {
+        setKundli(data.profile);
+        setNakshatraInsight(data.profile.nakshatra_insight || null);
+      })
       .catch(e => setError(e.response?.data?.message || 'Could not load Kundli'))
       .finally(() => setFetching(false));
   }, [user, uuid]);
@@ -378,8 +952,31 @@ export default function KundliDetail({ uuid }) {
     try {
       const { data } = await api.post(`/kundli/${uuid}/recalculate`);
       setKundli(data.profile);
+      setNakshatraInsight(data.profile.nakshatra_insight || null);
     } catch {}
     finally { setRecalcing(false); }
+  };
+
+  // Called by EditKundliModal after save+recalc succeeds — re-fetch fresh chart
+  const handleEditSaved = useCallback(() => {
+    setEditOpen(false);
+    fetchKundli();   // reload full profile with new calculated_data
+  }, [fetchKundli]);
+
+  const handlePdf = async () => {
+    try {
+      const response = await api.get(`/kundli/${uuid}/report.pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${kundli?.name || 'kundli'}-report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Unable to export PDF');
+    }
   };
 
   // ── Loading / Error ─────────────────────────────────────────────────────────
@@ -454,11 +1051,35 @@ export default function KundliDetail({ uuid }) {
               )}
             </div>
           </div>
-          <button onClick={handleRecalc} disabled={recalcing}
-            className="btn-outline-gold text-xs px-4 py-2 shrink-0">
-            {recalcing ? '⏳ Recalculating…' : '🔄 Recalculate'}
-          </button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <button onClick={handlePdf} className="btn-outline-gold text-xs px-4 py-2">
+              📄 PDF Report
+            </button>
+            <button onClick={handleRecalc} disabled={recalcing}
+              className="btn-outline-gold text-xs px-4 py-2">
+              {recalcing ? '⏳ Recalculating…' : '🔄 Recalculate'}
+            </button>
+            <button onClick={() => setEditOpen(true)}
+              style={{
+                padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700,
+                background:'rgba(212,175,55,0.15)', border:'1px solid rgba(212,175,55,0.45)',
+                color:'#D4AF37', cursor:'pointer',
+              }}>
+              ✏️ Edit Details
+            </button>
+          </div>
         </motion.div>
+
+        {/* Edit Modal */}
+        <AnimatePresence>
+          {editOpen && kundli && (
+            <EditKundliModal
+              kundli={kundli}
+              onClose={() => setEditOpen(false)}
+              onSaved={handleEditSaved}
+            />
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
@@ -495,6 +1116,30 @@ export default function KundliDetail({ uuid }) {
               </AnimatePresence>
             </motion.div>
 
+            {/* Navamsha D9 chart — same North/South style toggle as D1 */}
+            {chart?.navamsha && (
+              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.08 }}
+                className="card-royal p-5">
+                <p className="font-serif text-gold text-sm font-semibold text-center mb-3">
+                  🔯 D9 Navamsha
+                  <span className="text-gold/40 text-[10px] ml-2 normal-case font-sans">
+                    {lang==='hi' ? chart.navamsha.ascendant?.rashi_hi : chart.navamsha.ascendant?.rashi_en} Lagna ·{' '}
+                    {chartStyle === 'south' ? 'South Indian' : 'North Indian'}
+                  </span>
+                </p>
+                <AnimatePresence mode="wait">
+                  <motion.div key={`nav-${chartStyle}`}
+                    initial={{ opacity:0, scale:0.97 }} animate={{ opacity:1, scale:1 }}
+                    exit={{ opacity:0, scale:0.97 }} transition={{ duration:0.2 }}>
+                    {chartStyle === 'south'
+                      ? <SouthIndianChart chart={chart.navamsha} lang={lang} />
+                      : <NorthIndianChart chart={chart.navamsha} lang={lang} />
+                    }
+                  </motion.div>
+                </AnimatePresence>
+              </motion.div>
+            )}
+
             {/* Quick stats */}
             {chart && (
               <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
@@ -514,27 +1159,8 @@ export default function KundliDetail({ uuid }) {
               </motion.div>
             )}
 
-            {/* Birth details */}
-            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.15 }}
-              className="card-royal p-5">
-              <h2 className="font-serif text-gold text-sm font-semibold mb-4">
-                📋 {lang==='hi'?'जन्म विवरण':'Birth Details'}
-              </h2>
-              <div className="space-y-3">
-                {[
-                  [lang==='hi'?'जन्म तिथि':'Date',   dob],
-                  [lang==='hi'?'समय':'Time',          `${kundli.time_of_birth?.slice(0,5)} (UTC+${kundli.timezone_offset})`],
-                  [lang==='hi'?'स्थान':'Place',        kundli.place_of_birth],
-                  [lang==='hi'?'अक्षांश/देशांतर':'Coordinates', `${kundli.latitude}°N / ${kundli.longitude}°E`],
-                  ...(chart ? [[lang==='hi'?'अयनांश':'Ayanamsa', `${chart.meta.ayanamsa_dms} (Lahiri)`]] : []),
-                ].map(([l, v]) => (
-                  <div key={l} className="flex flex-col gap-0.5 border-b border-gold/8 pb-2 last:border-0 last:pb-0">
-                    <span className="text-ivory/35 text-[10px] uppercase tracking-widest">{l}</span>
-                    <span className="text-ivory text-sm font-devanagari">{v}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+            {/* Basic Details + Ghat Chakra + Astro Details (tabbed panel) */}
+            <BasicDetailsPanel kundli={kundli} chart={chart} lang={lang} />
           </div>
 
           {/* ── Right col: Planets + Dasha + Houses ──────────────────── */}
@@ -675,6 +1301,73 @@ export default function KundliDetail({ uuid }) {
                     );
                   })}
                 </div>
+                {curDasha?.antardasha && (
+                  <div className="mt-5 pt-4 border-t border-gold/10">
+                    <h3 className="text-gold/80 text-xs uppercase tracking-[0.22em] mb-3">
+                      Current Antardasha
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {curDasha.antardasha.map((ad) => {
+                        const isCur = ad.is_current;
+                        return (
+                          <div key={`${ad.lord}-${ad.start}`} className={`rounded border p-2 ${isCur ? 'border-gold/45 bg-gold/10' : 'border-gold/10 bg-white/3'}`}>
+                            <div className="flex justify-between gap-2">
+                              <span className="text-ivory text-xs">{ad.lord}</span>
+                              {isCur && <span className="text-gold text-[9px] uppercase">Now</span>}
+                            </div>
+                            <p className="text-ivory/35 text-[10px] mt-1">{ad.start} → {ad.end}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Dosha, transit, predictions */}
+            {chart && (
+              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.18 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="card-royal p-5">
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Mangal Dosha</h2>
+                  <p className="text-ivory/75 text-sm">{chart.mangal_dosha?.summary_en || 'Not calculated'}</p>
+                  <div className="grid grid-cols-3 gap-2 mt-4">
+                    {(chart.mangal_dosha?.checks || []).map((check) => (
+                      <div key={check.basis} className={`rounded border p-2 text-center ${check.has_dosha ? 'border-gold/40 bg-gold/10' : 'border-gold/10 bg-white/3'}`}>
+                        <p className="text-[10px] text-ivory/35">{check.basis}</p>
+                        <p className="text-sm text-gold mt-1">H{check.house}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="card-royal p-5">
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Gochar</h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between border-b border-gold/8 pb-2">
+                      <span className="text-ivory/45">Sade Sati</span>
+                      <span className="text-ivory">{chart.gochar?.highlights?.sade_sati?.active ? chart.gochar.highlights.sade_sati.phase : 'Inactive'}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gold/8 pb-2">
+                      <span className="text-ivory/45">Jupiter</span>
+                      <span className="text-ivory">{chart.gochar?.highlights?.jupiter_support?.favorable ? 'Supportive' : 'Patient'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-ivory/45">Rahu Ketu</span>
+                      <span className="text-ivory">{chart.gochar?.highlights?.rahu_ketu_axis || 'N/A'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-royal p-5 md:col-span-2">
+                  <h2 className="font-serif text-gold text-sm font-semibold mb-3">Prediction Engine</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {(chart.predictions?.summary_en || []).map((line, index) => (
+                      <p key={index} className="border border-gold/10 rounded p-3 text-sm text-ivory/70">{line}</p>
+                    ))}
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -716,8 +1409,231 @@ export default function KundliDetail({ uuid }) {
                 </div>
               </motion.div>
             )}
+            {/* Personality Insights (from nakshatra DB) */}
+            {nakshatraInsight && (
+              <PersonalityInsights insight={nakshatraInsight} chart={chart} lang={lang} />
+            )}
+
           </div>
         </div>
+
+        {/* ── Digbala ─────────────────────────────────────────────────────── */}
+        {chart?.digbala && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.22 }}
+            className="card-royal p-5 mt-6">
+            <h2 className="font-serif text-gold text-sm font-semibold mb-1">
+              🧭 {lang==='hi' ? 'ग्रह दिग्बल (Digbala)' : 'Graha Digbala — Directional Strength'}
+            </h2>
+            <p className="text-ivory/30 text-[10px] mb-4">
+              {lang==='hi'
+                ? 'जब कोई ग्रह अपनी विशेष दिशा (भाव) में होता है तो उसे दिग्बल प्राप्त होता है।'
+                : 'A planet gains Digbala (directional strength) when placed in its specific directional house.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.values(chart.digbala).map((d) => {
+                const meta = PLANET_META[d.planet] || {};
+                const barColor = d.has_digbala ? '#22C55E'
+                               : d.has_digbala_loss ? '#EF4444'
+                               : '#D4AF37';
+                return (
+                  <div key={d.planet}
+                    style={{
+                      border: `1px solid ${d.has_digbala ? 'rgba(34,197,94,0.4)' : d.has_digbala_loss ? 'rgba(239,68,68,0.25)' : 'rgba(212,175,55,0.12)'}`,
+                      borderRadius: 8, padding: '10px 12px',
+                      background: d.has_digbala ? 'rgba(34,197,94,0.06)' : 'rgba(17,20,40,0.5)',
+                    }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span style={{ color: meta.color, fontSize: 14 }}>{meta.icon}</span>
+                        <span className="text-ivory text-xs font-semibold">{d.planet}</span>
+                        {d.has_digbala && (
+                          <span style={{ fontSize:9, padding:'1px 6px', borderRadius:10, background:'rgba(34,197,94,0.2)', color:'#22C55E', fontWeight:700, textTransform:'uppercase' }}>
+                            Digbala ✓
+                          </span>
+                        )}
+                        {d.has_digbala_loss && (
+                          <span style={{ fontSize:9, padding:'1px 6px', borderRadius:10, background:'rgba(239,68,68,0.15)', color:'#EF4444', fontWeight:700, textTransform:'uppercase' }}>
+                            Lost
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-ivory/35 text-[10px]">{d.strength_percent}%</span>
+                    </div>
+                    {/* Strength bar */}
+                    <div style={{ height:4, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden', marginBottom:6 }}>
+                      <div style={{ height:'100%', width:`${d.strength_percent}%`, background:barColor, borderRadius:2, transition:'width 0.4s ease' }} />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-ivory/35">
+                      <span>
+                        {lang==='hi' ? 'भाव' : 'House'} {d.planet_house} ({d.rashi_en})
+                        {'  →  '}
+                        {lang==='hi' ? 'शक्तिशाली भाव' : 'Strong at'} H{d.strong_house}
+                      </span>
+                      <span style={{ color: '#A78BFA' }}>
+                        {d.strong_direction?.[lang === 'hi' ? 'hi' : 'en']}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Bhav Karak ───────────────────────────────────────────────────── */}
+        {chart?.bhav_karak && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25 }}
+            className="card-royal p-5 mt-6">
+            <h2 className="font-serif text-gold text-sm font-semibold mb-1">
+              🪐 {lang==='hi' ? 'भाव कारक ग्रह' : 'Bhav Karak Grahas — Natural Significators'}
+            </h2>
+            <p className="text-ivory/30 text-[10px] mb-4">
+              {lang==='hi'
+                ? 'हर भाव का एक कारक ग्रह होता है जो उस भाव के स्वाभाविक फल का प्रतिनिधित्व करता है।'
+                : 'Each house has natural significator (Karak) planets that govern its themes.'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {Object.values(chart.bhav_karak).map((bk) => {
+                const isLagna = bk.house === chart.ascendant?.rashi_num
+                  ? false   // compare house not sign
+                  : false;
+                return (
+                  <div key={bk.house}
+                    className="border border-gold/12 rounded p-3 hover:border-gold/25 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-gold/70 text-[10px] font-bold uppercase tracking-wider">
+                        H{bk.house}
+                      </span>
+                      <div className="flex gap-1">
+                        {bk.karakas.map((p) => (
+                          <span key={p}
+                            style={{ fontSize:10, color: PLANET_META[p]?.color || '#D4AF37', fontWeight:700 }}>
+                            {PLANET_META[p]?.icon}{p.slice(0,2)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-ivory/55 text-[10px] mb-2 leading-tight">
+                      {lang==='hi' ? bk.signification_hi : bk.signification_en}
+                    </p>
+                    {bk.karaka_positions.map((kp) => {
+                      const meta = PLANET_META[kp.planet] || {};
+                      const qualityColor = kp.placement_quality === 'trikona' ? '#22C55E'
+                                         : kp.placement_quality === 'kendra'  ? '#60A5FA'
+                                         : 'rgba(245,240,232,0.35)';
+                      return (
+                        <div key={kp.planet}
+                          className="flex items-center justify-between mt-1 border-t border-white/4 pt-1">
+                          <span style={{ color: meta.color, fontSize:10 }}>
+                            {meta.icon} {kp.planet}
+                          </span>
+                          <span style={{ fontSize:9, color: qualityColor }}>
+                            H{kp.house} · {kp.rashi_en}
+                            {kp.placement_quality !== 'other' && (
+                              <span style={{ marginLeft:4, opacity:0.7 }}>
+                                ({kp.placement_quality})
+                              </span>
+                            )}
+                            {kp.is_in_own_karak_house && (
+                              <span style={{ marginLeft:3, color:'#F59E0B' }} title="Karako Bhava Nashaya">⚠</span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Graha Drishti ────────────────────────────────────────────────── */}
+        {chart?.drishti && (
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
+            className="card-royal p-5 mt-6">
+            <h2 className="font-serif text-gold text-sm font-semibold mb-1">
+              👁 {lang==='hi' ? 'ग्रह दृष्टि (Graha Drishti)' : 'Graha Drishti — Planetary Aspects'}
+            </h2>
+            <p className="text-ivory/30 text-[10px] mb-4">
+              {lang==='hi'
+                ? 'हर ग्रह अपनी स्थिति से 7वें भाव पर दृष्टि डालता है। मंगल, गुरु, शनि, राहु, केतु की विशेष दृष्टियाँ होती हैं।'
+                : 'Every planet aspects the 7th house. Mars, Jupiter, Saturn, Rahu & Ketu have additional special aspects.'}
+            </p>
+
+            {/* By Planet */}
+            <h3 className="text-gold/60 text-[10px] uppercase tracking-widest mb-2">
+              {lang==='hi' ? 'ग्रह → जिन भावों पर दृष्टि' : 'Planet → Houses Aspected'}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-5">
+              {Object.entries(chart.drishti.by_planet || {}).map(([planet, info]) => {
+                const meta = PLANET_META[planet] || {};
+                const hasSpecial = info.aspects.length > 1;
+                return (
+                  <div key={planet}
+                    style={{
+                      border: `1px solid ${hasSpecial ? 'rgba(212,175,55,0.25)' : 'rgba(212,175,55,0.1)'}`,
+                      borderRadius: 8, padding: '8px 10px',
+                      background: hasSpecial ? 'rgba(212,175,55,0.04)' : 'transparent',
+                    }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span style={{ color: meta.color, fontSize:13 }}>{meta.icon}</span>
+                      <span className="text-ivory text-xs font-semibold">{planet}</span>
+                      <span className="text-ivory/30 text-[9px]">H{info.from_house}</span>
+                      {hasSpecial && (
+                        <span style={{ fontSize:8, padding:'1px 5px', borderRadius:8, background:'rgba(212,175,55,0.15)', color:'#D4AF37', marginLeft:'auto' }}>
+                          Special
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {info.aspects.map(({ house, offset, nature }) => {
+                        const natColor = nature === 'auspicious'  ? '#22C55E'
+                                       : nature === 'aggressive'  ? '#EF4444'
+                                       : nature === 'karmic'      ? '#A78BFA'
+                                       : nature === 'restricting' ? '#818CF8'
+                                       : '#94A3B8';
+                        return (
+                          <span key={offset}
+                            style={{ fontSize:9, padding:'2px 7px', borderRadius:10, fontWeight:600,
+                              background:`${natColor}18`, color:natColor, border:`1px solid ${natColor}33` }}>
+                            H{house} ({offset}th)
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* By House */}
+            <h3 className="text-gold/60 text-[10px] uppercase tracking-widest mb-2">
+              {lang==='hi' ? 'भाव → जिन ग्रहों की दृष्टि पड़ रही है' : 'House → Planets Aspecting It'}
+            </h3>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+              {Object.entries(chart.drishti.by_house || {}).map(([house, planets]) => (
+                <div key={house}
+                  className={`border rounded p-2 text-center ${
+                    planets.length ? 'border-gold/20 bg-gold/4' : 'border-gold/8'
+                  }`}>
+                  <p className="text-[9px] text-ivory/35 uppercase tracking-wider mb-1">H{house}</p>
+                  {planets.length ? (
+                    <div className="flex flex-wrap gap-0.5 justify-center">
+                      {planets.map((p) => (
+                        <span key={p} style={{ fontSize:9, color: PLANET_META[p]?.color || '#D4AF37', fontWeight:700 }}>
+                          {p.slice(0,2)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-ivory/15 text-[9px]">—</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Bottom nav */}
         <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4 }}

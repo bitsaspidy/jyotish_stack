@@ -316,7 +316,7 @@ APP_URL=https://jyotishstack.com
 ### Phase 1 — Foundation ✅ DONE
 - [x] Monorepo setup (npm workspaces)
 - [x] Express server with all core routes
-- [x] MySQL schema (5 migration files)
+- [x] MySQL schema (7 migration files)
 - [x] JWT auth (register/login/refresh/logout/verify email/password reset)
 - [x] Admin panel UI (users, settings, notifications, email blast, newsletter, plans, logs)
 - [x] Main UI (ui-main) — Home, Login, Register, Dashboard
@@ -330,22 +330,25 @@ APP_URL=https://jyotishstack.com
 - [x] Royal design system (Tailwind custom palette + components)
 
 ### Phase 2 — Kundli Engine (pending PDFs from owner)
-- [ ] Vedic planetary position calculations (degrees, Rashi, Nakshatra, Pada)
-- [ ] Lagna chart generation (D1)
-- [ ] Navamsha chart (D9)
-- [ ] Dasha/Antardasha calculations (Vimshottari)
-- [ ] Kundli chart SVG rendering
-- [ ] Nakshatra detailed report
+- [x] Vedic planetary position calculations (degrees, Rashi, Nakshatra, Pada, retrograde status)
+- [x] Lagna chart generation (D1)
+- [x] Extended Varga charts (D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60)
+- [x] Dasha/Antardasha calculations (Vimshottari)
+- [x] Kundli chart SVG rendering — North Indian + South Indian toggle (applies to D1 and D9)
+- [x] Panchang engine — Tithi, Nitya Yoga, Karana, Vara, Hindu Masa, Sunrise/Sunset, Pahar
+- [x] Astro details — Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya
+- [x] Nakshatra detailed report — characteristics, professions, health (EN + HI, from DB)
 
 ### Phase 3 — Matchmaking
-- [ ] Ashtakoot Guna Milan (36 gunas)
-- [ ] Mangal Dosha detection
+- [x] Ashtakoot Guna Milan (36 gunas)
+- [x] Mangal Dosha detection
 - [ ] Dashakoot compatibility
-- [ ] PDF export of match report
+- [x] PDF export of match report
 
 ### Phase 4 — Predictions (Bhavishya Vani)
 - [ ] Daily horoscope by Rashi
-- [ ] Transit predictions (Gochar)
+- [x] Transit predictions (Gochar)
+- [x] Rule-based personalized prediction engine
 - [ ] Annual predictions (Varshphal)
 - [ ] AI-generated personalised predictions
 
@@ -394,16 +397,97 @@ npm run dev:admin    # ui-admin on :3004
 - **CORS** — Origins list comes from `ALLOWED_ORIGINS` env var (comma-separated). Add new domains there.
 - **All 4 UIs share one API** — no per-domain backend logic. Domain differentiation is frontend-only.
 - **Calculations** — All Vedic astrology calculations (Kundli, Dasha, Nakshatra, Guna Milan) will be implemented in server-side JS after the owner provides calculation PDFs. Placeholder DB columns (`calculated_data` JSON) are already in schema.
+- **Retrograde status** — `server/src/services/vedic-calc.service.js` now computes apparent sidereal daily motion for every graha. Sun/Moon are forced non-retrograde; Mercury/Venus/Mars/Jupiter/Saturn/Rahu/Ketu use negative daily motion to set `is_retrograde`. Each planet also exposes `daily_motion` for audit/debug.
+- **Calculation expansion** — `calculateVedicChart()` now returns D1 plus the 18-chart Varga set (D1, D2, D3, D4, D5, D7, D8, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60), Vimshottari Mahadasha + Antardasha, Mangal Dosha, Gochar transit highlights, and rule-based prediction summaries. `calculateAshtakoot()` provides 36-guna matching with Mangal compatibility.
+- **Varga database reference** — Migration/seed `007_varga_reference_data.js` creates and populates `varga_charts`, `varga_family_references`, and `varga_chart_relationships` from the owner-provided pasted PDF text. Local seed verification: 18 chart definitions, 15 family reference rows, and 62 chart relationship rows.
+- **PDF exports** — `server/src/services/report.service.js` generates lightweight authenticated PDF reports without external dependencies. Routes: `GET /api/kundli/:id/report.pdf` and `GET /api/kundli/matchmaking/:id/report.pdf`.
+- **Product UI flows** — `ui-main` now has real `/kundli`, `/kundli/new`, `/kundli/:uuid`, `/matchmaking`, and `/predictions` flows. Detail view includes D1, D9, planets, dasha/antardasha, dosha, gochar, predictions, and PDF export.
+- **Calculation tests** — Run `npm run test:server` from repo root. Current tests validate the documented Rahul Sharma reference chart, retrograde flags, D9/Navamsha, complete Varga set, Varga boundary rules, seed reference data, Antardasha, Mangal Dosha, Gochar, Ashtakoot, PDF report buffers, and rashi/nakshatra boundaries using Node's built-in test runner.
+- **Panchang engine** — `calculateVedicChart()` now also returns `chart.panchang` (Hindu Masa, Tithi, Nitya Yoga, Karana, Vara, Pahar, Moon Phase, Sunrise, Sunset) and `chart.astro_details` (Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya). Verified against Jodhpur 23-Jan-1989 — all 14 fields match reference values.
+- **Nakshatra Insight API** — `GET /api/kundli/:id` returns `profile.nakshatra_insight` (characteristics, professions JSON, health EN+HI) fetched live from `nakshatras` table using Moon's nakshatra num.
+- **KundliDetail UI** — North/South Indian toggle now applies to both D1 and D9 Navamsha charts. New `BasicDetailsPanel` (tabbed: Basic Details, Ghat Chakra, Astro Details). New `PersonalityInsights` panel (tabbed: Traits, Career, Health) from nakshatra DB data.
+- **Stale cache** — After multi-file changes, delete `ui-main/.next` and rebuild to fix webpack `'call'` errors.
 
 ---
 
 ## 12. When the Owner Provides PDFs
 
 1. Read PDFs carefully for calculation formulas.
-2. Create a new migration file (e.g., `005_add_calculation_fields.js`) if new columns are needed.
+2. Create a new migration file after the current latest migration (`007_varga_reference_data.js`) if new columns or tables are needed.
 3. Implement calculation logic in `server/src/services/astro/` directory.
 4. Wire calculations into `kundli.routes.js` (on create and on `GET /:id` if `calculated_data` is null).
 5. Update this MEMORY.md with the new formulas and column details.
+
+---
+
+---
+
+## 13. Nakshatra Reference Data (AstroAnsh Class 8 PDF)
+
+**Source:** `AstroAnsh Class 8 — Nakshatra Table Sheet.pdf`  
+**Migration:** `010_nakshatra_gandmool.js` — adds `is_gandmool` column to `nakshatras` table  
+**Seed:** `005_nakshatras.js` — re-seeded with deity and gandmool data
+
+### Nakshatra → Lord → Deity → Gandmool
+
+| # | Nakshatra | Lord | Deity | Gandmool |
+|---|-----------|------|-------|----------|
+| 1 | Ashwini | Ketu | Ashwini Kumars | ✅ Yes |
+| 2 | Bharani | Venus | Yama | No |
+| 3 | Krittika | Sun | Agni | No |
+| 4 | Rohini | Moon | Brahma | No |
+| 5 | Mrigashira | Mars | Soma / Chandra | No |
+| 6 | Ardra | Rahu | Rudra | No |
+| 7 | Punarvasu | Jupiter | Aditi | No |
+| 8 | Pushya | Saturn | Brihaspati | No |
+| 9 | Ashlesha | Mercury | Nagas | ✅ Yes |
+| 10 | Magha | Ketu | Pitris (Ancestors) | ✅ Yes |
+| 11 | Purva Phalguni | Venus | Bhaga | No |
+| 12 | Uttara Phalguni | Sun | Aryaman | No |
+| 13 | Hasta | Moon | Savitar | No |
+| 14 | Chitra | Mars | Tvashtar / Vishwakarma | No |
+| 15 | Swati | Rahu | Vayu | No |
+| 16 | Vishakha | Jupiter | Indra & Agni | No |
+| 17 | Anuradha | Saturn | Mitra | No |
+| 18 | Jyeshtha | Mercury | Indra | ✅ Yes |
+| 19 | Mula | Ketu | Nirriti | ✅ Yes |
+| 20 | Purva Ashadha | Venus | Apas (Water) | No |
+| 21 | Uttara Ashadha | Sun | Vishwadeva | No |
+| 22 | Shravana | Moon | Vishnu | No |
+| 23 | Dhanishtha | Mars | Vasus | No |
+| 24 | Shatabhisha | Rahu | Varuna | No |
+| 25 | Purva Bhadrapada | Jupiter | Aja Ekapada | No |
+| 26 | Uttara Bhadrapada | Saturn | Ahirbudhnya | No |
+| 27 | Revati | Mercury | Pushan | ✅ Yes |
+
+### Gandmool Rule (from PDF)
+
+- **Ketu's 3 nakshatras** = ALL Gandmool: Ashwini (1), Magha (10), Mula (19)
+- **Mercury's 3 nakshatras** = ALL Gandmool: Ashlesha (9), Jyeshtha (18), Revati (27)
+- **All other planets' nakshatras** = NOT Gandmool
+- Total Gandmool: **6 out of 27** nakshatras
+
+### Planet → Nakshatra Mapping (Vimshottari sequence)
+
+| Planet | Nakshatra 1 | Nakshatra 2 | Nakshatra 3 | Dasha Years | Gandmool |
+|--------|-------------|-------------|-------------|-------------|---------|
+| Ketu | Ashwini | Magha | Mula | 7 | ✅ All 3 |
+| Venus | Bharani | Purva Phalguni | Purva Ashadha | 20 | No |
+| Sun | Krittika | Uttara Phalguni | Uttara Ashadha | 6 | No |
+| Moon | Rohini | Hasta | Shravana | 10 | No |
+| Mars | Mrigashira | Chitra | Dhanishtha | 7 | No |
+| Rahu | Ardra | Swati | Shatabhisha | 18 | No |
+| Jupiter | Punarvasu | Vishakha | Purva Bhadrapada | 16 | No |
+| Saturn | Pushya | Anuradha | Uttara Bhadrapada | 19 | No |
+| Mercury | Ashlesha | Jyeshtha | Revati | 17 | ✅ All 3 |
+
+### New fields added to `NAKSHATRAS` (vedic-calc.service.js)
+- `deity_en` — English deity name
+- `deity_hi` — Hindi deity name
+- `is_gandmool` — boolean (true for 6 nakshatras)
+
+### New DB column added to `nakshatras` table
+- `is_gandmool` BOOLEAN DEFAULT false (migration 010)
 
 ---
 
