@@ -235,21 +235,148 @@ function AreaChips({ analysis, lang }) {
   );
 }
 
-// ── Year Selector ─────────────────────────────────────────────────────────────
-function YearSelector({ selected, onChange }) {
-  const now = new Date().getUTCFullYear();
-  const years = [now - 1, now, now + 1, now + 2];
+// ── 5-Year Journey Strip ──────────────────────────────────────────────────────
+const STRIP_AREAS = [
+  { key:'finance',   icon:'💰', en:'Finance',    hi:'धन'       },
+  { key:'luck',      icon:'🍀', en:'Luck',       hi:'भाग्य'    },
+  { key:'health',    icon:'🌿', en:'Health',     hi:'स्वास्थ्य'},
+  { key:'career',    icon:'🏢', en:'Career',     hi:'करियर'    },
+  { key:'family',    icon:'🏠', en:'Family',     hi:'परिवार'   },
+  { key:'spouse',    icon:'💍', en:'Spouse',     hi:'विवाह'    },
+];
+const TONE_DOT = { favorable:'#22C55E', moderate:'#F59E0B', challenging:'#EF4444' };
+
+function FiveYearStrip({ years, selected, onSelect, loading, lang }) {
   return (
-    <div style={{ display:'flex', gap:6 }}>
-      {years.map((y) => (
-        <button key={y} onClick={() => onChange(y)} style={{
-          padding:'6px 16px', borderRadius:20, border:'1px solid',
-          fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.15s',
-          background: selected===y ? 'rgba(212,175,55,0.15)' : 'rgba(255,255,255,0.03)',
-          borderColor: selected===y ? 'rgba(212,175,55,0.5)' : 'rgba(255,255,255,0.1)',
-          color: selected===y ? '#D4AF37' : '#94A3B8',
-        }}>{y}</button>
-      ))}
+    <div style={{ marginBottom:20 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:10 }}>
+        {t(lang,'✦ 5-Year Life Journey — Click a year to explore','✦ 5-वर्षीय जीवन यात्रा — वर्ष चुनें')}
+      </div>
+      <div style={{ overflowX:'auto', paddingBottom:4 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(5, minmax(130px, 1fr))', gap:8, minWidth:680 }}>
+          {loading
+            ? Array.from({ length:5 }, (_, i) => (
+                <div key={i} style={{ height:140, borderRadius:12, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', animation:'pulse 1.5s infinite' }} />
+              ))
+            : years.map((y) => {
+                if (!y) return null;
+                const pm  = PLANET_META[y.varshesha] || { icon:'●', color:'#D4AF37', hi: y.varshesha };
+                const sc  = SCORE_COLOR[y.score] || '#F59E0B';
+                const isSel = y.target_year === selected;
+                const now = new Date().getUTCFullYear();
+                return (
+                  <button key={y.target_year} onClick={() => onSelect(y.target_year)} style={{
+                    background: isSel ? `${pm.color}12` : 'rgba(255,255,255,0.025)',
+                    border:`1px solid ${isSel ? pm.color+'55' : 'rgba(255,255,255,0.07)'}`,
+                    borderRadius:12, padding:'12px 12px 10px', cursor:'pointer', textAlign:'left',
+                    transition:'all 0.15s', position:'relative',
+                  }}>
+                    {/* Current year tag */}
+                    {y.target_year === now && (
+                      <div style={{ position:'absolute', top:6, right:8, fontSize:8, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.06em', background:'rgba(212,175,55,0.15)', padding:'2px 6px', borderRadius:8 }}>
+                        {t(lang,'Now','अभी')}
+                      </div>
+                    )}
+                    {/* Year number */}
+                    <div style={{ fontSize:20, fontWeight:800, color: isSel ? pm.color : '#CBD5E1', lineHeight:1, marginBottom:5 }}>
+                      {y.target_year}
+                    </div>
+                    {/* Stars */}
+                    <div style={{ letterSpacing:1, marginBottom:5 }}>
+                      {[1,2,3,4,5].map((n) => (
+                        <span key={n} style={{ color: n<=y.score ? sc : 'rgba(255,255,255,0.1)', fontSize:12 }}>★</span>
+                      ))}
+                    </div>
+                    {/* Varshesha */}
+                    <div style={{ fontSize:11, color: pm.color, fontWeight:700, marginBottom:4 }}>
+                      {pm.icon} {t(lang, y.varshesha, y.varshesha_hi)}
+                    </div>
+                    {/* Lagna */}
+                    <div style={{ fontSize:9, color:'#475569', marginBottom:7 }}>
+                      {t(lang, y.varsha_lagna_en, y.varsha_lagna_hi)} {t(lang,'Lagna','लग्न')} · {y.sr_date}
+                    </div>
+                    {/* Area dots — 6 color dots: Finance, Luck, Health, Career, Family, Spouse */}
+                    <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:4 }}>
+                      {STRIP_AREAS.map(({ key, icon, en, hi }) => {
+                        const tone = y.areas?.[key];
+                        const score = y.areas?.[`${key}_score`] || 3;
+                        const dc = TONE_DOT[tone] || '#64748B';
+                        return (
+                          <span key={key} title={`${t(lang, en, hi)}: ${tone || '—'} (${score}★)`}
+                            style={{ width:10, height:10, borderRadius:'50%', background: dc, display:'inline-block', flexShrink:0, border:`1px solid ${dc}55` }} />
+                        );
+                      })}
+                    </div>
+                    {/* Caution indicator */}
+                    {y.caution_count > 0 && (
+                      <div style={{ fontSize:8, color:'#FCA5A5', marginTop:3 }}>
+                        ⚠ {y.caution_count} {t(lang,'caution','सावधानी')}{y.caution_count > 1 ? t(lang,'s','') : ''}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+          }
+        </div>
+      </div>
+      {/* Dot legend */}
+      {!loading && years.length > 0 && (
+        <div style={{ display:'flex', gap:10, marginTop:8, flexWrap:'wrap', alignItems:'center' }}>
+          {STRIP_AREAS.map(({ key, icon, en, hi }) => (
+            <span key={key} style={{ fontSize:9, color:'#475569' }}>{icon} {t(lang,en,hi)}</span>
+          ))}
+          <span style={{ fontSize:9, color:'#475569', marginLeft:4 }}>
+            {'  '}<span style={{ color:'#22C55E' }}>●</span>{t(lang,' Good',' शुभ')}
+            {'  '}<span style={{ color:'#F59E0B' }}>●</span>{t(lang,' Moderate',' सामान्य')}
+            {'  '}<span style={{ color:'#EF4444' }}>●</span>{t(lang,' Tough',' कठिन')}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Year-at-a-Glance Table (all 11 life areas compact) ────────────────────────
+const GLANCE_AREAS = [
+  { key:'finance',   icon:'💰', en:'Finance & Wealth',          hi:'धन और वित्त'              },
+  { key:'luck',      icon:'🍀', en:'Luck & Fortune',            hi:'भाग्य और किस्मत'           },
+  { key:'family',    icon:'🏠', en:'Family & Home',             hi:'परिवार और घर'              },
+  { key:'spouse',    icon:'💍', en:'Spouse & Marriage',         hi:'जीवनसाथी और विवाह'        },
+  { key:'parents',   icon:'👪', en:'Parents',                   hi:'माता-पिता'                  },
+  { key:'children',  icon:'👶', en:'Children',                  hi:'संतान'                      },
+  { key:'siblings',  icon:'🤝', en:'Siblings',                  hi:'भाई-बहन'                    },
+  { key:'education', icon:'📚', en:'Education',                 hi:'शिक्षा'                     },
+  { key:'job',       icon:'🏢', en:'Job & Service',             hi:'नौकरी और सेवा'              },
+  { key:'business',  icon:'📊', en:'Business & Trade',          hi:'व्यापार'                    },
+  { key:'health',    icon:'🌿', en:'Health & Vitality',         hi:'स्वास्थ्य'                  },
+];
+
+function YearAtGlanceTable({ life_areas, lang }) {
+  if (!life_areas) return null;
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:6 }}>
+      {GLANCE_AREAS.map(({ key, icon, en, hi }) => {
+        const area = life_areas[key];
+        if (!area) return null;
+        const ts = TONE_STYLE[area.tone] || TONE_STYLE.moderate;
+        const toneLbl = area.tone === 'favorable' ? t(lang,'Favorable','अनुकूल') : area.tone === 'challenging' ? t(lang,'Challenging','चुनौतीपूर्ण') : t(lang,'Moderate','सामान्य');
+        return (
+          <div key={key} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:'rgba(255,255,255,0.025)', border:`1px solid ${ts.border}`, borderRadius:8 }}>
+            <span style={{ fontSize:16, lineHeight:1, flexShrink:0 }}>{icon}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:11, color:'#CBD5E1', fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {t(lang, en, hi)}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}>
+                <span style={{ letterSpacing:1 }}>
+                  {[1,2,3,4,5].map((n) => <span key={n} style={{ color: n<=area.score ? ts.color : 'rgba(255,255,255,0.1)', fontSize:9 }}>★</span>)}
+                </span>
+                <span style={{ fontSize:9, color: ts.color, textTransform:'uppercase', letterSpacing:'0.06em', fontWeight:700 }}>{toneLbl}</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -350,11 +477,23 @@ function KeyAdviceCard({ advice, lang }) {
 
 export default function VarshphalPanel({ kundliUuid, lang = 'en' }) {
   const now = new Date().getUTCFullYear();
-  const [year, setYear]     = useState(now);
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
+  const [year, setYear]           = useState(now);
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [yearsData, setYearsData] = useState([]);
+  const [yearsLoading, setYearsLoading] = useState(false);
+
+  // Load 5-year strip on mount
+  useEffect(() => {
+    if (!kundliUuid) return;
+    setYearsLoading(true);
+    api.get(`/kundli/${kundliUuid}/varshphal-years?from=${now}&count=5`)
+      .then((r) => setYearsData(r.data.years || []))
+      .catch(() => setYearsData([]))
+      .finally(() => setYearsLoading(false));
+  }, [kundliUuid, now]);
 
   const load = useCallback(async (y) => {
     if (!kundliUuid) return;
@@ -379,16 +518,19 @@ export default function VarshphalPanel({ kundliUuid, lang = 'en' }) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', flexWrap:'wrap', gap:12, marginBottom:20 }}>
-        <div>
-          <h2 style={{ fontSize:18, fontWeight:700, color:'#F1F5F9', margin:'0 0 4px' }}>
-            {t(lang,'🌞 Varshphal — Annual Solar Return','🌞 वर्षफल — वार्षिक सौर कुंडली')}
-          </h2>
-          <p style={{ fontSize:12, color:'#64748B', margin:0 }}>
-            {t(lang,'Personalized yearly prediction based on exact Solar Return (Sun\'s annual return to natal position)','नताल सूर्य के वार्षिक मिलन पर आधारित वार्षिक भविष्यफल')}
-          </p>
-        </div>
-        <YearSelector selected={year} onChange={(y) => { setYear(y); setData(null); }} />
+      <div style={{ marginBottom:16 }}>
+        <h2 style={{ fontSize:18, fontWeight:700, color:'#F1F5F9', margin:'0 0 4px' }}>
+          {t(lang,'🌞 Varshphal — Annual Solar Return','🌞 वर्षफल — वार्षिक सौर कुंडली')}
+        </h2>
+        <p style={{ fontSize:12, color:'#64748B', margin:'0 0 18px' }}>
+          {t(lang,'Personalized yearly predictions based on exact Solar Return — your Sun\'s annual return to natal position.','नताल सूर्य के वार्षिक मिलन पर आधारित व्यक्तिगत वार्षिक भविष्यफल।')}
+        </p>
+        {/* 5-Year Strip */}
+        <FiveYearStrip
+          years={yearsData} selected={year} loading={yearsLoading}
+          onSelect={(y) => { setYear(y); setData(null); }}
+          lang={lang}
+        />
       </div>
 
       {loading && (
@@ -477,8 +619,11 @@ export default function VarshphalPanel({ kundliUuid, lang = 'en' }) {
                 </>
               )}
 
-              <SectionHeader title={t(lang,'Life Area Forecast','जीवन क्षेत्र पूर्वानुमान')} />
-              <AreaChips analysis={an} lang={lang} />
+              <SectionHeader title={t(lang,'All Life Areas at a Glance','सभी जीवन क्षेत्र — एक नज़र में')} />
+              <p style={{ fontSize:11, color:'#475569', margin:'0 0 10px' }}>
+                {t(lang,'Quick snapshot of all 11 life domains for this year. Open the Life Guide tab for full readings.','इस वर्ष के सभी 11 जीवन क्षेत्रों का त्वरित सारांश। पूरी रीडिंग के लिए जीवन मार्गदर्शन टैब खोलें।')}
+              </p>
+              <YearAtGlanceTable life_areas={an.life_areas} lang={lang} />
             </div>
           )}
 

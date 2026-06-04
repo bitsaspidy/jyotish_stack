@@ -692,4 +692,42 @@ function generateVarshphal(natalChart, profile, targetYear) {
   }
 }
 
-module.exports = { generateVarshphal };
+// ── Compact summary for multi-year strip ─────────────────────────────────────
+function compactVarshphal(result) {
+  if (!result) return null;
+  const an = result.analysis;
+  const la = an?.life_areas;
+  return {
+    target_year:      result.target_year,
+    score:            an?.score || 3,
+    varshesha:        result.varshesha,
+    varshesha_hi:     result.varshesha_hi,
+    sr_date:          result.varsha_chart?.sr_date,
+    sr_weekday:       result.varsha_chart?.sr_weekday,
+    sr_weekday_hi:    result.varsha_chart?.sr_weekday_hi,
+    varsha_lagna_en:  result.varsha_chart?.ascendant?.rashi_en,
+    varsha_lagna_hi:  result.varsha_chart?.ascendant?.rashi_hi,
+    indicators_en:    an?.indicators_en?.slice(0, 2) || [],
+    indicators_hi:    an?.indicators_hi?.slice(0, 2) || [],
+    year_summary_en:  an?.year_summary_en?.split('.').slice(0, 2).join('.') + '.' || '',
+    year_summary_hi:  an?.year_summary_hi?.split('।').slice(0, 2).join('।') + '।' || '',
+    areas: la ? {
+      finance: la.finance?.tone,  finance_score: la.finance?.score,
+      luck:    la.luck?.tone,     luck_score:    la.luck?.score,
+      family:  la.family?.tone,   family_score:  la.family?.score,
+      spouse:  la.spouse?.tone,   spouse_score:  la.spouse?.score,
+      health:  la.health?.tone,   health_score:  la.health?.score,
+      career:  la.job?.tone,      career_score:  la.job?.score,
+      business: la.business?.tone, business_score: la.business?.score,
+      children: la.children?.tone, children_score: la.children?.score,
+      education: la.education?.tone, education_score: la.education?.score,
+      parents:  la.parents?.tone, parents_score:  la.parents?.score,
+      siblings: la.siblings?.tone, siblings_score: la.siblings?.score,
+    } : {},
+    varshesha_desc_short_en: an?.varshesha_desc_en?.split('.')[0] + '.' || '',
+    varshesha_desc_short_hi: an?.varshesha_desc_hi?.split('।')[0] + '।' || '',
+    caution_count: la?.cautions?.length || 0,
+  };
+}
+
+module.exports = { generateVarshphal, compactVarshphal };

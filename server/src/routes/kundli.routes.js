@@ -8,7 +8,7 @@ const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-c
 const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 const { generateLifeGuidance } = require('../services/helpers/life-guidance');
-const { generateVarshphal }   = require('../services/helpers/varshphal');
+const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 
 router.use(authenticate);
 
@@ -603,6 +603,33 @@ router.get('/:id/varshphal', async (req, res) => {
   } catch (e) {
     console.error('[Varshphal] Route error:', e.message);
     return fail(res, 'Unable to generate Varshphal', 500);
+  }
+});
+
+// ── GET /api/kundli/:id/varshphal-years — 5-year compact forecast ─────────────
+router.get('/:id/varshphal-years', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const from  = parseInt(req.query.from, 10) || new Date().getUTCFullYear();
+    const count = Math.min(Math.max(parseInt(req.query.count, 10) || 5, 1), 10);
+
+    const years = [];
+    for (let y = from; y < from + count; y++) {
+      const full = generateVarshphal(chart, profile, y);
+      years.push(compactVarshphal(full));
+    }
+
+    return ok(res, { years, from, count });
+  } catch (e) {
+    console.error('[VarshphalYears] Error:', e.message);
+    return fail(res, 'Unable to generate multi-year forecast', 500);
   }
 });
 
