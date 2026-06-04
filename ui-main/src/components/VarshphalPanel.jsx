@@ -256,11 +256,97 @@ function YearSelector({ selected, onChange }) {
 
 // ── Main Panel ────────────────────────────────────────────────────────────────
 const TABS = [
-  { key:'overview', en:'Year Overview', hi:'वार्षिक सारांश' },
-  { key:'chart',    en:'Varsha Chart',  hi:'वर्ष कुंडली'    },
-  { key:'houses',   en:'House Readings', hi:'भाव रीडिंग'    },
-  { key:'dasha',    en:'Mudda Dasha',   hi:'मुद्दा दशा'     },
+  { key:'overview',    en:'Year Overview',  hi:'वार्षिक सारांश' },
+  { key:'life_guide',  en:'Life Guide',     hi:'जीवन मार्गदर्शन' },
+  { key:'chart',       en:'Varsha Chart',   hi:'वर्ष कुंडली'     },
+  { key:'houses',      en:'House Readings', hi:'भाव रीडिंग'      },
+  { key:'dasha',       en:'Mudda Dasha',    hi:'मुद्दा दशा'      },
 ];
+
+const LIFE_AREA_ORDER = ['finance','luck','family','spouse','parents','children','siblings','education','job','business','health'];
+
+const TONE_ICON = { favorable:'✦', moderate:'◆', challenging:'▲' };
+
+// ── Life Area Card ────────────────────────────────────────────────────────────
+function LifeAreaCard({ area, lang }) {
+  const [open, setOpen] = useState(false);
+  if (!area) return null;
+  const ts = TONE_STYLE[area.tone] || TONE_STYLE.moderate;
+  return (
+    <div style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${ts.border}`, borderRadius:12, overflow:'hidden' }}>
+      <button onClick={() => setOpen(!open)} style={{ width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'12px 14px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:20, lineHeight:1, flexShrink:0 }}>{area.icon}</span>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:'#E2E8F0' }}>{t(lang, area.title_en, area.title_hi)}</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:3, flexWrap:'wrap' }}>
+              <span style={{ fontSize:9, fontWeight:700, color: ts.color, textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                {TONE_ICON[area.tone]} {t(lang, area.tone.charAt(0).toUpperCase()+area.tone.slice(1), area.tone==='favorable'?'अनुकूल':area.tone==='challenging'?'चुनौतीपूर्ण':'सामान्य')}
+              </span>
+              <span style={{ letterSpacing:1 }}>
+                {[1,2,3,4,5].map((n) => <span key={n} style={{ color: n<=area.score ? ts.color : 'rgba(255,255,255,0.1)', fontSize:10 }}>★</span>)}
+              </span>
+            </div>
+          </div>
+          <span style={{ fontSize:10, color:'#475569', flexShrink:0 }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+      {open && (
+        <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)', padding:'10px 14px 12px' }}>
+          <p style={{ fontSize:12, color:'#94A3B8', lineHeight:1.8, margin:'0 0 8px' }}>
+            {t(lang, area.reading_en, area.reading_hi)}
+          </p>
+          {area.planets_involved?.length > 0 && (
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {[...new Set(area.planets_involved)].map((p) => {
+                const pm = PLANET_META[p] || { icon:'●', color:'#94A3B8', hi: p };
+                return (
+                  <span key={p} style={{ fontSize:10, color: pm.color, background:`${pm.color}15`, border:`1px solid ${pm.color}30`, padding:'2px 8px', borderRadius:10 }}>
+                    {pm.icon} {t(lang, p, pm.hi)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Caution Card ──────────────────────────────────────────────────────────────
+function CautionCard({ caution, lang }) {
+  return (
+    <div style={{ padding:'12px 14px', background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:10, display:'flex', gap:10 }}>
+      <span style={{ fontSize:18, lineHeight:1, flexShrink:0 }}>{caution.icon}</span>
+      <div>
+        <div style={{ fontSize:12, fontWeight:700, color:'#FCA5A5', marginBottom:4 }}>
+          {t(lang, caution.title_en, caution.title_hi)}
+        </div>
+        <p style={{ fontSize:11, color:'#94A3B8', lineHeight:1.75, margin:0 }}>
+          {t(lang, caution.desc_en, caution.desc_hi)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Key Advice Card ───────────────────────────────────────────────────────────
+function KeyAdviceCard({ advice, lang }) {
+  return (
+    <div style={{ padding:'12px 14px', background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:10, display:'flex', gap:10 }}>
+      <span style={{ fontSize:18, lineHeight:1, flexShrink:0 }}>{advice.icon}</span>
+      <div>
+        <div style={{ fontSize:12, fontWeight:700, color:'#D4AF37', marginBottom:4 }}>
+          {t(lang, advice.title_en, advice.title_hi)}
+        </div>
+        <p style={{ fontSize:11, color:'#94A3B8', lineHeight:1.75, margin:0 }}>
+          {t(lang, advice.desc_en, advice.desc_hi)}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function VarshphalPanel({ kundliUuid, lang = 'en' }) {
   const now = new Date().getUTCFullYear();
@@ -393,6 +479,46 @@ export default function VarshphalPanel({ kundliUuid, lang = 'en' }) {
 
               <SectionHeader title={t(lang,'Life Area Forecast','जीवन क्षेत्र पूर्वानुमान')} />
               <AreaChips analysis={an} lang={lang} />
+            </div>
+          )}
+
+          {/* Tab: Life Guide */}
+          {activeTab === 'life_guide' && an?.life_areas && (
+            <div>
+              {/* Life Area Grid */}
+              <SectionHeader title={t(lang,'All Life Areas This Year','इस वर्ष सभी जीवन क्षेत्र')} />
+              <p style={{ fontSize:11, color:'#475569', margin:'0 0 12px' }}>
+                {t(lang,'Click any area to read your personalised Varsha chart analysis for that life domain.','किसी भी क्षेत्र पर क्लिक करें उस जीवन क्षेत्र का व्यक्तिगत वर्ष कुंडली विश्लेषण पढ़ें।')}
+              </p>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:8, marginBottom:24 }}>
+                {LIFE_AREA_ORDER.map((key) => (
+                  <LifeAreaCard key={key} area={an.life_areas[key]} lang={lang} />
+                ))}
+              </div>
+
+              {/* Cautions */}
+              {an.life_areas.cautions?.length > 0 && (
+                <>
+                  <SectionHeader title={t(lang,'⚠ Important Cautions This Year','⚠ इस वर्ष महत्वपूर्ण सावधानियां')} />
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:24 }}>
+                    {an.life_areas.cautions.map((c, i) => (
+                      <CautionCard key={i} caution={c} lang={lang} />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Key Advice */}
+              {an.life_areas.key_advice?.length > 0 && (
+                <>
+                  <SectionHeader title={t(lang,'✦ Key Advice Before Any Major Decision','✦ कोई भी बड़ा निर्णय लेने से पहले')} />
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {an.life_areas.key_advice.map((a, i) => (
+                      <KeyAdviceCard key={i} advice={a} lang={lang} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
