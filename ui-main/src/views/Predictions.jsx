@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
+import LifeGuidancePanel from '../components/LifeGuidancePanel';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
@@ -492,9 +493,10 @@ export default function Predictions() {
     () => profiles.find((p) => p.uuid === selectedUuid) || profiles[0],
     [profiles, selectedUuid]
   );
-  const chart      = parseChart(selected);
-  const pred       = chart?.predictions;
-  const remedyData = selected?.remedy_data || null;
+  const chart        = parseChart(selected);
+  const pred         = chart?.predictions;
+  const remedyData   = selected?.remedy_data || null;
+  const lifeGuidance = selected?.life_guidance || null;
   const dasha = chart?.dasha?.find((d) => d.is_current) || chart?.dasha?.[0];
   const antar = dasha?.antardasha?.find((d) => d.is_current) || dasha?.antardasha?.[0];
 
@@ -721,6 +723,17 @@ export default function Predictions() {
                     lang={lang}
                     delay={0.3}
                   />
+
+                  {/* ── Life Guidance (Session 33) ── */}
+                  {lifeGuidance && (
+                    <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.34 }}
+                      style={{
+                        borderRadius:12, border:'1px solid rgba(212,175,55,0.12)',
+                        background:'rgba(17,20,40,0.65)', padding:20,
+                      }}>
+                      <LifeGuidancePanel guidance={lifeGuidance} lang={lang} />
+                    </motion.div>
+                  )}
                 </>
               )}
             </div>
