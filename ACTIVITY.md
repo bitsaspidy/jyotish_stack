@@ -2349,3 +2349,44 @@ Expand Varshphal (Annual Solar Return) from a basic 4-tab panel into a comprehen
 **Tests:** 14/14 | **Build:** 26/26 pages
 
 *Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6 (Session 34)*
+
+---
+
+## Session 34b–34d (continued) — 2026-06-04
+
+### ✅ Varshphal 5-Year Journey Strip
+- `varshphal.js`: Added `compactVarshphal()` — compact per-year summary (score, varshesha, lagna, 11 area tones/scores, caution count)
+- New route: `GET /api/kundli/:id/varshphal-years?from=YYYY&count=5` — computes 5 years in one call
+- `VarshphalPanel.jsx`: `FiveYearStrip` — always-visible horizontal card strip (year, stars, Varshesha, Lagna, SR date, 6 colored dots, caution badge, "Now" tag). Replaced old 4-button YearSelector.
+- `YearAtGlanceTable` added to Overview tab — 11 life area scores at a glance
+
+### ✅ Navbar — Horoscope + Varshphal links
+- `Navbar.jsx`: Added `/horoscope` (राशिफल) and `/varshphal` (वर्षफल) to desktop + mobile nav
+
+### ✅ Kundli Strength Report
+- NEW `server/src/services/helpers/kundli-strength.js` (18th helper):
+  `computeKundliStrength(chart)` — 0-100 score from planets/yogas/life-domains/dasha
+  8 life domains (wealth/career/health/marriage/family/children/fortune/spirituality)
+  6-tier label (Exceptional→Needs Remedies), top 5 strengths, top 4 challenges
+- New route: `GET /api/kundli/:id/strength`
+- NEW `KundliStrengthPanel.jsx`: auto-loads on mount, conic-gradient ring, category bars, life domain grid, planet table, strengths/challenges cards
+- Added to `KundliDetail.jsx` above KundliInsightPanel
+
+### ✅ Dedicated /varshphal page
+- NEW `VarshphalPage.jsx` + `app/varshphal/page.jsx` (page 27)
+- Sticky sidebar kundli selector + full VarshphalPanel on right
+
+### ✅ Daily Horoscope — 7 tabs
+- `DailyHoroscope.jsx`: Added "Transits" tab (9 planets + house positions + effect descriptions)
+- Added "Remedies" tab (rashi-lord based mantra, color, gem, puja, do's & don'ts)
+- `PLANET_REMEDY` data for all 9 planets | `RASHI_LORD_MAP` for auto lookup
+
+### ✅ KundliStrengthPanel display fix
+- Replaced broken SVG text rotation with `conic-gradient` CSS meter
+- Auto-load on mount (was broken lazy-load)
+- Fixed category score display (/100 instead of %)
+- Coloured card tiles for strengths/challenges
+
+**Tests:** 14/14 | **Build:** 27/27 pages (+1 /varshphal)
+
+*Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6 (Sessions 34b–34d)*
