@@ -1,6 +1,6 @@
 'use strict';
 const eph = require('../ephemeris.service');
-const { RASHIS, NAKSHATRAS, NAK_SPAN, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS } = require('./vedic-data');
+const { RASHIS, NAKSHATRAS, NAK_SPAN, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS, DIGNITY_STRENGTH } = require('./vedic-data');
 
 const norm = eph.norm;
 
@@ -61,15 +61,29 @@ function nakshatraFromDeg(siderealDeg) {
 
 function getPlanetDignity(planet, siderealDeg) {
   const d = DIGNITY_MAP[planet];
-  if (!d) return 'shadow';
+  if (!d) return 'Neutral';
   const n = norm(siderealDeg);
   const s = Math.floor(n / 30) + 1;
   const deg = n % 30;
-  if (s === d.exalt)                               return 'Exaltation (उच्च)';
-  if (s === d.debil)                               return 'Debilitation (नीच)';
-  if (s === d.mool && deg >= d.moolF && deg <= d.moolT) return 'Moolatrikona (मूलत्रिकोण)';
-  if (d.own.includes(s))                           return 'Own Sign (स्वगृह)';
+  if (s === d.exalt)                                    return 'Exaltation (उच्च)';
+  if (s === d.debil)                                    return 'Debilitation (नीच)';
+  if (d.mool && s === d.mool && deg >= d.moolF && deg <= d.moolT) return 'Moolatrikona (मूलत्रिकोण)';
+  if (d.own.includes(s))                                return 'Own Sign (स्वगृह)';
   return 'Neutral';
+}
+
+function getDignityStrength(dignityLabel) {
+  return DIGNITY_STRENGTH[dignityLabel] ?? 50;
+}
+
+// Returns 'friend' | 'enemy' | 'neutral' | 'self' based on permanent friendship table
+function getPlanetRelation(planet, otherPlanet) {
+  if (planet === otherPlanet) return 'self';
+  const entry = NATURAL_FRIENDS[planet];
+  if (!entry) return 'neutral';
+  if (entry.friends.includes(otherPlanet)) return 'friend';
+  if (entry.enemies.includes(otherPlanet)) return 'enemy';
+  return 'neutral';
 }
 
 function houseFromSign(referenceSignNum, targetSignNum) {
@@ -173,7 +187,7 @@ module.exports = {
   norm, NAK_SPAN, lahiriAyanamsa, toSidereal,
   tropicalLongitudeForPlanet, siderealLongitudeForPlanet,
   signedAngleDelta, dailyMotionForPlanet, isRetrogradePlanet,
-  rashiFromDeg, nakshatraFromDeg, getPlanetDignity,
+  rashiFromDeg, nakshatraFromDeg, getPlanetDignity, getDignityStrength, getPlanetRelation,
   houseFromSign, wrapSign, rashiSummary, toDMS,
   startSignByQuality, startSignByElement,
   nakExtra, inclusiveNakDistance, varnaForRashi, vashyaForRashi, relationScore,
