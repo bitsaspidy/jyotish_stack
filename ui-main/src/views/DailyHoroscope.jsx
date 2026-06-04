@@ -96,6 +96,35 @@ function hexToRgb(hex) {
   return `${r},${g},${b}`;
 }
 
+// ─── Rashi remedies (client-side, no API needed) ─────────────────────────────
+const RASHI_LORD_MAP = [null,'Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
+const PLANET_REMEDY = {
+  Sun:     { mantra:'Om Suryaya Namah (108×)', mantra_hi:'ॐ सूर्याय नमः (108 बार)', color:'Red / Orange', color_hi:'लाल / नारंगी', gem:'Ruby or Red Garnet', gem_hi:'माणिक या लाल गार्नेट', day:'Sunday', day_hi:'रविवार', puja:'Offer water to the Sun at sunrise, donate wheat or jaggery', puja_hi:'सूर्योदय पर सूर्य को जल अर्पित करें, गेहूं या गुड़ दान करें', avoid:'Avoid ego conflicts and arguments with authority', avoid_hi:'अहंकार के कारण विवाद और अधिकारियों से झगड़े से बचें' },
+  Moon:    { mantra:'Om Chandraya Namah (108×)', mantra_hi:'ॐ चंद्राय नमः (108 बार)', color:'White / Silver', color_hi:'सफेद / चांदी', gem:'Pearl or Moonstone', gem_hi:'मोती या मूनस्टोन', day:'Monday', day_hi:'सोमवार', puja:'Offer milk to Lord Shiva, visit a water body', puja_hi:'शिवजी को दूध अर्पित करें, जलाशय दर्शन करें', avoid:'Avoid emotional decisions and mood swings', avoid_hi:'भावनात्मक निर्णय और मनोदशा परिवर्तन से बचें' },
+  Mars:    { mantra:'Om Mangalaya Namah (108×)', mantra_hi:'ॐ मंगलाय नमः (108 बार)', color:'Red / Coral', color_hi:'लाल / मूंगा', gem:'Red Coral', gem_hi:'मूंगा', day:'Tuesday', day_hi:'मंगलवार', puja:'Hanuman puja, offer red flowers, donate red lentils', puja_hi:'हनुमान पूजा, लाल फूल अर्पित करें, मसूर दाल दान करें', avoid:'Avoid anger, arguments, and hasty decisions', avoid_hi:'क्रोध, झगड़े और जल्दबाजी के निर्णय से बचें' },
+  Mercury: { mantra:'Om Budhaya Namah (108×)', mantra_hi:'ॐ बुधाय नमः (108 बार)', color:'Green', color_hi:'हरा', gem:'Emerald or Green Tourmaline', gem_hi:'पन्ना या हरा तुरमाली', day:'Wednesday', day_hi:'बुधवार', puja:'Worship Vishnu, donate green vegetables, read scriptures', puja_hi:'विष्णु पूजा, हरी सब्जी दान, धर्मग्रंथ पाठ', avoid:'Avoid signing contracts without reading them carefully', avoid_hi:'बिना पढ़े अनुबंध पर हस्ताक्षर न करें' },
+  Jupiter: { mantra:'Om Gurave Namah (108×)', mantra_hi:'ॐ गुरवे नमः (108 बार)', color:'Yellow / Gold', color_hi:'पीला / सुनहरा', gem:'Yellow Sapphire or Topaz', gem_hi:'पुखराज या टोपाज', day:'Thursday', day_hi:'गुरुवार', puja:'Vishnu Sahasranama, offer yellow sweets, donate to teachers', puja_hi:'विष्णु सहस्रनाम, पीली मिठाई अर्पित करें, गुरु/शिक्षक को दान दें', avoid:'Avoid arrogance and disrespecting teachers or elders', avoid_hi:'अहंकार और गुरु/बड़ों का अपमान करने से बचें' },
+  Venus:   { mantra:'Om Shukraya Namah (108×)', mantra_hi:'ॐ शुक्राय नमः (108 बार)', color:'White / Pink', color_hi:'सफेद / गुलाबी', gem:'Diamond or White Sapphire', gem_hi:'हीरा या सफेद पुखराज', day:'Friday', day_hi:'शुक्रवार', puja:'Lakshmi puja, offer white flowers and sweets', puja_hi:'लक्ष्मी पूजा, सफेद फूल और मिठाई अर्पित करें', avoid:'Avoid over-indulgence, luxury spending, and jealousy', avoid_hi:'अत्यधिक भोग, फिजूलखर्ची और ईर्ष्या से बचें' },
+  Saturn:  { mantra:'Om Shanaye Namah (108×)', mantra_hi:'ॐ शनये नमः (108 बार)', color:'Blue / Black', color_hi:'नीला / काला', gem:'Blue Sapphire (test first)', gem_hi:'नीलम (पहले परीक्षण करें)', day:'Saturday', day_hi:'शनिवार', puja:'Shani puja, light oil lamp under Peepal tree, serve the elderly', puja_hi:'शनि पूजा, पीपल के नीचे तेल का दीपक, बुजुर्गों की सेवा', avoid:'Avoid laziness, shortcuts, and disrespecting service workers', avoid_hi:'आलस्य, शॉर्टकट और सेवाकर्मियों का अपमान न करें' },
+  Rahu:    { mantra:'Om Rahave Namah (108×)', mantra_hi:'ॐ राहवे नमः (108 बार)', color:'Smoky Gray / Blue', color_hi:'धुएं जैसा ग्रे / नीला', gem:'Hessonite (Gomed)', gem_hi:'गोमेद', day:'Saturday', day_hi:'शनिवार', puja:'Durga puja, donate to the poor, light incense', puja_hi:'दुर्गा पूजा, गरीबों को दान, धूप जलाएं', avoid:'Avoid illusions, obsessive thinking, and risky speculation', avoid_hi:'भ्रम, जुनूनी सोच और जोखिम भरे सट्टे से बचें' },
+  Ketu:    { mantra:'Om Ketave Namah (108×)', mantra_hi:'ॐ केतवे नमः (108 बार)', color:'Brownish Gray', color_hi:'भूरा-ग्रे', gem:"Cat's Eye (Lehsunia)", gem_hi:'लहसुनिया', day:'Tuesday', day_hi:'मंगलवार', puja:'Ganesha puja, spiritual practice, donate blankets', puja_hi:'गणेश पूजा, साधना, कंबल दान', avoid:'Avoid scattered focus and ignoring spiritual needs', avoid_hi:'बिखरा ध्यान और आध्यात्मिक जरूरतों की अनदेखी से बचें' },
+};
+
+const HOUSE_EFFECT_BRIEF = {
+  1:'Personal vitality, appearance, and overall day energy',
+  2:'Speech, family matters, finances and food',
+  3:'Communication, short travel, siblings and courage',
+  4:'Home, mother, comfort and mental peace',
+  5:'Creativity, children, investments and romance',
+  6:'Work routine, health, competition and service',
+  7:'Relationships, partnerships and public dealings',
+  8:'Hidden matters, research, and sudden changes',
+  9:'Fortune, travel, higher learning and blessings',
+  10:'Career, authority, reputation and public image',
+  11:'Income, gains, social connections and wishes',
+  12:'Rest, spirituality, foreign matters and expenses',
+};
+
 // ─── Rashi Detail Card ────────────────────────────────────────────────────────
 function RashiDetail({ rashi, lang }) {
   const [tab, setTab] = useState('overview');
@@ -103,12 +132,17 @@ function RashiDetail({ rashi, lang }) {
   const scoreColor = SCORE_COLOR[rashi.score];
   const scoreLabel = lang==='hi' ? SCORE_LABEL_HI[rashi.score] : SCORE_LABEL[rashi.score];
 
+  const rashiLord  = RASHI_LORD_MAP[rashi.rashi_num];
+  const remedy     = PLANET_REMEDY[rashiLord] || {};
+
   const TABS = [
-    { key:'overview', en:'Overview', hi:'सारांश' },
-    { key:'career',   en:'Career',   hi:'करियर' },
-    { key:'love',     en:'Love',     hi:'प्रेम'  },
-    { key:'health',   en:'Health',   hi:'स्वास्थ्य' },
-    { key:'finance',  en:'Finance',  hi:'धन'    },
+    { key:'overview', en:'Overview',  hi:'सारांश'      },
+    { key:'career',   en:'Career',    hi:'करियर'       },
+    { key:'love',     en:'Love',      hi:'प्रेम'        },
+    { key:'health',   en:'Health',    hi:'स्वास्थ्य'   },
+    { key:'finance',  en:'Finance',   hi:'धन'           },
+    { key:'transit',  en:'Transits',  hi:'गोचर प्रभाव' },
+    { key:'remedy',   en:'Remedies',  hi:'उपाय'        },
   ];
 
   return (
@@ -244,6 +278,83 @@ function RashiDetail({ rashi, lang }) {
           <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, margin:0 }}>
             {t(lang, rashi.finance.en, rashi.finance.hi)}
           </p>
+        )}
+
+        {/* ── Transit Effects tab ── */}
+        {tab === 'transit' && (
+          <div>
+            <p style={{ fontSize:12, color:'#64748B', marginBottom:16 }}>
+              {t(lang,
+                `Today's planet positions from ${rashi.rashi_en} Lagna. Each planet activates its house and area of life.`,
+                `${rashi.rashi_hi} लग्न से आज के ग्रह। प्रत्येक ग्रह अपने भाव और जीवन क्षेत्र को सक्रिय करता है।`
+              )}
+            </p>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {Object.entries(rashi.planet_positions || {}).map(([key, house]) => {
+                const pname = key.replace('_house','');
+                const pCap  = pname.charAt(0).toUpperCase() + pname.slice(1);
+                const color = PLANET_COLOR[pCap] || '#94A3B8';
+                const icon  = PLANET_ICON[pCap]  || '●';
+                const nameHi = PLANET_NAME_HI[pCap] || pCap;
+                const effect = HOUSE_EFFECT_BRIEF[house] || '';
+                return (
+                  <div key={key} style={{ display:'flex', gap:12, padding:'10px 14px', background:'rgba(255,255,255,0.03)', border:`1px solid ${color}25`, borderRadius:10, alignItems:'flex-start' }}>
+                    <span style={{ fontSize:18, color, flexShrink:0, lineHeight:1.4 }}>{icon}</span>
+                    <div>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+                        <span style={{ fontSize:12, fontWeight:700, color }}>{t(lang, pCap, nameHi)}</span>
+                        <span style={{ fontSize:10, color:'rgba(255,255,255,0.3)' }}>in</span>
+                        <span style={{ fontSize:11, fontWeight:600, color:'#CBD5E1' }}>House {house}</span>
+                        <span style={{ fontSize:9, color:'#475569', background:'rgba(255,255,255,0.05)', padding:'2px 7px', borderRadius:8 }}>{t(lang,`H${house}`,`${house}वां भाव`)}</span>
+                      </div>
+                      <p style={{ fontSize:11, color:'#94A3B8', lineHeight:1.7, margin:0 }}>{effect}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Remedy tab ── */}
+        {tab === 'remedy' && (
+          <div>
+            <div style={{ marginBottom:14, padding:'10px 14px', background:`rgba(${hexToRgb(rashi.color)},0.08)`, border:`1px solid ${rashi.color}33`, borderRadius:10 }}>
+              <p style={{ fontSize:11, color:'#94A3B8', lineHeight:1.75, margin:0 }}>
+                {t(lang,
+                  `Remedies are based on ${rashi.rashi_en}'s ruling planet: ${rashiLord}. Performing these consistently strengthens your rashi lord and reduces day-to-day challenges.`,
+                  `ये उपाय ${rashi.rashi_hi} के स्वामी ग्रह ${PLANET_NAME_HI[rashiLord] || rashiLord} पर आधारित हैं। नियमित रूप से करने से राशि स्वामी मजबूत होते हैं।`
+                )}
+              </p>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              {[
+                { icon:'📿', en:'Daily Mantra', hi:'दैनिक मंत्र', val_en: remedy.mantra, val_hi: remedy.mantra_hi },
+                { icon:'🔵', en:'Lucky Color Today', hi:'आज का शुभ रंग', val_en: remedy.color, val_hi: remedy.color_hi },
+                { icon:'💎', en:'Recommended Gem', hi:'अनुशंसित रत्न', val_en: remedy.gem, val_hi: remedy.gem_hi },
+                { icon:'📅', en:'Best Day for Puja', hi:'पूजा का शुभ दिन', val_en: remedy.day, val_hi: remedy.day_hi },
+              ].map(({ icon, en, hi, val_en, val_hi }) => (
+                <div key={en} style={{ padding:'12px 14px', background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:10 }}>
+                  <div style={{ fontSize:10, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>{icon} {t(lang, en, hi)}</div>
+                  <div style={{ fontSize:12, color:'#F1F5F9', fontWeight:600 }}>{t(lang, val_en, val_hi) || '—'}</div>
+                </div>
+              ))}
+            </div>
+            {/* Puja steps */}
+            {remedy.puja && (
+              <div style={{ marginTop:10, padding:'12px 14px', background:'rgba(34,197,94,0.06)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:10 }}>
+                <div style={{ fontSize:10, color:'#22C55E', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>🙏 {t(lang,'Today\'s Puja & Actions','आज की पूजा और कार्य')}</div>
+                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.75, margin:0 }}>{t(lang, remedy.puja, remedy.puja_hi)}</p>
+              </div>
+            )}
+            {/* What to avoid */}
+            {remedy.avoid && (
+              <div style={{ marginTop:10, padding:'12px 14px', background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10 }}>
+                <div style={{ fontSize:10, color:'#F59E0B', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>⚠ {t(lang,'Avoid Today','आज से बचें')}</div>
+                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.75, margin:0 }}>{t(lang, remedy.avoid, remedy.avoid_hi)}</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </motion.div>

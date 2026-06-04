@@ -9,6 +9,7 @@ const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.se
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 const { generateLifeGuidance } = require('../services/helpers/life-guidance');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
+const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
 
 router.use(authenticate);
 
@@ -630,6 +631,27 @@ router.get('/:id/varshphal-years', async (req, res) => {
   } catch (e) {
     console.error('[VarshphalYears] Error:', e.message);
     return fail(res, 'Unable to generate multi-year forecast', 500);
+  }
+});
+
+// ── GET /api/kundli/:id/strength — Overall Kundli strength report ─────────────
+router.get('/:id/strength', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const strength = computeKundliStrength(chart);
+    if (!strength) return fail(res, 'Unable to compute strength', 500);
+
+    return ok(res, { strength });
+  } catch (e) {
+    console.error('[Strength] Error:', e.message);
+    return fail(res, 'Unable to generate strength report', 500);
   }
 });
 
