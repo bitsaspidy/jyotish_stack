@@ -11,6 +11,7 @@ import PlanetImpactPanel from '../components/PlanetImpactPanel';
 import BhavaLordPanel from '../components/BhavaLordPanel';
 import LifeGuidancePanel from '../components/LifeGuidancePanel';
 import VarshphalPanel from '../components/VarshphalPanel';
+import KundliStrengthPanel from '../components/KundliStrengthPanel';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
@@ -3227,6 +3228,17 @@ export default function KundliDetail({ uuid }) {
         {/* ── Life Report (Finance, Family, Health, Problems, Isht Devata) ── */}
         {chart?.life_report?.sections && (
           <LifeReportPanel lifeReport={chart.life_report} lang={lang} />
+        )}
+
+        {/* ── Kundli Strength Report — Overall score, life domains, planet table */}
+        {kundli?.uuid && (
+          <section style={{ marginTop: 24 }}>
+            <KundliStrengthPanel
+              kundliUuid={kundli.uuid}
+              natalPlanets={chart?.planets}
+              lang={lang}
+            />
+          </section>
         )}
 
         {/* ── Kundli Insight — Plain Language Customer Guide ────────────────

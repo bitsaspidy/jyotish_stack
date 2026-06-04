@@ -8,11 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 
 const NAV = [
-  { href: '/',            en: 'Home',       hi: 'होम' },
-  { href: '/kundli',      en: 'Kundli',     hi: 'कुंडली' },
-  { href: '/matchmaking', en: 'Matching',   hi: 'मिलान' },
-  { href: '/predictions', en: 'Predictions',hi: 'भविष्यवाणी' },
-  { href: '/pricing',     en: 'Pricing',    hi: 'मूल्य' },
+  { href: '/',            en: 'Home',        hi: 'होम'        },
+  { href: '/kundli',      en: 'Kundli',      hi: 'कुंडली'     },
+  { href: '/horoscope',   en: 'Horoscope',   hi: 'राशिफल'     },
+  { href: '/varshphal',   en: 'Varshphal',   hi: 'वर्षफल'     },
+  { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
+  { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },
+  { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'      },
 ];
 
 export default function Navbar() {

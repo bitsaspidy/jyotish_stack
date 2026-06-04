@@ -2287,3 +2287,65 @@ planet_naisargika_maitri: 9 rows ✓
 **Tests:** 14/14 | **Build:** 25/25 pages
 
 *Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6 (Session 31)*
+
+---
+
+## Session 34 — 2026-06-04 | Varshphal → Full Life Coach Guide
+
+### Objective
+Expand Varshphal (Annual Solar Return) from a basic 4-tab panel into a comprehensive life coach guide covering all major life domains.
+
+---
+
+### ✅ TASK — Varshphal Life Guide Engine
+**Status:** Done
+**Files:**
+- `server/src/services/helpers/varshphal.js`
+- `ui-main/src/components/VarshphalPanel.jsx`
+
+#### Backend (varshphal.js)
+- Added `RASHI_LORD` array (12 rashis → natural lords) for whole-sign house lord computation
+- Added `getHouseLordPlanet(ascRashiNum, houseNum)` — computes which planet lords any house in the Varsha chart
+- Added `buildLifeAreas(varshaChart, houseMap, varshesha)` — comprehensive bilingual engine:
+
+**11 Life Domains with tone + score + detailed reading + planets:**
+1. Finance & Wealth (धन और वित्त) — houses 2, 11, 8
+2. Luck & Fortune (भाग्य और किस्मत) — houses 9, 5
+3. Family & Home (परिवार और घर) — houses 2, 4
+4. Spouse & Marriage (जीवनसाथी और विवाह) — house 7
+5. Parents (माता-पिता) — houses 4 (mother), 9 (father)
+6. Children / Sons & Daughters (संतान) — house 5
+7. Siblings / Brothers & Sisters (भाई-बहन) — house 3
+8. Education & Learning (शिक्षा और विद्या) — houses 4, 5, 9
+9. Job & Service (नौकरी और सेवा) — houses 10, 6
+10. Business & Trade (व्यापार और कारोबार) — houses 7, 10, 11
+11. Health & Vitality (स्वास्थ्य) — houses 1, 6, 8
+
+**Dynamic Cautions (chart-based):**
+- Saturn/Rahu in 8th → sudden events warning
+- Multiple malefics in 6th → legal/health alert
+- Multiple malefics in 12th → hidden expenses warning
+- Saturn/Mars in 7th → partnership caution
+- Malefics in 4th → property/home caution
+- Lagna lord in trik (6/8/12) → personal energy warning
+
+**Key Advice (5 points, always generated):**
+- Varshesha alignment — how to live the year's energy (7 planets each have specific EN+HI guidance)
+- Best houses to focus on (top 3 benefic-occupied houses)
+- Benefics in trik houses — redirect their energy
+- Mudda Dasha timing guidance (when to act)
+- Spiritual practice tailored to each of 7 Varshesha planets
+
+- `analyzeVarshaChart` now returns `life_areas` in the payload
+
+#### Frontend (VarshphalPanel.jsx)
+- Added 5th tab: "Life Guide / जीवन मार्गदर्शन"
+- `LifeAreaCard`: expandable card — icon, tone badge (✦/◆/▲), 1-5 star score, bilingual reading, planet chips
+- `CautionCard`: red-tinted card for dynamic chart-based warnings
+- `KeyAdviceCard`: gold-tinted card for pre-action guidance
+- `LIFE_AREA_ORDER` constant for consistent domain ordering
+- Tab order: Year Overview → **Life Guide** → Varsha Chart → House Readings → Mudda Dasha
+
+**Tests:** 14/14 | **Build:** 26/26 pages
+
+*Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6 (Session 34)*
