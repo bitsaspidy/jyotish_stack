@@ -8,6 +8,9 @@ import StarField from '../components/StarField';
 import LifeReportPanel from '../components/LifeReportPanel';
 import KundliInsightPanel from '../components/KundliInsightPanel';
 import PlanetImpactPanel from '../components/PlanetImpactPanel';
+import BhavaLordPanel from '../components/BhavaLordPanel';
+import LifeGuidancePanel from '../components/LifeGuidancePanel';
+import VarshphalPanel from '../components/VarshphalPanel';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
@@ -3240,6 +3243,39 @@ export default function KundliDetail({ uuid }) {
         {/* ── Planet Life Impact — How each planet affects money, career, family etc. */}
         {chart?.reports?.planet_assessments && (
           <PlanetImpactPanel chart={chart} lang={lang} />
+        )}
+
+        {/* ── Bhava Lord Readings — Class 7 BPHS: 12 house lords in 12 houses */}
+        {kundli?.bhava_lord_readings?.length > 0 && (
+          <section style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 16, padding: 24, marginTop: 24,
+          }}>
+            <BhavaLordPanel readings={kundli.bhava_lord_readings} lang={lang} />
+          </section>
+        )}
+
+        {/* ── Life Guidance (Session 33) ──────────────────────────────────── */}
+        {kundli?.life_guidance && (
+          <section style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 16, padding: 24, marginTop: 24,
+          }}>
+            <LifeGuidancePanel guidance={kundli.life_guidance} lang={lang} />
+          </section>
+        )}
+
+        {/* ── Varshphal — Annual Solar Return (Session 33) ────────────────── */}
+        {kundli?.uuid && (
+          <section style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: 16, padding: 24, marginTop: 24,
+          }}>
+            <VarshphalPanel kundliUuid={kundli.uuid} lang={lang} />
+          </section>
         )}
 
         {/* ── Detailed Reports ─────────────────────────────────────────────── */}

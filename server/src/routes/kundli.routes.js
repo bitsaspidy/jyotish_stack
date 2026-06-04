@@ -7,6 +7,8 @@ const { ok, fail } = require('../utils/response');
 const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-calc.service');
 const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
+const { generateLifeGuidance } = require('../services/helpers/life-guidance');
+const { generateVarshphal }   = require('../services/helpers/varshphal');
 
 router.use(authenticate);
 
@@ -170,6 +172,87 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
     };
   } catch (e) {
     console.error('[ChartEnrichment] Error:', e.message);
+    return null;
+  }
+}
+
+// ── Bhava Lord Readings ───────────────────────────────────────────────────────
+// For each house 1-12, determines which planet is its lord, where that planet
+// is placed, and fetches the BPHS interpretation from DB.
+const RASHI_LORD = {
+  1:'Mars',2:'Venus',3:'Mercury',4:'Moon',5:'Sun',6:'Mercury',
+  7:'Venus',8:'Mars',9:'Jupiter',10:'Saturn',11:'Saturn',12:'Jupiter',
+};
+const PLANET_NAME_MAP = {
+  Sun:'Sun',Moon:'Moon',Mars:'Mars',Mercury:'Mercury',Jupiter:'Jupiter',
+  Venus:'Venus',Saturn:'Saturn',Rahu:'Rahu',Ketu:'Ketu',
+};
+
+async function fetchBhavaLordReadings(chart) {
+  if (!chart?.ascendant?.rashi_num || !chart?.planets) return null;
+  try {
+    const lagnaRashi = chart.ascendant.rashi_num;
+
+    // Build map: planet → house number (whole-sign)
+    const planetHouse = {};
+    for (const [pName, pData] of Object.entries(chart.planets)) {
+      if (pData?.rashi_num) {
+        planetHouse[pName] = ((pData.rashi_num - lagnaRashi + 12) % 12) + 1;
+      }
+    }
+
+    // For each house, find its lord and its placement
+    const lookups = []; // [{house_lord, placed_in_house, lord_planet, lord_house}]
+    for (let h = 1; h <= 12; h++) {
+      const houseSign = ((lagnaRashi + h - 2) % 12) + 1;
+      const lordPlanet = RASHI_LORD[houseSign];
+      const placedIn = planetHouse[lordPlanet] || null;
+      if (placedIn) {
+        lookups.push({ house_lord: h, placed_in_house: placedIn, lord_planet: lordPlanet });
+      }
+    }
+
+    if (!lookups.length) return [];
+
+    // Batch DB fetch
+    const pairs = lookups.map((l) => [l.house_lord, l.placed_in_house]);
+    const rows = await db('house_lord_interpretations')
+      .where(function () {
+        pairs.forEach(([hl, ph]) => {
+          this.orWhere({ house_lord: hl, placed_in_house: ph });
+        });
+      })
+      .select(
+        'house_lord','placed_in_house','title','title_hi',
+        'lord_name_en','lord_name_hi',
+        'house_signification_en','house_signification_hi',
+        'interpretation_en','interpretation_hi',
+        'overall_effect','forms_viparita_yoga'
+      );
+
+    const rowMap = {};
+    for (const r of rows) rowMap[`${r.house_lord}_${r.placed_in_house}`] = r;
+
+    return lookups.map((l) => {
+      const row = rowMap[`${l.house_lord}_${l.placed_in_house}`] || {};
+      return {
+        house_number:         l.house_lord,
+        lord_planet:          l.lord_planet,
+        placed_in_house:      l.placed_in_house,
+        title_en:             row.title || `${l.house_lord}th Lord in ${l.placed_in_house}th House`,
+        title_hi:             row.title_hi || null,
+        lord_name_en:         row.lord_name_en || null,
+        lord_name_hi:         row.lord_name_hi || null,
+        house_signification_en: row.house_signification_en || null,
+        house_signification_hi: row.house_signification_hi || null,
+        interpretation_en:    row.interpretation_en || null,
+        interpretation_hi:    row.interpretation_hi || null,
+        overall_effect:       row.overall_effect || 'neutral',
+        forms_viparita_yoga:  row.forms_viparita_yoga || false,
+      };
+    });
+  } catch (e) {
+    console.error('[BhavaLordReadings] Error:', e.message);
     return null;
   }
 }
@@ -432,6 +515,12 @@ router.get('/:id', async (req, res) => {
     cd?.planets?.Moon?.rashi_num
   );
 
+  // Attach bhava lord readings (Session 32 — Class 7 PDF: 144 BPHS interpretations)
+  profile.bhava_lord_readings = await fetchBhavaLordReadings(cd);
+
+  // Attach life guidance (Session 33: career, work location, business timing, relationships, marriage, parents, children, remedies)
+  profile.life_guidance = generateLifeGuidance(cd);
+
   return ok(res, { profile });
 });
 
@@ -462,6 +551,12 @@ router.post('/:id/recalculate', async (req, res) => {
     chart?.planets?.Moon?.rashi_num
   );
 
+  // Attach bhava lord readings
+  freshProfile.bhava_lord_readings = await fetchBhavaLordReadings(chart);
+
+  // Attach life guidance
+  freshProfile.life_guidance = generateLifeGuidance(chart);
+
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });
 
@@ -487,6 +582,28 @@ router.patch('/:id', async (req, res) => {
   calcAndSave(updated);
 
   return ok(res, { profile: updated }, 'Kundli updated. Chart is being recalculated.');
+});
+
+// ── GET /api/kundli/:id/varshphal — Annual Solar Return chart ────────────────
+router.get('/:id/varshphal', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+
+    const targetYear = parseInt(req.query.year, 10) || new Date().getUTCFullYear();
+    const varshphal  = generateVarshphal(chart, profile, targetYear);
+    if (!varshphal) return fail(res, 'Unable to generate Varshphal', 500);
+
+    return ok(res, { varshphal });
+  } catch (e) {
+    console.error('[Varshphal] Route error:', e.message);
+    return fail(res, 'Unable to generate Varshphal', 500);
+  }
 });
 
 // ── DELETE /api/kundli/:id ────────────────────────────────────────────────────
