@@ -2448,6 +2448,216 @@ function VargaChartsPanel({ birthChart, reference, referenceError, chartStyle, l
   );
 }
 
+// ─── Graha Drishti House Card with Life-Area Impact Accordion ────────────────
+const LIFE_AREA_ICONS = {
+  self:'👤', family:'🏠', spouse:'💑', money:'💰', career:'💼', health:'❤️', spirit:'🙏',
+};
+const ASPECT_NATURE_COLOR = {
+  auspicious:'#22C55E', aggressive:'#EF4444', restricting:'#818CF8',
+  karmic:'#A78BFA', neutral:'#9CA3AF',
+};
+
+function DrishtiHouseCard({ item, lang, t, houseLabel, planetName, PLANET_META }) {
+  const [expanded, setExpanded] = useState(false);
+  const [activeImpact, setActiveImpact] = useState(0);
+
+  const hasAspects   = item.aspects?.length > 0;
+  const hasOccupants = item.occupants?.length > 0;
+  const impacts      = item.planet_impacts || [];
+  const hasImpacts   = impacts.length > 0;
+
+  const natureColor = hasAspects
+    ? (ASPECT_NATURE_COLOR[item.aspects[0]?.nature] || '#D4AF37')
+    : 'rgba(212,175,55,0.4)';
+
+  return (
+    <div style={{
+      border: `1px solid ${hasAspects ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.07)'}`,
+      borderRadius: 10, padding: '12px 14px',
+      background: hasAspects ? 'rgba(212,175,55,0.03)' : 'rgba(17,20,40,0.4)',
+    }}>
+      {/* House header */}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <p className="text-gold/85 text-xs font-semibold font-devanagari">
+            {houseLabel(item.house, lang)} · {lang === 'hi' ? item.sign_hi : item.sign_en}
+          </p>
+          <p className="text-ivory/52 text-[10px] mt-0.5 font-devanagari">
+            {lang === 'hi' ? item.theme_hi : item.theme_en}
+          </p>
+        </div>
+        <span style={{ background: hasAspects ? 'rgba(212,175,55,0.12)' : 'rgba(255,255,255,0.05)' }}
+          className={`rounded px-2 py-1 text-[9px] font-semibold shrink-0 ${hasAspects ? 'text-gold/80' : 'text-ivory/55'}`}>
+          {hasAspects ? `${item.aspects.length} ${t(lang,'aspect','दृष्टि')}` : t(lang,'quiet','शांत')}
+        </span>
+      </div>
+
+      {/* Summary text */}
+      <p className="text-ivory/74 text-[11px] leading-relaxed font-devanagari mb-2">
+        {lang === 'hi' ? item.plain_effect_hi : item.plain_effect_en}
+      </p>
+
+      {/* Benefit / Watch */}
+      <div className="grid grid-cols-1 gap-1 mb-2">
+        <p className="text-emerald-300/76 text-[10px] leading-relaxed font-devanagari">
+          ✓ {lang === 'hi' ? item.benefit_hi : item.benefit_en}
+        </p>
+        <p className="text-amber-200/76 text-[10px] leading-relaxed font-devanagari">
+          ⚠ {lang === 'hi' ? item.watch_hi : item.watch_en}
+        </p>
+      </div>
+
+      {/* Planet chips */}
+      {(hasOccupants || hasAspects) && (
+        <div className="flex flex-wrap gap-1.5 mb-3 pt-2 border-t border-white/6">
+          {item.occupants?.map((p) => (
+            <span key={`occ-${p}`} className="rounded bg-white/5 px-2 py-1 text-[9px] text-ivory/70 font-devanagari">
+              {t(lang,'Sitting:','बैठा:')} {planetName(p, lang)}
+            </span>
+          ))}
+          {item.aspects?.map((a) => (
+            <span key={`${a.planet}-${a.offset}`}
+              style={{ color: PLANET_META[a.planet]?.color || '#D4AF37' }}
+              className="rounded bg-white/5 px-2 py-1 text-[9px] font-devanagari">
+              {t(lang,'Aspect:','दृष्टि:')} {planetName(a.planet, lang)}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Life Area Impact expand button ── */}
+      {hasImpacts && (
+        <>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            style={{
+              width:'100%', textAlign:'left', padding:'7px 10px',
+              background: expanded ? 'rgba(167,139,250,0.12)' : 'rgba(167,139,250,0.06)',
+              border:'1px solid rgba(167,139,250,0.25)', borderRadius:8,
+              cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between',
+            }}>
+            <span style={{ color:'#A78BFA', fontSize:10, fontWeight:700 }}>
+              🔍 {t(lang,
+                `Detailed Life Impact — ${hasOccupants ? item.occupants.join(', ') + ' in this house' : 'this house'}`,
+                `विस्तृत जीवन प्रभाव — ${hasOccupants ? item.occupants.map(p => p).join(', ') + ' इस भाव में' : 'इस भाव पर'}`)}
+            </span>
+            <span style={{ color:'#A78BFA', fontSize:12 }}>{expanded ? '▲' : '▼'}</span>
+          </button>
+
+          {expanded && (
+            <div style={{ marginTop:8 }}>
+              {/* Aspecting planet tabs (if multiple aspects) */}
+              {impacts.length > 1 && (
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
+                  {impacts.map((imp, idx) => (
+                    <button key={imp.aspecting_planet} onClick={() => setActiveImpact(idx)} style={{
+                      padding:'4px 10px', borderRadius:8, fontSize:10, fontWeight:600,
+                      background: idx === activeImpact ? `${PLANET_META[imp.aspecting_planet]?.color || '#A78BFA'}22` : 'rgba(255,255,255,0.05)',
+                      color: idx === activeImpact ? (PLANET_META[imp.aspecting_planet]?.color || '#A78BFA') : 'rgba(245,240,232,0.4)',
+                      border: `1px solid ${idx === activeImpact ? (PLANET_META[imp.aspecting_planet]?.color || '#A78BFA') + '44' : 'transparent'}`,
+                      cursor:'pointer',
+                    }}>
+                      {t(lang, imp.aspecting_planet, imp.aspecting_planet)} {t(lang,'aspect','दृष्टि')}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Active impact — 7 life area cards */}
+              {impacts[activeImpact] && (() => {
+                const imp = impacts[activeImpact];
+                const natColor = ASPECT_NATURE_COLOR[imp.aspect_nature] || '#A78BFA';
+                const pColor   = PLANET_META[imp.aspecting_planet]?.color || natColor;
+                return (
+                  <div>
+                    {/* Impact header */}
+                    <div style={{
+                      padding:'8px 12px', borderRadius:8, marginBottom:10,
+                      background:`${pColor}0E`, border:`1px solid ${pColor}30`,
+                    }}>
+                      <p style={{ color: pColor, fontSize:11, fontWeight:700, fontFamily:'Georgia,serif' }}>
+                        {t(lang,
+                          `${imp.aspecting_planet}'s ${imp.aspect_nature} aspect on ${imp.occupants.join(' + ')} in House ${imp.house}`,
+                          `${imp.aspecting_planet} की ${imp.aspect_nature === 'karmic' ? 'कर्मिक' : imp.aspect_nature === 'auspicious' ? 'शुभ' : imp.aspect_nature === 'aggressive' ? 'तीव्र' : imp.aspect_nature === 'restricting' ? 'गंभीर' : 'सामान्य'} दृष्टि — भाव ${imp.house} में ${imp.occupants.join(' + ')} पर`
+                        )}
+                      </p>
+                      <p style={{ color:'rgba(245,240,232,0.45)', fontSize:10, marginTop:3 }}>
+                        {t(lang,
+                          'How this aspect shapes 7 life areas for you personally:',
+                          'यह दृष्टि आपके लिए 7 जीवन क्षेत्रों को कैसे प्रभावित करती है:')}
+                      </p>
+                    </div>
+
+                    {/* 7 Life area accordion */}
+                    <div style={{ display:'grid', gap:6 }}>
+                      {imp.life_areas.map((area) => (
+                        <DrishtiAreaRow key={area.key} area={area} lang={lang} pColor={pColor} t={t} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// Single life-area expandable row
+function DrishtiAreaRow({ area, lang, pColor, t }) {
+  const [open, setOpen] = useState(false);
+  const icon = LIFE_AREA_ICONS[area.key] || '•';
+  const text = lang === 'hi' ? area.text_hi : area.text_en;
+
+  // Bold **text** helper
+  function renderBold(str) {
+    if (!str) return null;
+    return str.split(/\*\*(.*?)\*\*/g).map((part, i) =>
+      i % 2 === 1
+        ? <strong key={i} style={{ color:'rgba(245,240,232,0.9)', fontWeight:700 }}>{part}</strong>
+        : <span key={i}>{part}</span>
+    );
+  }
+
+  return (
+    <div style={{
+      border:`1px solid ${open ? pColor + '30' : 'rgba(255,255,255,0.07)'}`,
+      borderRadius:8, overflow:'hidden',
+      background: open ? `${pColor}08` : 'rgba(17,20,40,0.3)',
+      transition:'all 0.18s',
+    }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width:'100%', padding:'9px 12px', display:'flex', alignItems:'center',
+          justifyContent:'space-between', cursor:'pointer', background:'transparent',
+          border:'none', textAlign:'left',
+        }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:14 }}>{icon}</span>
+          <span style={{ color: open ? pColor : 'rgba(245,240,232,0.7)', fontSize:11, fontWeight:600,
+            fontFamily:'var(--font-devanagari,Georgia),sans-serif' }}>
+            {lang === 'hi' ? area.heading_hi : area.heading_en}
+          </span>
+        </div>
+        <span style={{ color: open ? pColor : 'rgba(245,240,232,0.3)', fontSize:10 }}>
+          {open ? '▲' : '▼'}
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding:'0 12px 12px 34px' }}>
+          <p style={{ color:'rgba(245,240,232,0.72)', fontSize:11, lineHeight:1.85,
+            fontFamily:'var(--font-devanagari,Georgia),sans-serif' }}>
+            {renderBold(text)}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function KundliDetail({ uuid }) {
   const { user, loading: authLoading } = useAuth();
   const { lang } = useLang();
@@ -2737,7 +2947,7 @@ export default function KundliDetail({ uuid }) {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-gold/15">
-                        {[lang==='hi'?'ग्रह':'Planet', lang==='hi'?'राशि':'Sign', lang==='hi'?'अंश':'Degree', lang==='hi'?'भाव':'House', lang==='hi'?'स्थिति':'Status'].map(h => (
+                        {[lang==='hi'?'ग्रह':'Planet', lang==='hi'?'राशि':'Sign', lang==='hi'?'अंश':'Degree', lang==='hi'?'भाव':'House', lang==='hi'?'स्थिति (EDOFEN)':'Status (EDOFEN)'].map(h => (
                           <th key={h} className="text-left py-2 pr-3 text-ivory/30 text-[10px] font-medium uppercase tracking-wider first:pl-0">{h}</th>
                         ))}
                       </tr>
@@ -2748,6 +2958,12 @@ export default function KundliDetail({ uuid }) {
                         const ds   = DIGNITY_STYLE[pd.dignity] || DIGNITY_STYLE.Neutral;
                         const houseNum = Object.entries(chart.houses)
                           .find(([,h]) => h.rashi_num === pd.rashi_num)?.[0];
+                        // EDOFEN: strength % and sign-lord relation
+                        const strength = pd.dignity_strength;
+                        const relKey   = pd.sign_lord_relation;
+                        const REL_COLOR = { friend:'#22C55E', enemy:'#EF4444', neutral:'#9CA3AF', self:'#60A5FA' };
+                        const REL_LABEL_EN = { friend:'Friend\'s sign', enemy:'Enemy\'s sign', neutral:'Neutral sign', self:'Own sign' };
+                        const REL_LABEL_HI = { friend:'मित्र राशि', enemy:'शत्रु राशि', neutral:'सम राशि', self:'स्वराशि' };
                         return (
                           <tr key={name} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                             <td className="py-2.5 pr-3">
@@ -2763,21 +2979,38 @@ export default function KundliDetail({ uuid }) {
                               <p className="text-ivory/80 text-[11px] font-devanagari">
                                 {lang==='hi' ? pd.rashi_hi : pd.rashi_en}
                               </p>
-                              <p className="text-ivory/30 text-[9px]">{pd.rashi_symbol}</p>
+                              {/* Sign-lord relation from EDOFEN Friendship table */}
+                              {relKey && relKey !== 'self' && (
+                                <p className="text-[9px] mt-0.5" style={{ color: REL_COLOR[relKey] || '#9CA3AF' }}>
+                                  {lang === 'hi' ? REL_LABEL_HI[relKey] : REL_LABEL_EN[relKey]}
+                                </p>
+                              )}
                             </td>
                             <td className="py-2.5 pr-3 text-ivory/55 font-mono text-[10px]">
                               {pd.degree_in_sign_dms}
+                              {pd.is_retrograde && <span className="text-red-400 ml-1 text-[9px]">℞</span>}
                             </td>
                             <td className="py-2.5 pr-3 text-ivory/45 text-[11px]">
                               {houseNum ? houseLabel(houseNum, lang) : '—'}
                             </td>
                             <td className="py-2.5">
-                              <span style={{
-                                fontSize:10, padding:'2px 7px', borderRadius:12, fontWeight:600,
-                                background: ds.bg, color: ds.color,
-                              }}>
-                                {dignityLabel(pd.dignity, lang)}
-                              </span>
+                              <div className="flex flex-col gap-0.5">
+                                <span style={{
+                                  fontSize:10, padding:'2px 7px', borderRadius:12, fontWeight:600,
+                                  background: ds.bg, color: ds.color, display:'inline-block',
+                                }}>
+                                  {dignityLabel(pd.dignity, lang)}
+                                </span>
+                                {/* EDOFEN strength percentage */}
+                                {strength !== undefined && (
+                                  <span style={{
+                                    fontSize:9, color: strength >= 70 ? '#22C55E' : strength <= 15 ? '#EF4444' : '#9CA3AF',
+                                    paddingLeft:2, fontWeight:600,
+                                  }}>
+                                    {strength}% {lang === 'hi' ? 'शक्ति' : 'strength'}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -3200,54 +3433,10 @@ export default function KundliDetail({ uuid }) {
                   {lang==='hi' ? 'साधारण भाषा में प्रभाव' : 'Plain-Language Effects'}
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {Object.values(chart.drishti.by_house_detail).map((item) => {
-                    const hasAspects = item.aspects?.length > 0;
-                    const hasOccupants = item.occupants?.length > 0;
-                    return (
-                      <div key={item.house} className={`rounded border p-3 ${hasAspects ? 'border-gold/18 bg-gold/4' : 'border-white/7 bg-white/3'}`}>
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div>
-                            <p className="text-gold/85 text-xs font-semibold font-devanagari">
-                              {houseLabel(item.house, lang)} · {lang === 'hi' ? item.sign_hi : item.sign_en}
-                            </p>
-                            <p className="text-ivory/52 text-[10px] mt-0.5 font-devanagari">
-                              {lang === 'hi' ? item.theme_hi : item.theme_en}
-                            </p>
-                          </div>
-                          <span className={`rounded px-2 py-1 text-[9px] font-semibold shrink-0 ${hasAspects ? 'bg-gold/12 text-gold/80' : 'bg-white/5 text-ivory/55'}`}>
-                            {hasAspects
-                              ? `${item.aspects.length} ${t(lang, 'aspect', 'दृष्टि')}`
-                              : t(lang, 'quiet', 'शांत')}
-                          </span>
-                        </div>
-                        <p className="text-ivory/74 text-[11px] leading-relaxed font-devanagari">
-                          {lang === 'hi' ? item.plain_effect_hi : item.plain_effect_en}
-                        </p>
-                        <div className="grid grid-cols-1 gap-1.5 mt-3">
-                          <p className="text-emerald-300/76 text-[10px] leading-relaxed font-devanagari">
-                            {t(lang, 'Benefit:', 'लाभ:')} {lang === 'hi' ? item.benefit_hi : item.benefit_en}
-                          </p>
-                          <p className="text-amber-200/76 text-[10px] leading-relaxed font-devanagari">
-                            {t(lang, 'Watch:', 'सावधानी:')} {lang === 'hi' ? item.watch_hi : item.watch_en}
-                          </p>
-                        </div>
-                        {(hasOccupants || hasAspects) && (
-                          <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-white/6">
-                            {item.occupants?.map((p) => (
-                              <span key={`occ-${p}`} className="rounded bg-white/5 px-2 py-1 text-[9px] text-ivory/70 font-devanagari">
-                                {t(lang, 'Sitting:', 'बैठा:')} {planetName(p, lang)}
-                              </span>
-                            ))}
-                            {item.aspects?.map((a) => (
-                              <span key={`${a.planet}-${a.offset}`} style={{ color: PLANET_META[a.planet]?.color || '#D4AF37' }} className="rounded bg-white/5 px-2 py-1 text-[9px] font-devanagari">
-                                {t(lang, 'Aspect:', 'दृष्टि:')} {planetName(a.planet, lang)}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {Object.values(chart.drishti.by_house_detail).map((item) => (
+                    <DrishtiHouseCard key={item.house} item={item} lang={lang}
+                      t={t} houseLabel={houseLabel} planetName={planetName} PLANET_META={PLANET_META} />
+                  ))}
                 </div>
               </div>
             )}

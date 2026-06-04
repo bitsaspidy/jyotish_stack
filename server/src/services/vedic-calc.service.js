@@ -12,7 +12,7 @@ const {
   norm, NAK_SPAN, lahiriAyanamsa, toSidereal,
   tropicalLongitudeForPlanet, siderealLongitudeForPlanet,
   signedAngleDelta, dailyMotionForPlanet, isRetrogradePlanet,
-  rashiFromDeg, nakshatraFromDeg, getPlanetDignity,
+  rashiFromDeg, nakshatraFromDeg, getPlanetDignity, getDignityStrength, getPlanetRelation,
   houseFromSign, wrapSign, rashiSummary, toDMS,
   startSignByQuality, startSignByElement,
   nakExtra, inclusiveNakDistance, varnaForRashi, vashyaForRashi, relationScore,
@@ -68,20 +68,23 @@ function calculateVedicChart(p) {
 
   const planetDetails = {};
   for (const [name, lon] of Object.entries(sid)) {
-    const rashi = rashiFromDeg(lon);
+    const rashi      = rashiFromDeg(lon);
+    const dignityLbl = getPlanetDignity(name, lon);
     planetDetails[name] = {
-      longitude:          +lon.toFixed(4),
-      longitude_dms:      toDMS(lon),
-      rashi_num:          rashi.num,
-      rashi_en:           rashi.en,
-      rashi_hi:           rashi.hi,
-      rashi_symbol:       rashi.symbol,
-      rashi_lord:         rashi.lord,
-      degree_in_sign:     +rashi.degreeInSign.toFixed(4),
-      degree_in_sign_dms: toDMS(rashi.degreeInSign),
-      dignity:            getPlanetDignity(name, lon),
-      daily_motion:       +dailyMotionForPlanet(name, JD).toFixed(4),
-      is_retrograde:      isRetrogradePlanet(name, JD),
+      longitude:            +lon.toFixed(4),
+      longitude_dms:        toDMS(lon),
+      rashi_num:            rashi.num,
+      rashi_en:             rashi.en,
+      rashi_hi:             rashi.hi,
+      rashi_symbol:         rashi.symbol,
+      rashi_lord:           rashi.lord,
+      degree_in_sign:       +rashi.degreeInSign.toFixed(4),
+      degree_in_sign_dms:   toDMS(rashi.degreeInSign),
+      dignity:              dignityLbl,
+      dignity_strength:     getDignityStrength(dignityLbl),   // 100/85/70/50/10
+      sign_lord_relation:   getPlanetRelation(name, rashi.lord), // friend/enemy/neutral/self
+      daily_motion:         +dailyMotionForPlanet(name, JD).toFixed(4),
+      is_retrograde:        isRetrogradePlanet(name, JD),
     };
   }
 
@@ -151,9 +154,13 @@ function calculateVedicChart(p) {
   return chart;
 }
 
+const { BHAVA_CLASSIFICATION, DIGNITY_STRENGTH } = require('./helpers/vedic-data');
+
 // ── Exports ───────────────────────────────────────────────────────────────────
 module.exports = {
   calculateVedicChart,
+  // Data constants
+  BHAVA_CLASSIFICATION, DIGNITY_STRENGTH,
   // Life report
   generateLifeReport:    lifeReport.generateLifeReport,
   generateVargaAnalysis: lifeReport.generateVargaAnalysis,

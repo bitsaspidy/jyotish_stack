@@ -1,6 +1,7 @@
 'use strict';
 const { houseFromSign } = require('./core-helpers');
 const { RASHIS } = require('./vedic-data');
+const { generateDrishtiLifeImpact } = require('./drishti-life-impact');
 
 // Source: Drishti, Bhav Karak and Digbala.pdf
 const DRISHTI_OFFSETS = {
@@ -112,6 +113,9 @@ function drishtiHouseReading(house, sign, aspects, occupants) {
   }
 
   if (hasAspects && hasOccupants) {
+    // Generate detailed life-area impact for each aspecting planet × each occupant
+    const planetImpacts = generateDrishtiLifeImpact(aspects, occupants, house);
+
     return {
       plain_effect_en: `${names(aspectPlanets)} aspect house ${house} (${sign?.en || 'sign'}), where ${names(occupants)} is placed. This means the aspect directly influences the planet(s) sitting here, so those planets express ${theme.en} through a ${label.en} tone.`,
       plain_effect_hi: `${namesHi(aspectPlanets)} भाव ${house} (${sign?.hi || sign?.en || 'राशि'}) पर दृष्टि दे रहे हैं, जहाँ ${namesHi(occupants)} बैठा है। इसका अर्थ है कि दृष्टि बैठे हुए ग्रहों पर भी असर कर रही है; इसलिए वे ग्रह ${theme.hi} को ${label.hi} रंग में व्यक्त करेंगे।`,
@@ -119,10 +123,23 @@ function drishtiHouseReading(house, sign, aspects, occupants) {
       benefit_hi: dominantNature === 'auspicious' ? 'शुभ दृष्टि इस भाव और यहाँ बैठे ग्रहों को संरक्षण देकर फल सुधार सकती है।' : 'भाव में सक्रिय ऊर्जा आती है, जिससे गति और दिखाई देने वाले परिणाम बनते हैं।',
       watch_en: dominantNature === 'aggressive' ? 'Forceful aspects can create impatience, conflict, or sudden pressure in this house.' : dominantNature === 'restricting' ? 'Serious aspects can delay results but make them mature through responsibility.' : 'Balance the house themes instead of overreacting to one planet.',
       watch_hi: dominantNature === 'aggressive' ? 'तीव्र दृष्टि इस भाव में अधीरता, टकराव या अचानक दबाव दे सकती है।' : dominantNature === 'restricting' ? 'गंभीर दृष्टि फल में देरी दे सकती है, पर जिम्मेदारी से परिपक्वता भी देती है।' : 'एक ग्रह के कारण अति प्रतिक्रिया न करें; भाव के विषयों को संतुलित रखें।',
+      // ── NEW: detailed 7 life-area impact per aspecting planet ─────────────
+      planet_impacts: planetImpacts,
     };
   }
 
   if (hasAspects) {
+    // Even for empty houses: generate life area impact of the aspecting planet on the house itself
+    // Use the house's natural karaka as a virtual occupant for richer text
+    const houseKarakas = {
+      1:['Sun'], 2:['Jupiter'], 3:['Mars'], 4:['Moon'], 5:['Jupiter'],
+      6:['Mars'], 7:['Venus'], 8:['Saturn'], 9:['Jupiter'], 10:['Sun'], 11:['Jupiter'], 12:['Saturn'],
+    };
+    const virtualOccupants = houseKarakas[house] || [];
+    const emptyHouseImpacts = virtualOccupants.length
+      ? generateDrishtiLifeImpact(aspects, virtualOccupants, house)
+      : [];
+
     return {
       plain_effect_en: `${names(aspectPlanets)} aspect empty house ${house} (${theme.en}) in ${sign?.en || 'this sign'}. Because no natal planet is sitting here, the aspect mainly activates the house and sign themes: events, responsibilities, opportunities, or lessons related to this area become more noticeable.`,
       plain_effect_hi: `${namesHi(aspectPlanets)} खाली भाव ${house} (${theme.hi}) पर ${sign?.hi || sign?.en || 'इस राशि'} में दृष्टि दे रहे हैं। यहाँ कोई जन्म ग्रह नहीं बैठा, इसलिए दृष्टि मुख्यतः भाव और राशि के विषयों को सक्रिय करती है: इस क्षेत्र की घटनाएँ, जिम्मेदारियाँ, अवसर या सीख अधिक स्पष्ट हो सकती हैं।`,
@@ -130,6 +147,7 @@ function drishtiHouseReading(house, sign, aspects, occupants) {
       benefit_hi: dominantNature === 'auspicious' ? 'इस जीवन क्षेत्र में संरक्षण और अच्छी दिशा मिल सकती है।' : 'यह भाव निष्क्रिय नहीं है; प्रयास से यहाँ परिणाम दिख सकते हैं।',
       watch_en: dominantNature === 'karmic' ? 'Karmic aspects can bring unusual desires, detachment, or sudden changes.' : 'Avoid ignoring this house during the current dasha or major transit.',
       watch_hi: dominantNature === 'karmic' ? 'कर्मिक दृष्टि असामान्य इच्छाएँ, विरक्ति या अचानक बदलाव ला सकती है।' : 'वर्तमान दशा या बड़े गोचर में इस भाव को अनदेखा न करें।',
+      planet_impacts: emptyHouseImpacts,
     };
   }
 

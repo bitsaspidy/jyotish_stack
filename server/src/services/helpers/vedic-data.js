@@ -49,7 +49,8 @@ const NAKSHATRAS = [
 
 const NAK_SPAN = 360 / 27; // 13.333...°
 
-// Source: seed 004_planet_dignity.js
+// Source: seed 004 + EDOFEN PDF (seed 014)
+// Rahu/Ketu exaltation/debilitation added from "Name of Bhavas and EDOFEN.pdf" page 2
 const DIGNITY_MAP = {
   Sun:     { exalt:1, exaltD:10, debil:7, debilD:10, mool:5, moolF:0,  moolT:20, own:[5]     },
   Moon:    { exalt:2, exaltD:3,  debil:8, debilD:3,  mool:2, moolF:4,  moolT:20, own:[4]     },
@@ -58,6 +59,34 @@ const DIGNITY_MAP = {
   Jupiter: { exalt:4, exaltD:5,  debil:10,debilD:5,  mool:9, moolF:0,  moolT:10, own:[9,12]  },
   Venus:   { exalt:12,exaltD:27, debil:6, debilD:27, mool:7, moolF:0,  moolT:15, own:[2,7]   },
   Saturn:  { exalt:7, exaltD:20, debil:1, debilD:20, mool:11,moolF:0,  moolT:20, own:[10,11] },
+  // Shadow planets — exalt/debil per EDOFEN PDF; no Moolatrikona or own sign
+  Rahu:    { exalt:2, exaltD:0,  debil:8, debilD:0,  mool:null, moolF:0, moolT:0, own:[] },
+  Ketu:    { exalt:8, exaltD:0,  debil:2, debilD:0,  mool:null, moolF:0, moolT:0, own:[] },
+};
+
+// Strength percentages per dignity type — source: EDOFEN PDF page 2
+const DIGNITY_STRENGTH = {
+  'Exaltation (उच्च)':        100,
+  'Moolatrikona (मूलत्रिकोण)': 85,
+  'Own Sign (स्वगृह)':         70,
+  'Neutral':                   50,
+  'Debilitation (नीच)':        10,
+};
+
+// Bhava classification — source: "Name of Bhavas" PDF page 1
+const BHAVA_CLASSIFICATION = {
+  1:  { type:'kendra',   groups:['kendra','trikona'],     is_kendra:true,  is_trikona:true,  is_dusthana:false, is_upachaya:false, is_maarak:false, nature_en:'Very Auspicious',              nature_hi:'अत्यंत शुभ' },
+  2:  { type:'neutral',  groups:['maarak'],               is_kendra:false, is_trikona:false, is_dusthana:false, is_upachaya:false, is_maarak:true,  nature_en:'Death Causing (Maarak)',        nature_hi:'मारक' },
+  3:  { type:'upachaya', groups:['upachaya'],             is_kendra:false, is_trikona:false, is_dusthana:false, is_upachaya:true,  is_maarak:false, nature_en:'Grows with Age',               nature_hi:'उपचय' },
+  4:  { type:'kendra',   groups:['kendra'],               is_kendra:true,  is_trikona:false, is_dusthana:false, is_upachaya:false, is_maarak:false, nature_en:'Auspicious (Kendra)',           nature_hi:'शुभ — केंद्र' },
+  5:  { type:'trikona',  groups:['trikona'],              is_kendra:false, is_trikona:true,  is_dusthana:false, is_upachaya:false, is_maarak:false, nature_en:'Auspicious (Trikona)',          nature_hi:'शुभ — त्रिकोण' },
+  6:  { type:'dusthana', groups:['dusthana','upachaya'],  is_kendra:false, is_trikona:false, is_dusthana:true,  is_upachaya:true,  is_maarak:false, nature_en:'Challenging (Dusthana)',        nature_hi:'दुस्थान — उपचय' },
+  7:  { type:'kendra',   groups:['kendra','maarak'],      is_kendra:true,  is_trikona:false, is_dusthana:false, is_upachaya:false, is_maarak:true,  nature_en:'Auspicious (Kendra + Maarak)', nature_hi:'शुभ केंद्र — मारक' },
+  8:  { type:'dusthana', groups:['dusthana'],             is_kendra:false, is_trikona:false, is_dusthana:true,  is_upachaya:false, is_maarak:false, nature_en:'Evil / Dusthana',              nature_hi:'दुस्थान' },
+  9:  { type:'trikona',  groups:['trikona'],              is_kendra:false, is_trikona:true,  is_dusthana:false, is_upachaya:false, is_maarak:false, nature_en:'Very Auspicious (Bhagya)',      nature_hi:'अत्यंत शुभ — भाग्य' },
+  10: { type:'kendra',   groups:['kendra','upachaya'],    is_kendra:true,  is_trikona:false, is_dusthana:false, is_upachaya:true,  is_maarak:false, nature_en:'Auspicious (Kendra + Upachaya)',nature_hi:'शुभ केंद्र — कर्म उपचय' },
+  11: { type:'upachaya', groups:['upachaya'],             is_kendra:false, is_trikona:false, is_dusthana:false, is_upachaya:true,  is_maarak:false, nature_en:'Grows with Age (Labha)',        nature_hi:'उपचय — लाभ' },
+  12: { type:'dusthana', groups:['dusthana'],             is_kendra:false, is_trikona:false, is_dusthana:true,  is_upachaya:false, is_maarak:false, nature_en:'Evil / Dusthana (Vyaya)',       nature_hi:'दुस्थान — व्यय' },
 };
 
 // Gana, Nadi, Yoni per nakshatra (index 1-27; index 0 is null)
@@ -92,14 +121,17 @@ const NAK_EXTRA = [
   { gana:'deva',     nadi:'antya',  yoni:'elephant' },
 ];
 
+// Updated with Rahu/Ketu rows + shadow-planet relations per EDOFEN PDF page 3
 const NATURAL_FRIENDS = {
-  Sun:     { friends:['Moon','Mars','Jupiter'], neutral:['Mercury'], enemies:['Venus','Saturn'] },
-  Moon:    { friends:['Sun','Mercury'], neutral:['Mars','Jupiter','Venus','Saturn'], enemies:[] },
-  Mars:    { friends:['Sun','Moon','Jupiter'], neutral:['Venus','Saturn'], enemies:['Mercury'] },
-  Mercury: { friends:['Sun','Venus'], neutral:['Mars','Jupiter','Saturn'], enemies:['Moon'] },
-  Jupiter: { friends:['Sun','Moon','Mars'], neutral:['Saturn'], enemies:['Mercury','Venus'] },
-  Venus:   { friends:['Mercury','Saturn'], neutral:['Mars','Jupiter'], enemies:['Sun','Moon'] },
-  Saturn:  { friends:['Mercury','Venus'], neutral:['Jupiter'], enemies:['Sun','Moon','Mars'] },
+  Sun:     { friends:['Moon','Mars','Jupiter'],           neutral:['Mercury'],                         enemies:['Venus','Saturn','Rahu','Ketu'] },
+  Moon:    { friends:['Sun','Mercury'],                   neutral:['Mars','Jupiter','Venus','Saturn'],  enemies:['Rahu','Ketu'] },
+  Mars:    { friends:['Sun','Moon','Jupiter','Ketu'],     neutral:['Venus','Saturn'],                  enemies:['Mercury','Rahu'] },
+  Mercury: { friends:['Sun','Venus'],                     neutral:['Mars','Jupiter','Saturn','Rahu','Ketu'], enemies:['Moon'] },
+  Jupiter: { friends:['Sun','Moon','Mars'],               neutral:['Saturn','Rahu','Ketu'],            enemies:['Mercury','Venus'] },
+  Venus:   { friends:['Mercury','Saturn','Rahu','Ketu'],  neutral:['Mars','Jupiter'],                  enemies:['Sun','Moon'] },
+  Saturn:  { friends:['Mercury','Venus','Rahu'],          neutral:['Jupiter'],                         enemies:['Sun','Moon','Mars','Ketu'] },
+  Rahu:    { friends:['Venus','Saturn'],                  neutral:['Mercury','Jupiter'],               enemies:['Sun','Moon','Mars','Ketu'] },
+  Ketu:    { friends:['Mars','Venus'],                    neutral:['Mercury','Jupiter'],               enemies:['Sun','Moon','Saturn','Rahu'] },
 };
 
-module.exports = { RASHIS, NAKSHATRAS, NAK_SPAN, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS };
+module.exports = { RASHIS, NAKSHATRAS, NAK_SPAN, DIGNITY_MAP, NAK_EXTRA, NATURAL_FRIENDS, DIGNITY_STRENGTH, BHAVA_CLASSIFICATION };

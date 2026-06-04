@@ -17,14 +17,39 @@ const PLANET_META = {
   Ketu:    { icon:'☋', color:'#6B7280', hi:'केतु'      },
 };
 
-// Plain-language dignity status
+// Dignity display — strength % from EDOFEN PDF (exalt=100%, own=70%, debil=10%)
 const DIGNITY_INFO = {
-  'Exaltation (उच्च)':        { label_en:'★ Excellent',   label_hi:'★ उत्कृष्ट',   desc_en:'Maximum strength — gives outstanding results', desc_hi:'अधिकतम शक्ति — उत्कृष्ट परिणाम देता है', color:'#22C55E', bg:'rgba(34,197,94,0.1)' },
-  'Moolatrikona (मूलत्रिकोण)':{ label_en:'◆ Very Strong', label_hi:'◆ बहुत शक्तिशाली', desc_en:'Strong results — in its preferred zone', desc_hi:'शक्तिशाली परिणाम — प्रिय क्षेत्र में है', color:'#F59E0B', bg:'rgba(245,158,11,0.1)' },
-  'Own Sign (स्वगृह)':         { label_en:'✦ Strong',      label_hi:'✦ शक्तिशाली',  desc_en:'Comfortable & effective — in own house', desc_hi:'सुविधाजनक और प्रभावी — अपने घर में', color:'#60A5FA', bg:'rgba(96,165,250,0.1)' },
-  'Neutral':                  { label_en:'○ Normal',      label_hi:'○ सामान्य',    desc_en:'Average position — neutral results', desc_hi:'औसत स्थिति — सामान्य परिणाम', color:'#9CA3AF', bg:'rgba(107,114,128,0.08)' },
-  'shadow':                   { label_en:'○ Shadow',      label_hi:'○ छाया',       desc_en:'Karmic node — no physical body', desc_hi:'कार्मिक नोड — कोई भौतिक शरीर नहीं', color:'#9CA3AF', bg:'rgba(107,114,128,0.08)' },
-  'Debilitation (नीच)':       { label_en:'▼ Needs Care',  label_hi:'▼ ध्यान दें',  desc_en:'Reduced strength — remedies recommended', desc_hi:'कम शक्ति — उपाय अनुशंसित', color:'#EF4444', bg:'rgba(239,68,68,0.1)' },
+  'Exaltation (उच्च)':        { label_en:'★ Excellent',   label_hi:'★ उत्कृष्ट',        strength:100, desc_en:'Maximum strength (100%) — outstanding results', desc_hi:'अधिकतम शक्ति (100%) — उत्कृष्ट परिणाम', color:'#22C55E', bg:'rgba(34,197,94,0.1)' },
+  'Moolatrikona (मूलत्रिकोण)':{ label_en:'◆ Very Strong', label_hi:'◆ बहुत शक्तिशाली', strength:85,  desc_en:'Very strong (85%) — in preferred zone',          desc_hi:'बहुत शक्तिशाली (85%) — प्रिय क्षेत्र में',   color:'#F59E0B', bg:'rgba(245,158,11,0.1)' },
+  'Own Sign (स्वगृह)':         { label_en:'✦ Strong',      label_hi:'✦ शक्तिशाली',       strength:70,  desc_en:'Strong (70%) — comfortable in own sign',         desc_hi:'शक्तिशाली (70%) — अपनी राशि में',            color:'#60A5FA', bg:'rgba(96,165,250,0.1)' },
+  'Neutral':                  { label_en:'○ Normal',      label_hi:'○ सामान्य',          strength:50,  desc_en:'Average (50%) — neutral results',                desc_hi:'औसत (50%) — सामान्य परिणाम',                color:'#9CA3AF', bg:'rgba(107,114,128,0.08)' },
+  'Debilitation (नीच)':       { label_en:'▼ Needs Care',  label_hi:'▼ ध्यान दें',        strength:10,  desc_en:'Low strength (10%) — remedies recommended',      desc_hi:'कम शक्ति (10%) — उपाय अनुशंसित',             color:'#EF4444', bg:'rgba(239,68,68,0.1)' },
+};
+
+// Sign-lord relation display (friend/enemy/neutral — from EDOFEN PDF page 3)
+const RELATION_INFO = {
+  friend:  { label_en:'Friend\'s Sign',  label_hi:'मित्र राशि',  color:'#22C55E', icon:'✓' },
+  enemy:   { label_en:'Enemy\'s Sign',   label_hi:'शत्रु राशि',  color:'#EF4444', icon:'✗' },
+  neutral: { label_en:'Neutral Sign',    label_hi:'सम राशि',     color:'#9CA3AF', icon:'○' },
+  self:    { label_en:'Own Sign',        label_hi:'स्वराशि',     color:'#60A5FA', icon:'★' },
+};
+
+// Bhava (house) type badge styling
+const BHAVA_BADGE = {
+  kendra:   { label_en:'Kendra',   label_hi:'केंद्र',    color:'#D4AF37', bg:'rgba(212,175,55,0.12)' },
+  trikona:  { label_en:'Trikona',  label_hi:'त्रिकोण',   color:'#22C55E', bg:'rgba(34,197,94,0.12)'  },
+  dusthana: { label_en:'Dusthana', label_hi:'दुस्थान',   color:'#EF4444', bg:'rgba(239,68,68,0.12)'  },
+  upachaya: { label_en:'Upachaya', label_hi:'उपचय',      color:'#A78BFA', bg:'rgba(167,139,250,0.12)' },
+  maarak:   { label_en:'Maarak',   label_hi:'मारक',      color:'#F97316', bg:'rgba(249,115,22,0.12)'  },
+};
+
+// Nature → card border/bg tint
+const NATURE_TINT = {
+  kendra:   { border:'rgba(212,175,55,0.3)',  bg:'rgba(212,175,55,0.04)'  },
+  trikona:  { border:'rgba(34,197,94,0.25)',  bg:'rgba(34,197,94,0.04)'   },
+  dusthana: { border:'rgba(239,68,68,0.22)',  bg:'rgba(239,68,68,0.04)'   },
+  upachaya: { border:'rgba(167,139,250,0.2)', bg:'rgba(167,139,250,0.04)' },
+  neutral:  { border:'rgba(212,175,55,0.1)',  bg:'rgba(17,20,40,0.35)'    },
 };
 
 // Plain-language guna badge
@@ -531,13 +556,33 @@ function PlanetsTab({ chart, enrichment, lang }) {
               )}
             </div>
 
-            {/* Guna badge + dignity plain description */}
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+            {/* Guna badge + dignity description + EDOFEN data */}
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', marginBottom:6 }}>
               {guna && (
                 <Badge bg={guna.bg} color={guna.color}>
                   {lang === 'hi' ? guna.label_hi : guna.label_en}
                 </Badge>
               )}
+              {/* Dignity strength % from EDOFEN PDF */}
+              {dignity.strength !== undefined && (
+                <Badge
+                  bg={isGood ? 'rgba(34,197,94,0.15)' : isWeak ? 'rgba(239,68,68,0.15)' : 'rgba(107,114,128,0.1)'}
+                  color={dignity.color}
+                >
+                  {dignity.strength}% {t(lang,'strength','शक्ति')}
+                </Badge>
+              )}
+              {/* Sign-lord relation from EDOFEN Friendship table */}
+              {pd.sign_lord_relation && pd.sign_lord_relation !== 'self' && (() => {
+                const ri = RELATION_INFO[pd.sign_lord_relation];
+                return ri ? (
+                  <Badge bg={`${ri.color}18`} color={ri.color}>
+                    {ri.icon} {lang === 'hi' ? ri.label_hi : ri.label_en}
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
+            <div>
               <span style={{ color: dignity.color, fontSize:11, opacity:0.85 }}>
                 {lang === 'hi' ? dignity.desc_hi : dignity.desc_en}
               </span>
@@ -576,37 +621,32 @@ function HousesTab({ chart, enrichment, lang }) {
     if (pd.house && houseMap[pd.house]) houseMap[pd.house].push(name);
   });
 
-  const HOUSE_QUALITY_LABEL = {
-    kendra:   { label_en:'Kendra (Angular)',  label_hi:'केंद्र', color:'#D4AF37', desc_en:'Most powerful house type — strong results', desc_hi:'सबसे शक्तिशाली भाव — शक्तिशाली परिणाम' },
-    trikona:  { label_en:'Trikona (Trinal)',  label_hi:'त्रिकोण', color:'#22C55E', desc_en:'Most auspicious — brings blessings', desc_hi:'सबसे शुभ — आशीर्वाद लाता है' },
-    upachaya: { label_en:'Upachaya',          label_hi:'उपचय', color:'#60A5FA', desc_en:'Growth house — improves over time', desc_hi:'वृद्धि भाव — समय के साथ सुधार' },
-    dusthana: { label_en:'Dusthana',          label_hi:'दुःस्थान', color:'#F59E0B', desc_en:'Difficult house — tests character', desc_hi:'कठिन भाव — चरित्र की परीक्षा' },
-    neutral:  { label_en:'Neutral',           label_hi:'तटस्थ', color:'#9CA3AF', desc_en:'Moderate influence', desc_hi:'मध्यम प्रभाव' },
-  };
-
   return (
     <div>
       <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, lineHeight:1.7, marginBottom:14 }}>
         {t(lang,
-          'Your 12 houses represent the 12 departments of your life. Houses with planets are active — they show where life events happen.',
-          'आपके 12 भाव जीवन के 12 विभागों का प्रतिनिधित्व करते हैं। ग्रहों वाले भाव सक्रिय हैं — वे दिखाते हैं जहाँ जीवन की घटनाएं होती हैं।'
+          'Your 12 houses represent the 12 departments of your life. Kendra = most powerful · Trikona = most auspicious · Upachaya = improves with time · Dusthana = challenging · Maarak = sensitive.',
+          'आपके 12 भाव जीवन के 12 विभाग हैं। केंद्र = सबसे शक्तिशाली · त्रिकोण = सबसे शुभ · उपचय = समय के साथ बढ़ता है · दुस्थान = चुनौतीपूर्ण · मारक = संवेदनशील।'
         )}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {housesMeta.map((house) => {
-          const planetsHere = houseMap[house.id] || [];
-          const hasplanets  = planetsHere.length > 0;
-          const qualityKey  = chart?.houses?.find?.(h => h.house_num === house.id)?.quality || 'neutral';
-          const ql          = HOUSE_QUALITY_LABEL[qualityKey] || HOUSE_QUALITY_LABEL.neutral;
+          const planetsHere  = houseMap[house.id] || [];
+          const hasplanets   = planetsHere.length > 0;
+          // Use new bhava classification from DB (seed 014)
+          const bhavaType    = house.bhava_type || 'neutral';
+          const bhavaGroups  = Array.isArray(house.bhava_groups) ? house.bhava_groups
+            : (typeof house.bhava_groups === 'string' ? JSON.parse(house.bhava_groups || '[]') : []);
+          const tint         = NATURE_TINT[bhavaType] || NATURE_TINT.neutral;
 
           return (
             <div key={house.id} style={{
-              border: `1px solid ${hasplanets ? 'rgba(212,175,55,0.25)' : 'rgba(212,175,55,0.08)'}`,
+              border: `1px solid ${hasplanets ? tint.border : 'rgba(212,175,55,0.1)'}`,
               borderRadius:10, padding:'12px 14px',
-              background: hasplanets ? 'rgba(212,175,55,0.04)' : 'rgba(17,20,40,0.35)',
+              background: hasplanets ? tint.bg : 'rgba(17,20,40,0.35)',
             }}>
               {/* House header */}
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
                 <div>
                   <span style={{ color:'rgba(212,175,55,0.5)', fontSize:11, fontWeight:700 }}>
                     {t(lang, `House ${house.id}`, `भाव ${house.id}`)}
@@ -616,12 +656,11 @@ function HousesTab({ chart, enrichment, lang }) {
                     {lang === 'hi' ? house.keywords_hi : house.keywords_en}
                   </p>
                 </div>
-                {/* Planets in this house */}
+                {/* Planet icons in this house */}
                 <div style={{ display:'flex', gap:3 }}>
                   {planetsHere.map(p => (
                     <span key={p} title={p} style={{
-                      color: PLANET_META[p]?.color || '#D4AF37',
-                      fontSize:15, lineHeight:1,
+                      color: PLANET_META[p]?.color || '#D4AF37', fontSize:15, lineHeight:1,
                     }}>
                       {PLANET_META[p]?.icon}
                     </span>
@@ -633,6 +672,26 @@ function HousesTab({ chart, enrichment, lang }) {
                   )}
                 </div>
               </div>
+
+              {/* Bhava type badges — from EDOFEN/Bhava PDF (seed 014) */}
+              {bhavaGroups.length > 0 && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:6 }}>
+                  {bhavaGroups.map(group => {
+                    const bb = BHAVA_BADGE[group];
+                    if (!bb) return null;
+                    return (
+                      <Badge key={group} bg={bb.bg} color={bb.color}>
+                        {lang === 'hi' ? bb.label_hi : bb.label_en}
+                      </Badge>
+                    );
+                  })}
+                  {house.bhava_nature_en && (
+                    <span style={{ color:'rgba(245,240,232,0.35)', fontSize:9, alignSelf:'center', marginLeft:2 }}>
+                      — {lang === 'hi' ? house.bhava_nature_hi : house.bhava_nature_en}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Topics covered */}
               <p style={{ color:'rgba(245,240,232,0.5)', fontSize:10.5, lineHeight:1.6, marginBottom:6 }}>

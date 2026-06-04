@@ -150,14 +150,23 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
     const houses_meta = await db('houses')
       .select('id','name','name_hi','keywords_en','keywords_hi',
               'topics_en','topics_hi','health_organs_en','health_organs_hi',
-              'detailed_notes_en','detailed_notes_hi')
+              'detailed_notes_en','detailed_notes_hi',
+              'bhava_type','bhava_groups','bhava_nature_en','bhava_nature_hi',
+              'is_kendra','is_trikona','is_dusthana','is_upachaya','is_maarak')
       .orderBy('id');
+
+    // parse bhava_groups JSON string
+    const housesWithGroups = houses_meta.map((h) => {
+      let groups = [];
+      try { groups = typeof h.bhava_groups === 'string' ? JSON.parse(h.bhava_groups) : (h.bhava_groups || []); } catch {}
+      return { ...h, bhava_groups: groups };
+    });
 
     return {
       lagna_sign: signMap[ascRashiNum] || null,
       moon_sign:  signMap[moonRashiNum] || null,
       planet_meta,
-      houses_meta,
+      houses_meta: housesWithGroups,
     };
   } catch (e) {
     console.error('[ChartEnrichment] Error:', e.message);

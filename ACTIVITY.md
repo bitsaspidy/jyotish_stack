@@ -2193,3 +2193,97 @@ npm run build:main    # 25/25 pages ✓
 ```
 
 *Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6*
+
+---
+
+## Session 30 — 2026-06-04 | Bhava Names + EDOFEN Full Implementation
+
+### ✅ TASK-069 — "Name of Bhavas and EDOFEN.pdf" Processed (3 pages)
+**Status:** Done
+**Source:** `C:\Users\Asus Vivobook\Downloads\Name of Bhavas and EDOFEN.pdf`
+
+**PDF Content:**
+- **Page 1** — Bhava type classifications: Kendra(1,4,7,10) · Trikona(1,5,9) · Upachaya(3,6,10,11) · Dusthana/Trik(6,8,12) · Maarak(2,7) with nature labels (Very Auspicious / Auspicious / Grows with Age / Evil / Death Causing)
+- **Page 2** — EDOFEN table: Exaltation=100% · Own=70% · Debilitation=10% + Rahu/Ketu dignity (Rahu exalted Taurus/debil Scorpio; Ketu exalted Scorpio/debil Taurus)
+- **Page 3** — Complete 9×9 Permanent Friendship (Naisargika Maitri) table including Rahu & Ketu
+
+---
+
+#### A — Migration 017 (`server/src/migrations/017_bhava_edofen.js`)
+- `houses` table: +7 columns (`bhava_type`, `bhava_groups` JSON, `bhava_nature_en/hi`, `is_kendra`, `is_trikona`, `is_dusthana`, `is_upachaya`, `is_maarak`)
+- New table `planet_naisargika_maitri`: 9 rows — complete friendship/enmity matrix
+
+#### B — Seed 014 (`server/src/seeds/014_bhava_edofen.js`)
+**Part 1 — Bhava classification:** UPDATE all 12 houses with bhava_type, bhava_groups, bhava_nature_en/hi, boolean flags
+**Part 2 — Rahu/Ketu dignity:** INSERT 4 rows into `planet_dignity` (Rahu: exalt=Taurus, debil=Scorpio; Ketu: exalt=Scorpio, debil=Taurus)
+**Part 3 — Friendship table:** INSERT 9 rows into `planet_naisargika_maitri` with full JSON friend/enemy/neutral arrays
+
+#### C — vedic-data.js (`server/src/services/helpers/vedic-data.js`)
+- `DIGNITY_MAP`: Added Rahu + Ketu entries (exalt/debil signs)
+- `NATURAL_FRIENDS`: Updated all 7 existing planets with Rahu/Ketu in their relationship lists + added Rahu/Ketu rows
+- New constant `DIGNITY_STRENGTH`: { Exaltation:100, Moolatrikona:85, Own:70, Neutral:50, Debilitation:10 }
+- New constant `BHAVA_CLASSIFICATION`: 12-house lookup with all groups/flags/nature labels
+
+#### D — core-helpers.js (`server/src/services/helpers/core-helpers.js`)
+- `getPlanetDignity`: Now handles Rahu/Ketu (no longer returns 'shadow' — returns proper Exaltation/Debilitation/Neutral)
+- New `getDignityStrength(dignityLabel)`: Returns % number (0–100)
+- New `getPlanetRelation(planet, otherPlanet)`: Returns 'friend'/'enemy'/'neutral'/'self' from NATURAL_FRIENDS
+
+#### E — vedic-calc.service.js
+- `planetDetails` now includes `dignity_strength` (number) and `sign_lord_relation` (string) per planet
+- Re-exports `BHAVA_CLASSIFICATION`, `DIGNITY_STRENGTH`
+
+#### F — kundli.routes.js
+- `fetchChartEnrichment()` now returns bhava classification fields from DB per house
+
+#### G — UI: KundliInsightPanel.jsx
+- **Your Planets tab**: Each planet card shows EDOFEN strength % badge (100%/85%/70%/50%/10%) + sign-lord relation badge (Friend's Sign / Enemy's Sign / Neutral Sign)
+- **Your Houses tab**: Each house card shows colored bhava type badges (Kendra/Trikona/Upachaya/Dusthana/Maarak) with nature label from DB; card border/background tinted by bhava type
+
+#### H — UI: KundliDetail.jsx Planet Table
+- "Status" column renamed "Status (EDOFEN)"
+- Shows dignity label + EDOFEN strength % below it (green ≥70%, red ≤15%)
+- Sign column shows sign-lord relation label (Friend's sign / Enemy's sign) in color
+
+**DB verification:**
+```
+houses: all 12 rows have bhava_type, bhava_groups, flags ✓
+planet_dignity Rahu/Ketu: 4 rows (exalt+debil for each) ✓
+planet_naisargika_maitri: 9 rows ✓
+```
+**Tests:** 14/14 ✓ | **Build:** 25/25 pages ✓
+
+*Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6*
+---
+
+## Session 31 — 2026-06-04 | Graha Drishti — Detailed 7 Life-Area Impact Engine
+
+### TASK-070 — Graha Drishti Life-Area Interpretation (Self / Family / Spouse / Money / Career / Health / Spirituality)
+**Status:** Done
+
+**Problem:** Graha Drishti showed only a generic one-line summary. Example:
+*"Ketu aspects house 12, where Venus, Saturn is placed. Those planets express Loss, Moksha through a karmic tone."*
+
+**Solution:** Built a full interpretation engine that explains HOW each aspecting planet affects each life area through aspected planets in the house.
+
+#### A — New file: server/src/services/helpers/drishti-life-impact.js
+- PLANET_KARAKATVA: 9 planets x 7 life areas = 63 entries (what each planet governs per area)
+- ASPECT_EFFECT: 9 planets x 7 life areas = 63 entries (how aspecting planet modifies each area)
+- HOUSE_MODIFIER: 12 houses x 7 areas = 84 entries (house context per life area)
+- generateDrishtiLifeImpact(): combines all 3 tables into 7-area paragraphs per aspecting planet
+
+#### B — drishti-bhavkarak.js
+- drishtiHouseReading() now calls generateDrishtiLifeImpact()
+- Adds planet_impacts[] to by_house_detail[house] output
+- Works for both occupied and empty houses
+
+#### C — KundliDetail.jsx UI
+- New DrishtiHouseCard component with expand/collapse state
+- New DrishtiAreaRow component: 7 collapsible life-area rows per aspecting planet
+- Icons: Self/Family/Spouse/Money/Career/Health/Spirituality
+- Bold **planet names** render with emphasis
+- EN + HI bilingual support
+
+**Tests:** 14/14 | **Build:** 25/25 pages
+
+*Last updated: 2026-06-04 | Agent: Claude Sonnet 4.6 (Session 31)*
