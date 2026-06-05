@@ -2,49 +2,129 @@
 import { useEffect, useState } from 'react';
 import adminApi from '../lib/adminApi';
 
+const STATUS_STYLE = {
+  sent:    { bg:'rgba(52,211,153,0.12)',  color:'#34D399',  border:'rgba(52,211,153,0.25)'  },
+  failed:  { bg:'rgba(239,68,68,0.12)',   color:'#F87171',  border:'rgba(239,68,68,0.25)'   },
+  pending: { bg:'rgba(245,158,11,0.12)',  color:'#FBBF24',  border:'rgba(245,158,11,0.25)'  },
+};
+
 export default function EmailLogs() {
-  const [logs, setLogs] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [logs,   setLogs]   = useState([]);
+  const [total,  setTotal]  = useState(0);
+  const [page,   setPage]   = useState(1);
+  const [filter, setFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [stats,  setStats]  = useState({ sent:0, failed:0, pending:0 });
 
   useEffect(() => {
+    setLoading(true);
     adminApi.get('/admin/email-logs', { params: { page } })
-      .then(({ data }) => { setLogs(data.logs); setTotal(Number(data.pagination.total)); })
-      .catch(() => {});
+      .then(({ data }) => {
+        setLogs(data.logs);
+        setTotal(Number(data.pagination.total));
+        // Compute stats from first page
+        const cnt = { sent:0, failed:0, pending:0 };
+        data.logs.forEach(l => { if (cnt[l.status] !== undefined) cnt[l.status]++; });
+        setStats(cnt);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [page]);
+
+  const filtered = filter ? logs.filter(l => l.status === filter) : logs;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gold mb-6">Email Logs</h1>
-      <div className="admin-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>{['To','Subject','Template','Status','Date'].map(h => (
-              <th key={h} className="text-gold/70 text-xs uppercase tracking-wider pb-3 text-left font-medium">{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {logs.map((l) => (
-              <tr key={l.id}>
-                <td className="py-3 border-t border-white/5 text-ivory/80">{l.to_email}</td>
-                <td className="py-3 border-t border-white/5 text-ivory/70 max-w-xs truncate">{l.subject}</td>
-                <td className="py-3 border-t border-white/5">
-                  <span className="text-xs bg-white/5 text-ivory/50 px-2 py-0.5 rounded">{l.template}</span>
-                </td>
-                <td className="py-3 border-t border-white/5">
-                  <span className={l.status === 'sent' ? 'badge-active' : l.status === 'failed' ? 'badge-inactive' : 'badge-pending'}>
-                    {l.status}
-                  </span>
-                </td>
-                <td className="py-3 border-t border-white/5 text-ivory/50">{new Date(l.created_at).toLocaleString()}</td>
+      <div style={{ marginBottom:24 }}>
+        <h1 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, marginBottom:3 }}>Email Logs</h1>
+        <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13 }}>{total} total email records</p>
+      </div>
+
+      {/* Stats strip */}
+      <div style={{ display:'flex', gap:10, marginBottom:18, flexWrap:'wrap' }}>
+        {[
+          { key:'',        label:'All', count:logs.length, color:'rgba(245,240,232,0.5)' },
+          { key:'sent',    label:'Sent',    count:stats.sent,    color:'#34D399' },
+          { key:'failed',  label:'Failed',  count:stats.failed,  color:'#F87171' },
+          { key:'pending', label:'Pending', count:stats.pending, color:'#FBBF24' },
+        ].map(({ key, label, count, color }) => (
+          <button key={key} onClick={() => setFilter(key)} style={{
+            padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6,
+            background: filter===key ? `${color}18` : 'rgba(255,255,255,0.04)',
+            border:`1px solid ${filter===key ? color+'44' : 'rgba(255,255,255,0.1)'}`,
+            color: filter===key ? color : 'rgba(245,240,232,0.45)',
+            transition:'all 0.15s',
+          }}>
+            {label}
+            <span style={{ background: filter===key ? color+'22' : 'rgba(255,255,255,0.08)', color: filter===key ? color : 'rgba(245,240,232,0.35)', borderRadius:10, padding:'0 6px', fontSize:10, fontWeight:700 }}>
+              {count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, overflow:'hidden' }}>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
+            <thead>
+              <tr style={{ borderBottom:'1px solid rgba(212,175,55,0.1)' }}>
+                {['Recipient','Subject','Template','Status','Date & Time'].map(h => (
+                  <th key={h} style={{ padding:'11px 14px', textAlign:'left', color:'rgba(212,175,55,0.6)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', whiteSpace:'nowrap' }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="flex gap-2 mt-4 justify-end">
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="admin-btn-outline text-xs px-3 py-1 disabled:opacity-30">←</button>
-          <span className="text-ivory/50 text-xs self-center">Page {page} / {Math.ceil(total / 20) || 1}</span>
-          <button disabled={page * 20 >= total} onClick={() => setPage(p => p + 1)} className="admin-btn-outline text-xs px-3 py-1 disabled:opacity-30">→</button>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={5} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>Loading…</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>No logs {filter ? `with status "${filter}"` : 'yet'}</td></tr>
+              ) : filtered.map(l => {
+                const ss = STATUS_STYLE[l.status] || STATUS_STYLE.pending;
+                return (
+                  <tr key={l.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
+                    onMouseEnter={e => e.currentTarget.style.background='rgba(212,175,55,0.025)'}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.8)', fontSize:13 }}>{l.to_email}</td>
+                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.6)', fontSize:13, maxWidth:220, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {l.subject || '—'}
+                    </td>
+                    <td style={{ padding:'10px 14px' }}>
+                      <span style={{ fontSize:10, padding:'2px 8px', borderRadius:6, background:'rgba(255,255,255,0.07)', color:'rgba(245,240,232,0.5)', fontWeight:600 }}>
+                        {l.template || 'custom'}
+                      </span>
+                    </td>
+                    <td style={{ padding:'10px 14px' }}>
+                      <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:ss.bg, color:ss.color, border:`1px solid ${ss.border}` }}>
+                        {l.status}
+                      </span>
+                    </td>
+                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.38)', fontSize:12 }}>
+                      {new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.05)' }}>
+          <span style={{ color:'rgba(245,240,232,0.35)', fontSize:12 }}>
+            Showing {Math.min((page-1)*20+1,total)}–{Math.min(page*20,total)} of {total}
+          </span>
+          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+            <button disabled={page===1} onClick={() => setPage(p=>p-1)}
+              style={{ padding:'5px 12px', borderRadius:5, border:'1px solid rgba(212,175,55,0.2)', background:'transparent', color: page===1 ? 'rgba(245,240,232,0.2)' : '#D4AF37', cursor: page===1 ? 'default' : 'pointer', fontSize:12 }}>
+              ←
+            </button>
+            <span style={{ color:'rgba(245,240,232,0.45)', fontSize:12 }}>{page} / {Math.ceil(total/20)||1}</span>
+            <button disabled={page*20>=total} onClick={() => setPage(p=>p+1)}
+              style={{ padding:'5px 12px', borderRadius:5, border:'1px solid rgba(212,175,55,0.2)', background:'transparent', color: page*20>=total ? 'rgba(245,240,232,0.2)' : '#D4AF37', cursor: page*20>=total ? 'default' : 'pointer', fontSize:12 }}>
+              →
+            </button>
+          </div>
         </div>
       </div>
     </div>

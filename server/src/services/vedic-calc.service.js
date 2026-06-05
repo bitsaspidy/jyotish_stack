@@ -45,6 +45,23 @@ const { generateRuleBasedPredictions } = require('./helpers/predictions-engine')
 const { calculateDetailedReports, planetPositiveNegativeAssessment, calculateEventTiming } = require('./helpers/detailed-reports');
 const { detectYogasAndDoshas }        = require('./helpers/yogas-doshas');
 
+// ── Awastha (Baladi) helpers ──────────────────────────────────────────────────
+// Odd signs (1,3,5,7,9,11): Bala→Kumara→Yuva→Vridha→Mrit
+// Even signs (2,4,6,8,10,12): reversed (Mrit→Vridha→Yuva→Kumara→Bala)
+const AVASTHA_ODD  = ['Bala','Kumara','Yuva','Vridha','Mrit'];
+const AVASTHA_EVEN = ['Mrit','Vridha','Yuva','Kumara','Bala'];
+const AVASTHA_HI   = { Bala:'बाल', Kumara:'कुमार', Yuva:'युवा', Vridha:'वृद्ध', Mrit:'मृत' };
+function computeAvastha(rashiNum, degreeInSign) {
+  const tier = Math.min(Math.floor(degreeInSign / 6), 4);
+  return (rashiNum % 2 === 1) ? AVASTHA_ODD[tier] : AVASTHA_EVEN[tier];
+}
+
+// ── Combustion (Maudhya) constants ────────────────────────────────────────────
+// Orbs per BPHS — reduced orb when planet is retrograde for Mercury/Venus
+const COMBUST_ORB       = { Moon:12, Mars:17, Mercury:14, Jupiter:11, Venus:10, Saturn:15 };
+const COMBUST_ORB_RETRO = { Mercury:12, Venus:8 };
+function _angularDiff(a, b) { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
+
 // ── Main Chart Calculation ────────────────────────────────────────────────────
 function calculateVedicChart(p) {
   const { year, month, day, hour = 0, minute = 0, second = 0,
@@ -69,7 +86,10 @@ function calculateVedicChart(p) {
   const planetDetails = {};
   for (const [name, lon] of Object.entries(sid)) {
     const rashi      = rashiFromDeg(lon);
+    const nak        = nakshatraFromDeg(lon);
     const dignityLbl = getPlanetDignity(name, lon);
+    const awastha    = computeAvastha(rashi.num, rashi.degreeInSign);
+    const isRetro    = isRetrogradePlanet(name, JD);
     planetDetails[name] = {
       longitude:            +lon.toFixed(4),
       longitude_dms:        toDMS(lon),
@@ -81,14 +101,33 @@ function calculateVedicChart(p) {
       degree_in_sign:       +rashi.degreeInSign.toFixed(4),
       degree_in_sign_dms:   toDMS(rashi.degreeInSign),
       dignity:              dignityLbl,
-      dignity_strength:     getDignityStrength(dignityLbl),   // 100/85/70/50/10
-      sign_lord_relation:   getPlanetRelation(name, rashi.lord), // friend/enemy/neutral/self
+      dignity_strength:     getDignityStrength(dignityLbl),
+      sign_lord_relation:   getPlanetRelation(name, rashi.lord),
       daily_motion:         +dailyMotionForPlanet(name, JD).toFixed(4),
-      is_retrograde:        isRetrogradePlanet(name, JD),
+      is_retrograde:        isRetro,
+      // Nakshatra
+      nakshatra_en:         nak.en,
+      nakshatra_hi:         nak.hi,
+      nakshatra_lord:       nak.lord,
+      nakshatra_num:        nak.num,
+      nakshatra_pada:       nak.pada,
+      // Awastha (Baladi Avastha)
+      awastha,
+      awastha_hi:           AVASTHA_HI[awastha] || awastha,
     };
   }
 
+  // Combust detection — requires Sun to be computed first
+  const sunLon = sid.Sun;
+  for (const [name, pd] of Object.entries(planetDetails)) {
+    const baseOrb = COMBUST_ORB[name];
+    if (!baseOrb) { pd.is_combust = false; continue; }
+    const orb = pd.is_retrograde && COMBUST_ORB_RETRO[name] ? COMBUST_ORB_RETRO[name] : baseOrb;
+    pd.is_combust = _angularDiff(pd.longitude, sunLon) <= orb;
+  }
+
   const ascRashi   = rashiFromDeg(sidAsc);
+  const ascNak     = nakshatraFromDeg(sidAsc);
   const ascendant  = {
     longitude:          +sidAsc.toFixed(4),
     longitude_dms:      toDMS(sidAsc),
@@ -99,6 +138,11 @@ function calculateVedicChart(p) {
     rashi_lord:         ascRashi.lord,
     degree_in_sign:     +ascRashi.degreeInSign.toFixed(4),
     degree_in_sign_dms: toDMS(ascRashi.degreeInSign),
+    nakshatra_en:       ascNak.en,
+    nakshatra_hi:       ascNak.hi,
+    nakshatra_lord:     ascNak.lord,
+    nakshatra_num:      ascNak.num,
+    nakshatra_pada:     ascNak.pada,
   };
 
   const moonNak  = nakshatraFromDeg(sid.Moon);
@@ -113,8 +157,8 @@ function calculateVedicChart(p) {
       ayanamsa:    +ayanamsa.toFixed(6),
       ayanamsa_dms: toDMS(ayanamsa),
       system:      'Lahiri (Chitra-paksha)',
-      calculation: 'Meeus Astronomical Algorithms 2nd Ed.',
-      accuracy:    'Sun ~0.01°, Moon ~0.1°, Planets ~0.5–2°',
+      calculation: 'astronomy-engine VSOP87 + Meeus Lahiri Ayanamsa',
+      accuracy:    'Sun <1", Moon <1", Planets <5" (VSOP87); Rahu ~0.1°; Asc ~0.1°',
     },
     ascendant,
     planets: planetDetails,

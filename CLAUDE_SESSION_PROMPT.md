@@ -1,4 +1,4 @@
-# Jyotish Stack AI — Claude Cold-Start Prompt (Session 34+)
+# Jyotish Stack AI — Claude Cold-Start Prompt (Session 36+)
 
 You are working on **Jyotish Stack AI** — a production Vedic astrology SaaS platform.
 Read this entire prompt before doing anything. This is your complete project memory.
@@ -39,14 +39,14 @@ npm run seed           # Run all 15 seed files
 npm run dev:server     # API on :5000
 npm run dev:main       # ui-main on :3000
 npm run test:server    # 14 server tests (Node built-in runner)
-npm run build:main     # Production build (26/26 pages)
+npm run build:main     # Production build (27/27 pages)
 ```
 
 ---
 
-## 🗄 Database State (as of Session 33)
+## 🗄 Database State (as of Session 34)
 
-* **18 migrations | 15 seed files | 27 tables**
+* **18 migrations | 15 seed files | 27 tables** (unchanged through Session 34)
 * Key fix: `knexfile.js` has `typeCast` — DATE columns return as "YYYY-MM-DD" strings
 * `house_lord_interpretations` — 144 bilingual rows (12 lords × 12 placements, BPHS)
   Columns: `house_lord`, `placed_in_house`, `title`, `title_hi`, `interpretation_en`, `interpretation_hi`,
@@ -62,70 +62,87 @@ server/src/
   services/
     vedic-calc.service.js      ← 181-line orchestrator (DO NOT bloat)
     ephemeris.service.js       ← Meeus astronomical algorithms
-                                  exports: julianDay, jCent, obliquity, GMST, LST,
-                                  sunTropicalLongitude, moonTropicalLongitude,
-                                  rahuTropicalLongitude, planetTropicalLongitude,
-                                  tropicalAscendant, norm
     life-report.service.js     ← Atmakaraka, Isht Devata, Varga, Life Report
     varga-reference.service.js ← Varga chart reference data
-    helpers/                   ← 17 focused modules:
-      vedic-data.js            ← RASHIS, NAKSHATRAS, DIGNITY_MAP (incl Rahu/Ketu),
-                                  NATURAL_FRIENDS (all 9 planets), DIGNITY_STRENGTH,
-                                  BHAVA_CLASSIFICATION
+    helpers/                   ← 19 focused modules:
+      vedic-data.js            ← RASHIS, NAKSHATRAS, DIGNITY_MAP, NATURAL_FRIENDS,
+                                  DIGNITY_STRENGTH, BHAVA_CLASSIFICATION
       core-helpers.js          ← norm, lahiriAyanamsa, toSidereal, getPlanetDignity,
                                   getDignityStrength, getPlanetRelation, toDMS,
                                   siderealLongitudeForPlanet, signedAngleDelta,
                                   houseFromSign, rashiFromDeg, ordinal, formatDate
       varga-calc.js            ← All 18 Varga chart calculations
       dasha-calc.js            ← Vimshottari Mahadasha + Antardasha
-      panchang.js              ← Tithi, Yoga, Karana, Vara, Sunrise/Sunset, Astro Details
+      panchang.js              ← Tithi, Yoga, Karana, Vara, Sunrise/Sunset
       drishti-bhavkarak.js     ← Graha Drishti, Bhav Karak, Digbala
       drishti-life-impact.js   ← 7 life-area interpretation engine (S31)
-      mangal-dosha.js          ← Mangal Dosha detection
+      mangal-dosha.js          ← Mangal Dosha: houses 1,2,4,7,8,12; 3 types
+                                  (Anshik/Poorna/Double); 4 cancellations; bilingual
+                                  effects_en/hi; manglik_type/manglik_type_hi (S35)
       gochar.js                ← Gochar transit summary
-      ashtakoot.js             ← Ashtakoot Guna Milan (36 gunas)
+      ashtakoot.js             ← Ashtakoot Guna Milan: all 8 kootas with name_hi,
+                                  description_en/hi, has_dosha, dosha_name/hi,
+                                  status_en/hi, verdict_en/hi, mangal_note_en/hi,
+                                  summary_hi, active_dosha_count (S35)
       prediction-data.js       ← All prediction reference data
       predictions-engine.js    ← Rule-based prediction generation
       detailed-reports.js      ← Planet assessment, Yoga+Dasha, Event timing
       yogas-doshas.js          ← 12 yogas + 13 dosha types detection
       life-guidance.js         ← Job/Business, Work Location, Business Timing,
-                                  Relationships, Marriage, Parents, Children, Remedies (S33a)
-      daily-horoscope.js       ← Transit-based 12-rashi daily horoscope engine (S33b)
-                                  Moon-house themes, planet modifiers, Sade Sati detection
+                                  Relationships, Marriage, Parents, Children, Remedies
+      daily-horoscope.js       ← Transit-based 12-rashi daily horoscope engine
                                   1-hour in-memory cache per date
-      varshphal.js             ← Annual Solar Return chart engine (S33c)
-                                  Binary-search SR finder, Varsha Lagna, Varshesha,
-                                  Mudda Dasha (7 Tajika periods), house readings,
-                                  planet movement comparison (natal vs varsha)
+      varshphal.js             ← Annual Solar Return engine:
+                                  generateVarshphal() — full analysis incl. life_areas
+                                  compactVarshphal() — compact multi-year summary
+                                  buildLifeAreas() — 11 life domains + cautions + advice
+      kundli-strength.js       ← Kundli overall strength report (S34, fixed S35)
+                                  computeKundliStrength() — 0-100 score across
+                                  planets, yogas, 8 life domains, dasha
+      varga-insights.js        ← NEW (S35): Deep planet-by-planet analysis for all
+                                  18 Varga charts. computeVargaInsights() returns 9
+                                  planet readings per chart with: impact rating,
+                                  positives[], negatives[], remedy{en,hi}.
+                                  VARGA_HOUSE_DOMAIN: 18×12 domain descriptions.
+                                  PLANET_REMEDY: complete EN+HI for all 9 planets.
+                                  getChartRemedy(): per-chart overall remedy.
 
   routes/
-    kundli.routes.js           ← Kundli CRUD + all DB enrichment fetchers:
-                                  fetchChartEnrichment(), fetchNakshatraInsight(),
-                                  fetchDashaRemedies(), fetchBhavaLordReadings() (S32)
-                                  generateLifeGuidance() → profile.life_guidance (S33a)
-                                  generateVarshphal() → GET /:id/varshphal?year=YYYY (S33c)
-    horoscope.routes.js        ← GET /api/horoscope/daily (public, no auth) (S33b)
-                                  ?date=YYYY-MM-DD | ?rashi=1-12
+    kundli.routes.js           ← Kundli CRUD + enrichment + all new endpoints:
+                                  GET /:id/varshphal?year=YYYY
+                                  GET /:id/varshphal-years?from=YYYY&count=5
+                                  GET /:id/strength
+    horoscope.routes.js        ← GET /api/horoscope/daily (public, no auth)
 
 ui-main/src/
+  app/
+    horoscope/page.jsx         ← /horoscope route
+    varshphal/page.jsx         ← /varshphal route (NEW S34)
   views/
     KundliDetail.jsx           ← Main Kundli detail page (very large)
-    DailyHoroscope.jsx         ← Daily horoscope page view (S33b)
-    Predictions.jsx            ← Predictions page (includes LifeGuidancePanel)
+    DailyHoroscope.jsx         ← 7-tab horoscope page (S34: +Transits +Remedies tabs)
+    Predictions.jsx            ← Predictions page
+    VarshphalPage.jsx          ← NEW (S34): dedicated /varshphal page with kundli selector
   components/
+    Navbar.jsx                 ← Nav links incl. /horoscope + /varshphal (added S34)
+    KundliStrengthPanel.jsx    ← NEW (S34): collapsible 0-100 strength report
+                                  conic-gradient ring, 8 life domains, planet table,
+                                  strengths/challenges — auto-loads on mount
     KundliInsightPanel.jsx     ← Plain-language customer panel (4 tabs)
     PlanetImpactPanel.jsx      ← Planet life-area impact (S29)
     BhavaLordPanel.jsx         ← Bhava Lord readings (S32) 12 house cards
-    LifeGuidancePanel.jsx      ← Life guidance (S33a) 4-tab panel
-    VarshphalPanel.jsx         ← Annual Solar Return (S33c) 4-tab panel
+    LifeGuidancePanel.jsx      ← Life guidance (S33) 4-tab panel
+    VarshphalPanel.jsx         ← Annual Solar Return (S33/S34):
+                                  5 tabs: Year Overview | Life Guide | Varsha Chart |
+                                  House Readings | Mudda Dasha
+                                  5-Year Journey Strip (always visible)
+                                  YearAtGlanceTable (11 areas in Overview)
     LifeReportPanel.jsx        ← 5-tab life report panel
-  app/
-    horoscope/page.jsx         ← /horoscope route (S33b)
 ```
 
 ---
 
-## ✅ What Is Already Built (Sessions 1–33)
+## ✅ What Is Already Built (Sessions 1–35)
 
 ### Backend
 * Full auth (JWT, refresh tokens, email verify, password reset)
@@ -140,8 +157,9 @@ ui-main/src/
   * Astro Details (Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya)
   * Graha Drishti + 7 Life-Area Impact per aspected house
   * Bhav Karak + Digbala
-  * Mangal Dosha | Ashtakoot | Gochar transits
-  * Rule-based predictions (portrait, dasha, life areas)
+  * **Mangal Dosha (S35 enhanced)** — houses 1,2,4,7,8,12; Anshik/Poorna/Double types; 4 cancellations (Jupiter aspect, Venus aspect, own/exalt sign, Kumbh Lagna); bilingual effects_en/hi; manglik_type_hi
+  * **Ashtakoot Guna Milan (S35 enhanced)** — all 8 kootas with name_hi, description_en/hi, has_dosha flag, dosha_name/hi, status_en/hi; verdict_en/hi; summary_hi; mangal_note_en/hi; mutual-Manglik cancellation; active_dosha_count
+  * Gochar transits | Rule-based predictions (portrait, dasha, life areas)
   * Yoga & Dosha detection (12 yogas, 13 dosha types + cancellation)
   * Upcoming Antardasha Signals (Yoga+Dasha forecast)
   * Life Report (Atmakaraka, Isht Devata, Varga Analysis, 5 sections)
@@ -151,22 +169,24 @@ ui-main/src/
   * Remedy system (Ishta Devata, mantras, puja steps)
   * Chart enrichment from DB (guna/varna/deity + house bhava data)
   * **Bhava Lord Readings (S32)** — 144 BPHS bilingual interpretations
-  * **Life Guidance (S33a)** — Job/Business, Work Location, Business Timing, Relationships, Marriage, Parents, Children, Remedies — all from chart data, no extra DB queries
-  * **Daily Horoscope (S33b)** — GET /api/horoscope/daily, 12 rashis, transit-based, cached
-  * **Varshphal (S33c)** — GET /api/kundli/:id/varshphal?year=YYYY, Solar Return chart, Varshesha, Mudda Dasha, house analysis
+  * **Life Guidance (S33)** — Job/Business, Work Location, Business Timing, Relationships, Marriage, Parents, Children, Remedies
+  * **Daily Horoscope (S33)** — GET /api/horoscope/daily, 12 rashis, transit-based, cached
+  * **Varshphal (S33/S34)** — Solar Return chart, Varshesha, Mudda Dasha, 11 life domains, cautions, key advice, 5-year compact endpoint
+  * **Kundli Strength Report (S34/S35)** — GET /api/kundli/:id/strength, 0-100 score, 8 life domains, planet breakdown, strengths/challenges, dasha rating; bugs fixed S35
+  * **Varga Deep Insights (S35)** — all 18 Varga charts now have planet_readings[] (9 planets each) + chart_remedy in varga_analysis; `varga-insights.js` 19th helper
 
 ### DB Tables (27 total)
 users, user_sessions, app_settings, kundli_profiles, matchmaking_requests, predictions,
 subscription_plans, user_subscriptions, newsletter_subscribers, notifications, email_logs,
 zodiac_signs, planets, planet_dignity, nakshatras, houses,
-house_lord_interpretations *(144 rows, bilingual, BPHS — S32)*,
+house_lord_interpretations *(144 rows, bilingual, BPHS)*,
 varga_charts, varga_family_references, varga_chart_relationships,
 graha_drishti_rules, bhav_karak, digbala_rules,
 remedy_planets, remedy_problems, remedy_puja_steps,
-nakshatra_notes (via migrations), yogas_library, doshas_library,
-jyotish_basics, planet_naisargika_maitri *(S30 — 9×9 friendship matrix)*
+nakshatra_notes, yogas_library, doshas_library,
+jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
 
-### Frontend (ui-main) — 26 pages / 20+ panels in KundliDetail
+### Frontend (ui-main) — **27 pages**
 * Full auth flow + Dashboard
 * Kundli Manager (list, create, open)
 * D1 + D9 charts (North/South Indian toggle)
@@ -175,22 +195,26 @@ jyotish_basics, planet_naisargika_maitri *(S30 — 9×9 friendship matrix)*
 * Basic Details / Panchang / Astro Details (tabbed)
 * Personality Insights (Traits / Career / Health from nakshatra DB)
 * Life Portrait (Who You Are / Current Period)
-* Mangal Dosha | Gochar | Digbala | Bhav Karak
-* Graha Drishti with 🔍 7 Life-Area accordion (S31)
+* **Mangal Dosha (S35)** — type badge (Anshik/Poorna/Double), H-number check cards, effects list, cancellations list, proper Hindi summary
+* Gochar | Digbala | Bhav Karak
+* Graha Drishti with 🔍 7 Life-Area accordion
 * Yogas & Doshas panel (with cancellation status)
-* Varga Charts (D1–D60) with plain-language guidance
+* **Varga Charts (D1–D60, S35)** — now shows Planet-by-Planet Analysis for every chart: 9 planet cards with impact badge, positives (◈), negatives (▸), planet-specific remedy box, overall chart remedy
 * D60 Past Life Reading | D20 Spiritual Path
 * Life Report (5 tabs: Soul Profile / Finance / Family / Health / Problems)
 * KundliInsightPanel (4 tabs with EDOFEN badges + bhava type badges)
 * PlanetImpactPanel (9 planets × life areas)
-* **BhavaLordPanel (S32)** — 12 house lord cards, filter tabs, quality/VRY badges, bilingual
-* **LifeGuidancePanel (S33a)** — 4-tab: Career · Relationships · Family · Remedies
-* **VarshphalPanel (S33c)** — 4-tab: Year Overview · Varsha Chart · House Readings · Mudda Dasha
+* BhavaLordPanel (S32) — 12 house lord cards, filter tabs, quality/VRY badges
+* LifeGuidancePanel (S33) — 4-tab: Career · Relationships · Family · Remedies
+* **KundliStrengthPanel (S34/S35)** — collapsible strength report with 0-100 ring, 8 life domains, planet table, strengths/challenges (bugs fixed S35)
+* **VarshphalPanel (S33/S34)** — 5 tabs + 5-year journey strip + life guide + year-at-a-glance
 * Detailed Reports (General / Planet / Varga Matrix / Planet Details / Cusps)
-* Matchmaking (Ashtakoot + PDF export)
+* **Matchmaking (S35)** — redesigned ResultPanel: conic ring, 8 koot cards (EN+HI name, description, dosha badge, status), MangalSection with type+cancellations; all bilingual
 * Predictions page (full narrative engine with Isht Devata + LifeGuidancePanel)
-* **Daily Horoscope page /horoscope (S33b)** — 12-rashi grid, transit strip, 5-tab detail
+* **Daily Horoscope /horoscope (S33/S34)** — 12-rashi grid, transit strip, 7-tab detail (Overview/Career/Love/Health/Finance/Transits/Remedies)
+* **Dedicated Varshphal /varshphal (S34)** — kundli selector + full VarshphalPanel
 * Admin panel at /admin/*
+* **UI readability (S35)** — North/South Indian charts: bright text with SVG drop-shadow filters, lighter cell fills; globals.css: card-royal lighter, all text-ivory/* utilities boosted
 
 ---
 
@@ -225,13 +249,14 @@ jyotish_basics, planet_naisargika_maitri *(S30 — 9×9 friendship matrix)*
    * New logic goes into focused helper files in `helpers/`
 5. After every session: update ACTIVITY.md (project root) + all memory files
 6. Tests must pass: `npm run test:server` → 14/14 before committing
-7. Build must pass: `npm run build:main` → 26/26 pages before committing
+7. Build must pass: `npm run build:main` → 27/27 pages before committing
 8. MySQL only (not SQLite/Postgres) | Next.js 14 App Router (not Vite/Pages)
 9. DATE columns return as strings via `typeCast` in `knexfile.js`
 10. Whole-sign house system | Lahiri ayanamsa throughout
 11. Communication: short direct instructions — owner trusts agent to know patterns
 12. No pdftoppm on this machine — PDFs are read directly via Claude's Read tool
 13. Push to GitHub after each session: branch `codex/yogas-doshas-hindi-ui`
+14. SVG text rotation is unreliable — use CSS `conic-gradient` for circular meters instead
 
 ---
 
@@ -243,12 +268,12 @@ jyotish_basics, planet_naisargika_maitri *(S30 — 9×9 friendship matrix)*
 * SMTP + Razorpay live key configuration
 * Production deployment
 * More AstroAnsh PDFs (Class 5, 6, 10, etc.)
-* Navbar links for /horoscope page
 * User location for Varshphal (currently uses birthplace; should use current residence)
+* Varga chart planet_readings are computed at chart-generation time — old cached charts in DB won't have them until "Recalculate" is triggered
 
 ---
 
 ## 🚀 Next Migration Number: 019
 ## 🌱 Next Seed Number: 016
-## 📄 Pages Count: 26
-## 🔧 Helper Modules: 17
+## 📄 Pages Count: 27
+## 🔧 Helper Modules: 19

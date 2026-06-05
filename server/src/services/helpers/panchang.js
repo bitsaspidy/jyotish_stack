@@ -69,32 +69,8 @@ function calculatePahar(birthHour, birthMinute, sunriseMinsFromMidnight) {
   return Math.min(4, Math.floor(diff / 180) + 1);
 }
 
-// ── Sunrise/Sunset ────────────────────────────────────────────────────────────
-function sunriseSunset(lat, lon, year, month, day, tzOffsetHrs) {
-  const JD  = eph.julianDay(year, month, day, 12, 0, 0);
-  const n   = JD - 2451545.0;
-  const L   = norm(280.46 + 0.9856474 * n);
-  const g   = norm(357.528 + 0.9856003 * n) * Math.PI / 180;
-  const lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI / 180;
-  const eps = (23.439 - 0.0000004 * n) * Math.PI / 180;
-  const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
-  const latR = lat * Math.PI / 180;
-  const cosH = (Math.sin(-0.8333 * Math.PI / 180) - Math.sin(latR) * Math.sin(dec)) / (Math.cos(latR) * Math.cos(dec));
-  if (cosH > 1 || cosH < -1) return { sunrise: null, sunset: null, sunrise_mins: null, sunset_mins: null };
-  const H = Math.acos(cosH) * 180 / Math.PI;
-  const B = (360 / 365) * (n + 10) * Math.PI / 180;
-  const EoT = -7.655 * Math.sin(B) + 9.873 * Math.sin(2 * B + 3.588) + 0.439 * Math.sin(4 * B + 0.072);
-  const noon = 720 - 4 * lon - EoT;
-  const sunriseMins = Math.round(noon - H * 4 + tzOffsetHrs * 60);
-  const sunsetMins  = Math.round(noon + H * 4 + tzOffsetHrs * 60);
-  const toHHMM = (m) => {
-    const mm = ((m % 1440) + 1440) % 1440;
-    const h = Math.floor(mm / 60); const mn = mm % 60;
-    const ap = h < 12 ? 'AM' : 'PM'; const h12 = h % 12 || 12;
-    return `${String(h12).padStart(2,'0')}:${String(mn).padStart(2,'0')} ${ap}`;
-  };
-  return { sunrise: toHHMM(sunriseMins), sunset: toHHMM(sunsetMins), sunrise_mins: sunriseMins, sunset_mins: sunsetMins };
-}
+// ── Sunrise/Sunset — delegates to ephemeris.service (astronomy-engine) ───────
+const sunriseSunset = eph.sunriseSunset;
 
 // ── Naam Akshar ───────────────────────────────────────────────────────────────
 const NAK_AKSHAR = [
