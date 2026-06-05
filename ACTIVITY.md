@@ -2,7 +2,101 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-03 (Session 24)
+> Last updated: 2026-06-05 (Session 36)
+
+---
+
+## Session 36 — 2026-06-05 | Full Planet Position Table + Pratyantardasha + Sookshmadasha
+
+### What was done
+
+**Backend — `vedic-calc.service.js`:**
+- Added `computeAvastha(rashiNum, degreeInSign)` — Baladi Avastha (Bala/Kumara/Yuva/Vridha/Mrit) per odd/even sign rule
+- Added combust detection: `COMBUST_ORB` (Moon:12, Mars:17, Mercury:14, Jupiter:11, Venus:10, Saturn:15), retrograde-adjusted for Mercury(12)/Venus(8)
+- Each planet in `planetDetails` now carries: `nakshatra_en`, `nakshatra_hi`, `nakshatra_lord`, `nakshatra_num`, `nakshatra_pada`, `awastha`, `awastha_hi`, `is_combust`
+
+**Backend — `dasha-calc.js`:**
+- Extracted shared `_buildSubPeriods(lord, start, end, currentDate)` helper
+- Added `buildPratyantardasha(antardasha, currentDate)` — 9 sub-periods, adds `sookshmadasha[]` only to the currently running period
+- Added `buildSookshmadasha(pratyantardasha, currentDate)` — 9 finest sub-periods
+- Modified `buildAntardasha` to include `pratyantardasha[]` on every antardasha period
+- All 3 new functions exported
+
+**Frontend — `KundliDetail.jsx` planet table:**
+- Replaced 5-col planet table with full 13-col comprehensive table (horizontal scroll)
+- Columns: Planet | Full Degree | Norm. Degree | Speed°/d | Retro | Sign | Sign Lord | Nakshatra | Nak. Lord | Pada | House | Combust | Awastha
+- Ascendant included as first row
+- Color-coded Awastha badges, retrograde speed in orange, combust in red, Nak/SignLord in planet color
+
+**Frontend — `KundliDetail.jsx` dasha section:**
+- Antardasha redesigned as compact 5-col grid with planet icon + color
+- Added Pratyantardasha section (violet theme) — all 9 periods of current Antardasha lord
+- Added Sookshmadasha section (green theme) — all 9 periods of current Pratyantardasha lord
+- Each section: current period badge, dates, heading shows current lord name
+
+**Ephemeris Engine Upgrade (later in Session 36):**
+- `server/package.json`: added `astronomy-engine` dependency (MIT, Don Cross, VSOP87)
+- `ephemeris.service.js`: replaced Meeus Keplerian planet calculations with `astronomy-engine`:
+  - Sun: `SunPosition(date).elon` (apparent tropical, <1" accuracy)
+  - Moon + planets: `GeoVector(body, date, true)` → `Ecliptic(gv).elon` (geocentric J2000, <5" accuracy)
+  - Rahu: kept Meeus mean node formula (~0.1°, astronomy-engine has no direct API)
+  - Sunrise/Sunset: `SearchRiseSet()` replaces simplified EoT formula (accurate to ±30s)
+- `panchang.js`: delegates `sunriseSunset` to `eph.sunriseSunset` (removed simplified formula)
+- `vedic-calc.service.js`: updated meta.calculation/accuracy strings
+- All 14 tests pass with new engine; planet accuracy improved from 0.5–2° to <5"
+
+### Counts unchanged
+- 18 migrations | 15 seeds | 27 tables | 27 pages | 19 helpers
+- **14/14 tests ✓ | 27/27 build pages ✓**
+
+---
+
+## Session 35 — 2026-06-05 | Kundli Strength Fix + Guna Milan + Manglik Dosha (Class 17 PDF)
+
+### What was done
+
+**Bug Fixes:**
+- `kundli-strength.js`: 4 field-name bugs fixed (dasha_periods→dasha, .planet→.lord, antardashas→antardasha, end_date→end) + yogas_doshas flat-array parsing bug + 2× `.present`→`.has_dosha` silent bug
+- `KundliStrengthPanel` now correctly loads, computes yoga score properly, and shows Mangal Dosha in challenges
+
+**Class 17 PDF processed — `mangal-dosha.js` enhanced:**
+- Added house 2 to trigger houses (was missing; PDF: 1,2,4,7,8,12)
+- 3 Manglik types: Anshik (1 activation), Poorna (2), Double (3)
+- 4 cancellations: own/exalted sign, Jupiter aspect, Venus aspect, Kumbh Lagna H8 exception
+- Bilingual cancellations `{en, hi}`, effects_en/hi, proper summary_hi
+- Test updated: reference chart Jupiter aspects Mars → severity mild (correct per PDF)
+
+**`ashtakoot.js` enhanced:**
+- All 8 kootas: name_hi, description_en/hi, details_hi, status/status_en/status_hi
+- Dosha flags: Nadi Dosha, Bhakoot Dosha, Gana Dosha, Yoni Vairam with Hindi names
+- Both-Manglik cancellation logic, mangal_note_en/hi, verdict_en/hi, summary_hi, active_dosha_count
+
+**`report.service.js`:** Matchmaking PDF includes manglik_type, koot doshas, verdict_en, section headers
+
+**`Matchmaking.jsx`** — full redesign:
+- Conic-gradient score ring (96px)
+- Bilingual verdict + dosha count pills
+- 8 koot cards with name (EN·HI), description, score bar, status text, dosha badge
+- MangalSection: compatibility verdict, type badge, active check chips, cancellations
+- All labels fully bilingual, history shows colour-coded scores + verdict
+
+**`KundliDetail.jsx` Mangal section:**
+- Manglik type badge, H-number checks, effects list, cancellations list, proper Hindi summary
+
+### Result: 14/14 tests ✓ | 27/27 pages ✓ | 16 PDFs processed
+
+**UI Readability overhaul (later in Session 35):**
+- North Indian SVG chart: SVG `feDropShadow` filter, house numbers full gold, sign/planet text near-white, lighter cell fills
+- South Indian grid: lighter backgrounds, sign labels 90%+ opacity, house numbers 85%+ opacity
+- `globals.css`: card-royal lighter; all text-ivory/* utilities boosted system-wide
+- `KundliInsightPanel.jsx`, `KundliDetail.jsx`, `Predictions.jsx`: all low-opacity inline text fixed
+
+**Varga Charts Deep Insights (later in Session 35):**
+- New `varga-insights.js` (19th helper): 216 house domain descriptions, per-chart planet roles, 9-planet remedy table, `computeVargaInsights()`, `getChartRemedy()`
+- `life-report.service.js`: attaches `planet_readings[]` + `chart_remedy` to every Varga reading in `generateVargaAnalysis()`
+- `KundliDetail.jsx` VargaChartsPanel: new Planet-by-Planet Analysis section — 9 sorted planet cards with positives/negatives/remedies + overall chart remedy
+
+### Final Result: 14/14 tests ✓ | 27/27 pages ✓ | 19 helper modules
 
 ---
 

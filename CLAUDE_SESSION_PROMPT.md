@@ -1,4 +1,4 @@
-# Jyotish Stack AI — Claude Cold-Start Prompt (Session 35+)
+# Jyotish Stack AI — Claude Cold-Start Prompt (Session 36+)
 
 You are working on **Jyotish Stack AI** — a production Vedic astrology SaaS platform.
 Read this entire prompt before doing anything. This is your complete project memory.
@@ -64,7 +64,7 @@ server/src/
     ephemeris.service.js       ← Meeus astronomical algorithms
     life-report.service.js     ← Atmakaraka, Isht Devata, Varga, Life Report
     varga-reference.service.js ← Varga chart reference data
-    helpers/                   ← 18 focused modules:
+    helpers/                   ← 19 focused modules:
       vedic-data.js            ← RASHIS, NAKSHATRAS, DIGNITY_MAP, NATURAL_FRIENDS,
                                   DIGNITY_STRENGTH, BHAVA_CLASSIFICATION
       core-helpers.js          ← norm, lahiriAyanamsa, toSidereal, getPlanetDignity,
@@ -76,9 +76,14 @@ server/src/
       panchang.js              ← Tithi, Yoga, Karana, Vara, Sunrise/Sunset
       drishti-bhavkarak.js     ← Graha Drishti, Bhav Karak, Digbala
       drishti-life-impact.js   ← 7 life-area interpretation engine (S31)
-      mangal-dosha.js          ← Mangal Dosha detection
+      mangal-dosha.js          ← Mangal Dosha: houses 1,2,4,7,8,12; 3 types
+                                  (Anshik/Poorna/Double); 4 cancellations; bilingual
+                                  effects_en/hi; manglik_type/manglik_type_hi (S35)
       gochar.js                ← Gochar transit summary
-      ashtakoot.js             ← Ashtakoot Guna Milan (36 gunas)
+      ashtakoot.js             ← Ashtakoot Guna Milan: all 8 kootas with name_hi,
+                                  description_en/hi, has_dosha, dosha_name/hi,
+                                  status_en/hi, verdict_en/hi, mangal_note_en/hi,
+                                  summary_hi, active_dosha_count (S35)
       prediction-data.js       ← All prediction reference data
       predictions-engine.js    ← Rule-based prediction generation
       detailed-reports.js      ← Planet assessment, Yoga+Dasha, Event timing
@@ -91,9 +96,16 @@ server/src/
                                   generateVarshphal() — full analysis incl. life_areas
                                   compactVarshphal() — compact multi-year summary
                                   buildLifeAreas() — 11 life domains + cautions + advice
-      kundli-strength.js       ← NEW (S34): Kundli overall strength report
+      kundli-strength.js       ← Kundli overall strength report (S34, fixed S35)
                                   computeKundliStrength() — 0-100 score across
                                   planets, yogas, 8 life domains, dasha
+      varga-insights.js        ← NEW (S35): Deep planet-by-planet analysis for all
+                                  18 Varga charts. computeVargaInsights() returns 9
+                                  planet readings per chart with: impact rating,
+                                  positives[], negatives[], remedy{en,hi}.
+                                  VARGA_HOUSE_DOMAIN: 18×12 domain descriptions.
+                                  PLANET_REMEDY: complete EN+HI for all 9 planets.
+                                  getChartRemedy(): per-chart overall remedy.
 
   routes/
     kundli.routes.js           ← Kundli CRUD + enrichment + all new endpoints:
@@ -130,7 +142,7 @@ ui-main/src/
 
 ---
 
-## ✅ What Is Already Built (Sessions 1–34)
+## ✅ What Is Already Built (Sessions 1–35)
 
 ### Backend
 * Full auth (JWT, refresh tokens, email verify, password reset)
@@ -145,8 +157,9 @@ ui-main/src/
   * Astro Details (Varna, Vashya, Yoni, Gana, Nadi, Tatva, Yunja, Naam Akshar, Paya)
   * Graha Drishti + 7 Life-Area Impact per aspected house
   * Bhav Karak + Digbala
-  * Mangal Dosha | Ashtakoot | Gochar transits
-  * Rule-based predictions (portrait, dasha, life areas)
+  * **Mangal Dosha (S35 enhanced)** — houses 1,2,4,7,8,12; Anshik/Poorna/Double types; 4 cancellations (Jupiter aspect, Venus aspect, own/exalt sign, Kumbh Lagna); bilingual effects_en/hi; manglik_type_hi
+  * **Ashtakoot Guna Milan (S35 enhanced)** — all 8 kootas with name_hi, description_en/hi, has_dosha flag, dosha_name/hi, status_en/hi; verdict_en/hi; summary_hi; mangal_note_en/hi; mutual-Manglik cancellation; active_dosha_count
+  * Gochar transits | Rule-based predictions (portrait, dasha, life areas)
   * Yoga & Dosha detection (12 yogas, 13 dosha types + cancellation)
   * Upcoming Antardasha Signals (Yoga+Dasha forecast)
   * Life Report (Atmakaraka, Isht Devata, Varga Analysis, 5 sections)
@@ -159,7 +172,8 @@ ui-main/src/
   * **Life Guidance (S33)** — Job/Business, Work Location, Business Timing, Relationships, Marriage, Parents, Children, Remedies
   * **Daily Horoscope (S33)** — GET /api/horoscope/daily, 12 rashis, transit-based, cached
   * **Varshphal (S33/S34)** — Solar Return chart, Varshesha, Mudda Dasha, 11 life domains, cautions, key advice, 5-year compact endpoint
-  * **Kundli Strength Report (S34)** — GET /api/kundli/:id/strength, 0-100 score, 8 life domains, planet breakdown, strengths/challenges, dasha rating
+  * **Kundli Strength Report (S34/S35)** — GET /api/kundli/:id/strength, 0-100 score, 8 life domains, planet breakdown, strengths/challenges, dasha rating; bugs fixed S35
+  * **Varga Deep Insights (S35)** — all 18 Varga charts now have planet_readings[] (9 planets each) + chart_remedy in varga_analysis; `varga-insights.js` 19th helper
 
 ### DB Tables (27 total)
 users, user_sessions, app_settings, kundli_profiles, matchmaking_requests, predictions,
@@ -181,24 +195,26 @@ jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
 * Basic Details / Panchang / Astro Details (tabbed)
 * Personality Insights (Traits / Career / Health from nakshatra DB)
 * Life Portrait (Who You Are / Current Period)
-* Mangal Dosha | Gochar | Digbala | Bhav Karak
+* **Mangal Dosha (S35)** — type badge (Anshik/Poorna/Double), H-number check cards, effects list, cancellations list, proper Hindi summary
+* Gochar | Digbala | Bhav Karak
 * Graha Drishti with 🔍 7 Life-Area accordion
 * Yogas & Doshas panel (with cancellation status)
-* Varga Charts (D1–D60) with plain-language guidance
+* **Varga Charts (D1–D60, S35)** — now shows Planet-by-Planet Analysis for every chart: 9 planet cards with impact badge, positives (◈), negatives (▸), planet-specific remedy box, overall chart remedy
 * D60 Past Life Reading | D20 Spiritual Path
 * Life Report (5 tabs: Soul Profile / Finance / Family / Health / Problems)
 * KundliInsightPanel (4 tabs with EDOFEN badges + bhava type badges)
 * PlanetImpactPanel (9 planets × life areas)
 * BhavaLordPanel (S32) — 12 house lord cards, filter tabs, quality/VRY badges
 * LifeGuidancePanel (S33) — 4-tab: Career · Relationships · Family · Remedies
-* **KundliStrengthPanel (S34)** — collapsible strength report with 0-100 ring, 8 life domains, planet table, strengths/challenges
+* **KundliStrengthPanel (S34/S35)** — collapsible strength report with 0-100 ring, 8 life domains, planet table, strengths/challenges (bugs fixed S35)
 * **VarshphalPanel (S33/S34)** — 5 tabs + 5-year journey strip + life guide + year-at-a-glance
 * Detailed Reports (General / Planet / Varga Matrix / Planet Details / Cusps)
-* Matchmaking (Ashtakoot + PDF export)
+* **Matchmaking (S35)** — redesigned ResultPanel: conic ring, 8 koot cards (EN+HI name, description, dosha badge, status), MangalSection with type+cancellations; all bilingual
 * Predictions page (full narrative engine with Isht Devata + LifeGuidancePanel)
 * **Daily Horoscope /horoscope (S33/S34)** — 12-rashi grid, transit strip, 7-tab detail (Overview/Career/Love/Health/Finance/Transits/Remedies)
 * **Dedicated Varshphal /varshphal (S34)** — kundli selector + full VarshphalPanel
 * Admin panel at /admin/*
+* **UI readability (S35)** — North/South Indian charts: bright text with SVG drop-shadow filters, lighter cell fills; globals.css: card-royal lighter, all text-ivory/* utilities boosted
 
 ---
 
@@ -253,10 +269,11 @@ jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
 * Production deployment
 * More AstroAnsh PDFs (Class 5, 6, 10, etc.)
 * User location for Varshphal (currently uses birthplace; should use current residence)
+* Varga chart planet_readings are computed at chart-generation time — old cached charts in DB won't have them until "Recalculate" is triggered
 
 ---
 
 ## 🚀 Next Migration Number: 019
 ## 🌱 Next Seed Number: 016
 ## 📄 Pages Count: 27
-## 🔧 Helper Modules: 18
+## 🔧 Helper Modules: 19
