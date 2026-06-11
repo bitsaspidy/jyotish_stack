@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Jyotish Stack AI — Full Horizontal Logo (Dark Background) -->
+<!-- Copyright © 2026 Jyotish Stack AI. All rights reserved. -->
+<!-- High-resolution vector — infinitely scalable (SVG) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 220" width="800" height="220">
+  <defs>
+    <!-- Icon gradients -->
+    <radialGradient id="bg" cx="40%" cy="35%" r="70%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#1E2348"/>
+      <stop offset="55%"  stop-color="#0E1228"/>
+      <stop offset="100%" stop-color="#060810"/>
+    </radialGradient>
+    <linearGradient id="gd" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#F8E878"/>
+      <stop offset="42%"  stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8B6A14"/>
+    </linearGradient>
+    <linearGradient id="gd2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F2DC58"/>
+      <stop offset="100%" stop-color="#C49A28"/>
+    </linearGradient>
+    <radialGradient id="gw" cx="50%" cy="40%" r="50%">
+      <stop offset="0%"   stop-color="rgba(212,175,55,0.35)"/>
+      <stop offset="60%"  stop-color="rgba(212,175,55,0.08)"/>
+      <stop offset="100%" stop-color="rgba(212,175,55,0)"/>
+    </radialGradient>
+    <radialGradient id="fl" cx="50%" cy="22%" r="60%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#FFFDE8"/>
+      <stop offset="28%"  stop-color="#F8DE40"/>
+      <stop offset="68%"  stop-color="#D4A020"/>
+      <stop offset="100%" stop-color="#9A6410"/>
+    </radialGradient>
+    <!-- Wordmark gradients -->
+    <linearGradient id="wmg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#F5E070"/>
+      <stop offset="100%" stop-color="#C49A28"/>
+    </linearGradient>
+    <linearGradient id="div" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="rgba(212,175,55,0)"/>
+      <stop offset="35%"  stop-color="rgba(212,175,55,0.45)"/>
+      <stop offset="65%"  stop-color="rgba(212,175,55,0.45)"/>
+      <stop offset="100%" stop-color="rgba(212,175,55,0)"/>
+    </linearGradient>
+    <filter id="fg" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="16" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0.7 0 0 0.15  0.7 0.5 0 0 0.08  0 0 0 0 0  0 0 0 1 0" result="c"/>
+      <feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="rg" x="-8%" y="-8%" width="116%" height="116%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark background -->
+  <rect width="800" height="220" fill="#0B0D1A" rx="0"/>
+
+  <!-- ── ICON (220×220 embedded, centred vertically) ── -->
+  <!-- Scale the 512×512 icon into a 220×220 box at x=0,y=0 -->
+  <!-- Scale factor: 220/512 = 0.4297 -->
+  <g transform="translate(0,0) scale(0.4297)">
+    <!-- Background disc -->
+    <circle cx="256" cy="256" r="255" fill="#020308" opacity=".5"/>
+    <circle cx="256" cy="256" r="248" fill="url(#bg)"/>
+    <!-- Star field -->
+    <g fill="rgba(240,210,60,0.48)">
+      <circle cx="76"  cy="88"  r="1.3"/><circle cx="158" cy="42"  r="0.9"/>
+      <circle cx="338" cy="36"  r="1.4"/><circle cx="415" cy="74"  r="0.8"/>
+      <circle cx="456" cy="148" r="1.2"/><circle cx="466" cy="342" r="1.1"/>
+      <circle cx="418" cy="432" r="0.8"/><circle cx="308" cy="472" r="1.3"/>
+      <circle cx="80"  cy="420" r="1.2"/><circle cx="48"  cy="178" r="1.1"/>
+      <circle cx="438" cy="238" r="1.0"/><circle cx="380" cy="130" r="0.9"/>
+    </g>
+    <!-- Outer border ring -->
+    <circle cx="256" cy="256" r="244" fill="none" stroke="url(#gd)" stroke-width="2.5" opacity=".75"/>
+    <!-- 12 zodiac dots -->
+    <circle cx="256" cy="34"  r="8" fill="url(#gd)"/>
+    <circle cx="367" cy="64"  r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="448" cy="145" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="478" cy="256" r="8" fill="url(#gd)"/>
+    <circle cx="448" cy="367" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="367" cy="448" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="256" cy="478" r="8" fill="url(#gd)"/>
+    <circle cx="145" cy="448" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="64"  cy="367" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="34"  cy="256" r="8" fill="url(#gd)"/>
+    <circle cx="64"  cy="145" r="6" fill="url(#gd)" opacity=".85"/>
+    <circle cx="145" cy="64"  r="6" fill="url(#gd)" opacity=".85"/>
+    <!-- Main ring -->
+    <circle cx="256" cy="256" r="210" fill="none" stroke="url(#gd)" stroke-width="3.5" filter="url(#rg)"/>
+    <!-- Inner frame ring -->
+    <circle cx="256" cy="256" r="175" fill="none" stroke="url(#gd)" stroke-width="1.8" opacity=".65"/>
+    <!-- Shatkona -->
+    <polygon points="256,96 394.6,336 117.4,336"
+      fill="rgba(212,175,55,0.10)" stroke="url(#gd)"  stroke-width="3" opacity=".95"/>
+    <polygon points="256,416 394.6,176 117.4,176"
+      fill="rgba(212,175,55,0.10)" stroke="url(#gd2)" stroke-width="3" opacity=".95"/>
+    <!-- Inner-hexagon dots -->
+    <g fill="url(#gd)" opacity=".85">
+      <circle cx="348.4" cy="256" r="5"/>
+      <circle cx="302.2" cy="336" r="5"/>
+      <circle cx="209.8" cy="336" r="5"/>
+      <circle cx="163.6" cy="256" r="5"/>
+      <circle cx="209.8" cy="176" r="5"/>
+      <circle cx="302.2" cy="176" r="5"/>
+    </g>
+    <!-- Inner ring + glow -->
+    <circle cx="256" cy="256" r="88" fill="none" stroke="url(#gd)" stroke-width="1.5" opacity=".5"/>
+    <circle cx="256" cy="256" r="108" fill="url(#gw)"/>
+    <!-- Jyot Flame -->
+    <path d="M 256 315 C 226 294 215 264 235 234 C 246 217 256 204 256 170 C 256 204 266 217 277 234 C 297 264 286 294 256 315 Z"
+      fill="url(#fl)" filter="url(#fg)"/>
+    <path d="M 256 304 C 242 288 236 268 248 248 C 253 235 256 224 256 198 C 256 224 259 235 264 248 C 276 268 270 288 256 304 Z"
+      fill="rgba(255,254,232,0.90)"/>
+    <circle cx="256" cy="200" r="5" fill="white" opacity=".80"/>
+  </g>
+
+  <!-- Divider -->
+  <line x1="236" y1="0" x2="236" y2="220" stroke="url(#div)" stroke-width="1"/>
+
+  <!-- ── WORDMARK ── -->
+  <!-- JYOTISH -->
+  <text x="258" y="88"
+    font-family="'Cinzel', Georgia, 'Times New Roman', serif"
+    font-size="52" font-weight="700" letter-spacing="10" fill="#F5F0E8">JYOTISH</text>
+  <!-- STACK (ivory) + AI (gold) -->
+  <text x="258" y="152"
+    font-family="'Cinzel', Georgia, 'Times New Roman', serif"
+    font-size="52" font-weight="700" letter-spacing="10" fill="#F5F0E8">STACK</text>
+  <text x="516" y="152"
+    font-family="'Cinzel', Georgia, 'Times New Roman', serif"
+    font-size="52" font-weight="900" letter-spacing="4" fill="url(#wmg)"> AI</text>
+  <!-- Tagline -->
+  <text x="260" y="182"
+    font-family="'Inter', system-ui, Arial, sans-serif"
+    font-size="11" font-weight="300" letter-spacing="4.5" fill="rgba(212,175,55,0.52)">VEDIC ASTROLOGY · INTELLIGENT INSIGHTS</text>
+</svg>

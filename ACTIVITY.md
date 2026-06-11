@@ -2,7 +2,85 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-05 (Session 36)
+> Last updated: 2026-06-10 (Session 40)
+
+---
+
+## Session 40 — 2026-06-10 | Panchang Muhurta — Hora System, End Times, Public Page
+
+### What was done
+
+**Backend — `server/src/services/helpers/panchang.js`:**
+- **Fixed `calculateHora()`**: Changed from variable-length proportional horas (dayspan/12) to equal 60-minute fixed horas (BPHS: 1 Hora = ~60 min, 24 Horas = 24 hours). Day horas 1–12 start from sunrise; night horas 13–24 start 12 hrs after sunrise.
+- **Added `nature` / `nature_hi`** fields per hora (Powerful, Artistic, Intelligent, Emotional, Disciplined, Auspicious, Active + Hindi)
+- **Added `hora_num`**, `start_mins`, `end_mins` fields to every hora entry (for client-side "current hora" detection)
+- **Added `jdToLocalHMS(jd, tz)`** helper — converts Julian Day to local HH:MM:SS string
+- **Added `computeEndTimes(year, month, day, tz)`** — computes exact end times for Tithi, Nakshatra, Yoga, Karana via 10-min forward scan + 25-iter binary search on ephemeris (< 5 ms total, accuracy ≈ 1 second)
+- **Updated `calculateDailyPanchang()`** — now attaches `end_time` to tithi/nakshatra/yoga/karana objects in the response
+- Updated `module.exports` to expose `computeEndTimes` and `jdToLocalHMS`
+
+**Backend — `server/src/routes/panchang.routes.js` (NEW):**
+- Public `GET /api/panchang/daily?lat=&lon=&date=YYYY-MM-DD&tz=&place=` endpoint (no auth required)
+- Returns full panchang including end times, chaughadiya, hora
+
+**Backend — `server/src/index.js`:**
+- Registered `app.use('/api/panchang', panchangRoutes)` 
+
+**Frontend — `ui-main/src/views/PanchangMuhurta.jsx` (NEW):**
+- Full public Panchang Muhurta page
+- **Location search with autocomplete**: Nominatim debounced search (400 ms), dropdown of up to 6 suggestions, click to select — auto-fills lat/lon, auto-detects timezone from longitude
+- **Date selection**: separate Day / Month / Year dropdowns (handles leap years / month-end correctly)
+- **Timezone selector**: 8 common zones (IST, PKT, NPT, BST, UTC, UAE, CET, EST) auto-selected from longitude
+- **Results layout** matching BPHS Panchang format:
+  - Result header: Day, formatted date, location name, Masa + Paksha + Ayana pills
+  - Celestial times: 4 cards (Sunrise / Sunset / Moonrise / Moonset)
+  - 5 Panchang elements (Tithi, Nakshatra, Yoga, Karana, Paksha) — each with `End: HH:MM:SS`
+  - 4 Astro details (Ritu, Sun Sign, Moon Sign, Ayana)
+  - Special Yogas (Sarvartha Siddhi, Amrit Siddhi, Ravi Yog, Dwipushkar, Tripushkar) — if present
+  - **Chaughadiya** tab: Day/Night sub-toggle, 8 periods each with auspicious/inauspicious color, start–end times
+  - **Hora** tab: Day/Night sub-toggle, 24 one-hour horas with planet icon, color, nature, time range, "NOW" badge for current hora
+- Bilingual EN/HI toggle throughout
+- BPHS attribution footer
+
+**Frontend — `ui-main/src/app/panchang-muhurat/page.jsx` (NEW):**
+- `/panchang-muhurat` page route
+
+**Frontend — `ui-main/src/components/Navbar.jsx`:**
+- Added `{ href: '/panchang-muhurat', en: 'Muhurta', hi: 'मुहूर्त' }` between Horoscope and Varshphal
+
+### Counts
+- 18 migrations · 15 seeds · 27 tables · **30 pages** · 19 helpers
+- **14/14 tests ✓ | 30/30 build pages ✓**
+
+---
+
+## Session 39 — 2026-06-07 | Dashakoot: Rajju + Vedha Compatibility
+
+### What was done
+
+**Backend — `server/src/services/helpers/ashtakoot.js`:**
+- Added `RAJJU_GROUP` map: all 27 nakshatras → 5 body-zone groups (Pada/Kati/Udara/Kantha/Sira)
+- Added `RAJJU_LABEL` + `RAJJU_EFFECT`: bilingual EN+HI names and dosha effects per group
+- Added `VEDHA_PAIRS` set: all 26 BPHS-standard bidirectional piercing nakshatra pairs
+  (1↔18, 2↔17, 3↔16, 4↔15, 5↔14, 6↔13, 7↔12, 8↔11, 9↔10, 19↔27, 20↔26, 21↔25, 22↔24; nak 23 exempt)
+- `calculateAshtakoot()` now computes and returns `rajju` + `vedha` objects:
+  - `rajju`: group for each partner, `has_dosha` (same group = dosha), bilingual status, dosha severity notes
+  - `vedha`: nakshatra numbers, `has_dosha`, bilingual status with nakshatra names
+- `system` field updated: `'Ashtakoot Guna Milan + Rajju-Vedha'`
+
+**Tests — `server/tests/vedic-calc.test.js`:**
+- Updated Ashtakoot test: relaxed `system` to `includes('Ashtakoot')`, added assertions for `rajju` + `vedha` presence and type
+
+**Frontend — `ui-main/src/views/Matchmaking.jsx`:**
+- Added `RajjuVedhaSection` component: 2-card grid (Rajju + Vedha)
+  - Each card: name, description, group detail, pass/fail badge, bilingual status text
+  - Dosha: red border + "Dosha" badge; Clear: green border + "✓ Clear" badge
+- Inserted `RajjuVedhaSection` between 8-koot grid and MangalSection
+- Header label updated to "Ashtakoot + Rajju-Vedha (Dashakoot)" / "अष्टकूट + राज्जु-वेध (दशकूट)"
+
+### Counts (unchanged)
+- 18 migrations · 15 seeds · 27 tables · 29 pages · 19 helpers
+- **14/14 tests ✓ | 29/29 build pages ✓**
 
 ---
 

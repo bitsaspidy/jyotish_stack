@@ -17,6 +17,7 @@ const NAV = [
       { href:'/admin/users',    icon:'◎', emoji:'👥', label:'Users' },
       { href:'/admin/plans',    icon:'◉', emoji:'💳', label:'Plans' },
       { href:'/admin/kundlis',  icon:'◈', emoji:'🔯', label:'Kundli Profiles' },
+      { href:'/admin/knowledge', icon:'◈', emoji:'📚', label:'Knowledge Base' },
     ],
   },
   {
@@ -26,6 +27,12 @@ const NAV = [
       { href:'/admin/email-blast',   icon:'◈', emoji:'📧', label:'Email Blast' },
       { href:'/admin/email-logs',    icon:'◈', emoji:'📋', label:'Email Logs' },
       { href:'/admin/notifications', icon:'◈', emoji:'🔔', label:'Notifications' },
+    ],
+  },
+  {
+    section: 'Jyotish Tools',
+    items: [
+      { href:'/admin/panchang', icon:'◈', emoji:'🕉', label:'Panchang Muhurta' },
     ],
   },
   {

@@ -14,22 +14,50 @@ const DASHA_SEQ = [
 ];
 const LORD_IDX = { Ketu:0, Venus:1, Sun:2, Moon:3, Mars:4, Rahu:5, Jupiter:6, Saturn:7, Mercury:8 };
 
-function buildAntardasha(mahadasha, currentDate = new Date()) {
-  const startDate = new Date(mahadasha.start);
-  const endDate   = new Date(mahadasha.end);
-  const totalMs   = endDate.getTime() - startDate.getTime();
-  const idx0      = LORD_IDX[mahadasha.lord];
-  const periods   = [];
-  let cursor      = startDate;
-
+function _buildSubPeriods(parentLord, parentStart, parentEnd, currentDate) {
+  const totalMs = parentEnd.getTime() - parentStart.getTime();
+  const idx0    = LORD_IDX[parentLord];
+  const periods = [];
+  let cursor    = parentStart;
   for (let i = 0; i < 9; i++) {
     const d = DASHA_SEQ[(idx0 + i) % 9];
     const durationMs = totalMs * (d.years / 120);
-    const end = i === 8 ? endDate : new Date(cursor.getTime() + durationMs);
+    const end = i === 8 ? parentEnd : new Date(cursor.getTime() + durationMs);
     periods.push({ lord: d.lord, start: formatDate(cursor), end: formatDate(end), is_current: currentDate >= cursor && currentDate < end });
     cursor = end;
   }
   return periods;
+}
+
+function buildSookshmadasha(pratyantardasha, currentDate = new Date()) {
+  return _buildSubPeriods(
+    pratyantardasha.lord,
+    new Date(pratyantardasha.start),
+    new Date(pratyantardasha.end),
+    currentDate
+  );
+}
+
+function buildPratyantardasha(antardasha, currentDate = new Date()) {
+  const periods = _buildSubPeriods(
+    antardasha.lord,
+    new Date(antardasha.start),
+    new Date(antardasha.end),
+    currentDate
+  );
+  return periods.map((pp) =>
+    pp.is_current ? { ...pp, sookshmadasha: buildSookshmadasha(pp, currentDate) } : pp
+  );
+}
+
+function buildAntardasha(mahadasha, currentDate = new Date()) {
+  const periods = _buildSubPeriods(
+    mahadasha.lord,
+    new Date(mahadasha.start),
+    new Date(mahadasha.end),
+    currentDate
+  );
+  return periods.map((ad) => ({ ...ad, pratyantardasha: buildPratyantardasha(ad, currentDate) }));
 }
 
 function vimshottariDasha(siderealMoonDeg, birthDate, currentDate = new Date()) {
@@ -102,4 +130,4 @@ function kpSubLordsFromLongitude(siderealDeg) {
   return { nakshatra: nak, sub_lord: sub.lord, sub_sub_lord: subSub.lord };
 }
 
-module.exports = { DASHA_SEQ, LORD_IDX, buildAntardasha, vimshottariDasha, legacyVimshottariDasha, dashaSequenceFrom, proportionalLord, kpSubLordsFromLongitude };
+module.exports = { DASHA_SEQ, LORD_IDX, buildAntardasha, buildPratyantardasha, buildSookshmadasha, vimshottariDasha, legacyVimshottariDasha, dashaSequenceFrom, proportionalLord, kpSubLordsFromLongitude };

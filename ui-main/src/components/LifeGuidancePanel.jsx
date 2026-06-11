@@ -185,7 +185,56 @@ function CareerTab({ data, lang }) {
 }
 
 // ─── Tab: Relationships ───────────────────────────────────────────────────────
-function RelationshipsTab({ data, lang }) {
+function MarriageTimingTable({ timing, lang }) {
+  if (!timing?.windows?.length) return null;
+  const T = (en, hi) => (lang === 'hi' ? hi : en);
+  const RC = { high:'#22C55E', good:'#D4AF37', moderate:'#F59E0B' };
+  return (
+    <div style={{ marginTop:10, border:'1px solid rgba(236,72,153,0.2)', borderRadius:10, padding:'12px 14px', background:'rgba(236,72,153,0.04)' }}>
+      <p style={{ color:'#EC4899', fontSize:11, fontWeight:700, marginBottom:4 }} className="font-devanagari">
+        💒 {T('Favourable Marriage Timing Windows', 'विवाह के अनुकूल समय')}
+      </p>
+      <p style={{ color:'rgba(245,240,232,0.45)', fontSize:10, marginBottom:8 }} className="font-devanagari">
+        {T(`Based on Venus, Jupiter and your 7th lord (${timing.seventh_lord}) dasha activations:`,
+           `शुक्र, गुरु और आपके सप्तमेश (${timing.seventh_lord_hi}) की दशाओं के आधार पर:`)}
+      </p>
+      <div style={{ overflowX:'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:10.5 }}>
+          <thead>
+            <tr style={{ background:'rgba(236,72,153,0.08)' }}>
+              {[T('From','से'), T('To','तक'), T('Period','दशा'), T('Strength','शक्ति'), T('Why','कारण')].map((h) => (
+                <th key={h} style={{ padding:'5px 9px', textAlign:'left', color:'#EC4899', fontSize:9, textTransform:'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {timing.windows.map((w, i) => (
+              <tr key={i} style={{ borderTop:'1px solid rgba(255,255,255,0.05)', background: w.is_current ? 'rgba(212,175,55,0.08)' : 'transparent' }}>
+                <td style={{ padding:'5px 9px', color:'rgba(245,240,232,0.8)' }}>{w.start}</td>
+                <td style={{ padding:'5px 9px', color:'rgba(245,240,232,0.8)' }}>{w.end}</td>
+                <td style={{ padding:'5px 9px', color:'rgba(245,240,232,0.9)', fontWeight:600 }} className="font-devanagari">
+                  {lang === 'hi' ? `${w.maha_hi}-${w.antar_hi}` : `${w.maha}-${w.antar}`}{w.is_current ? ' ⏳' : ''}
+                </td>
+                <td style={{ padding:'5px 9px', color: RC[w.rating] || '#F59E0B', fontWeight:700 }} className="font-devanagari">
+                  {lang === 'hi' ? w.rating_hi : w.rating_en}
+                </td>
+                <td style={{ padding:'5px 9px', color:'rgba(245,240,232,0.5)', fontSize:9.5 }} className="font-devanagari">
+                  {lang === 'hi' ? w.reason_hi : w.reason_en}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{ color:'rgba(245,240,232,0.35)', fontSize:9, marginTop:6 }} className="font-devanagari">
+        {T('Windows indicate favourable dasha support — final muhurta should be matched with panchang and the partner chart.',
+           'ये समय अनुकूल दशा-समर्थन दर्शाते हैं — अंतिम मुहूर्त पंचांग और साथी की कुंडली से मिलाकर तय करें।')}
+      </p>
+    </div>
+  );
+}
+
+function RelationshipsTab({ data, lang, marriageTiming }) {
   const { relationships, marriage } = data;
   if (!relationships && !marriage) return <p style={{ color:'#64748B', fontSize:12 }}>Relationship data not available.</p>;
 
@@ -234,6 +283,7 @@ function RelationshipsTab({ data, lang }) {
           <DescriptionBlock text={t(lang, marriage.description_en, marriage.description_hi)} />
           <IndicatorList items={t(lang, marriage.indicators_en, marriage.indicators_hi)} />
           <AdviceBox text={t(lang, marriage.advice_en, marriage.advice_hi)} />
+          <MarriageTimingTable timing={marriageTiming} lang={lang} />
         </SectionCard>
       )}
     </div>
@@ -376,7 +426,7 @@ const TABS = [
   { key:'remedies',      icon:'🕉️', en:'Remedies',       hi:'उपाय'            },
 ];
 
-export default function LifeGuidancePanel({ guidance, lang = 'en' }) {
+export default function LifeGuidancePanel({ guidance, lang = 'en', marriageTiming = null }) {
   const [activeTab, setActiveTab] = useState('career');
   if (!guidance) return null;
 
@@ -416,7 +466,7 @@ export default function LifeGuidancePanel({ guidance, lang = 'en' }) {
       {/* Tab Content */}
       <div>
         {activeTab === 'career'        && <CareerTab data={guidance} lang={lang} />}
-        {activeTab === 'relationships' && <RelationshipsTab data={guidance} lang={lang} />}
+        {activeTab === 'relationships' && <RelationshipsTab data={guidance} lang={lang} marriageTiming={marriageTiming} />}
         {activeTab === 'family'        && <FamilyTab data={guidance} lang={lang} />}
         {activeTab === 'remedies'      && <RemediesTab remedies={guidance.remedies} lang={lang} />}
       </div>

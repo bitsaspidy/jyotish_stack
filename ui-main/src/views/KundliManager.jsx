@@ -200,7 +200,7 @@ export default function KundliManager({ startWithForm = false }) {
   return (
     <div className="relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={70} />
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 max-w-8xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
           <div>
             <p className="text-gold/50 text-xs uppercase tracking-[0.35em]">Kundli Engine</p>

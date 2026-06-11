@@ -53,14 +53,14 @@
 
   /* Cards */
   .card-royal {
-    background: rgba(27,32,60,0.82);
-    border: 1px solid rgba(235,203,91,0.24);
+    background: rgba(32,38,70,0.88);
+    border: 1px solid rgba(235,203,91,0.28);
     border-radius: 8px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 14px 40px rgba(0,0,0,0.22);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.18);
     transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
   }
-  .card-royal:hover { border-color: rgba(235,203,91,0.48); }
+  .card-royal:hover { border-color: rgba(235,203,91,0.52); }
 
   /* Form input */
   .input-royal {
@@ -118,19 +118,20 @@
   .glass       { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
   .starfield-bg { background: radial-gradient(ellipse at top, #181C35 0%, #0B0D1A 60%, #06070F 100%); }
 
-  .text-ivory\/15 { color: rgba(245,240,232,0.42) !important; }
-  .text-ivory\/25 { color: rgba(245,240,232,0.52) !important; }
-  .text-ivory\/30 { color: rgba(245,240,232,0.58) !important; }
-  .text-ivory\/32 { color: rgba(245,240,232,0.6) !important; }
-  .text-ivory\/35 { color: rgba(245,240,232,0.62) !important; }
-  .text-ivory\/38 { color: rgba(245,240,232,0.64) !important; }
-  .text-ivory\/40 { color: rgba(245,240,232,0.66) !important; }
-  .text-ivory\/42 { color: rgba(245,240,232,0.68) !important; }
-  .text-ivory\/45 { color: rgba(245,240,232,0.7) !important; }
-  .text-ivory\/50 { color: rgba(245,240,232,0.74) !important; }
-  .text-ivory\/55 { color: rgba(245,240,232,0.78) !important; }
-  .text-ivory\/60 { color: rgba(245,240,232,0.82) !important; }
-  .text-ivory\/62 { color: rgba(245,240,232,0.84) !important; }
-  .text-ivory\/65 { color: rgba(245,240,232,0.86) !important; }
-  .text-ivory\/70 { color: rgba(245,240,232,0.9) !important; }
+  .text-ivory\/15 { color: rgba(245,240,232,0.52) !important; }
+  .text-ivory\/25 { color: rgba(245,240,232,0.60) !important; }
+  .text-ivory\/30 { color: rgba(245,240,232,0.65) !important; }
+  .text-ivory\/32 { color: rgba(245,240,232,0.67) !important; }
+  .text-ivory\/35 { color: rgba(245,240,232,0.70) !important; }
+  .text-ivory\/38 { color: rgba(245,240,232,0.72) !important; }
+  .text-ivory\/40 { color: rgba(245,240,232,0.74) !important; }
+  .text-ivory\/42 { color: rgba(245,240,232,0.76) !important; }
+  .text-ivory\/45 { color: rgba(245,240,232,0.78) !important; }
+  .text-ivory\/50 { color: rgba(245,240,232,0.81) !important; }
+  .text-ivory\/55 { color: rgba(245,240,232,0.84) !important; }
+  .text-ivory\/60 { color: rgba(245,240,232,0.87) !important; }
+  .text-ivory\/62 { color: rgba(245,240,232,0.89) !important; }
+  .text-ivory\/65 { color: rgba(245,240,232,0.91) !important; }
+  .text-ivory\/70 { color: rgba(245,240,232,0.93) !important; }
+  .text-ivory\/75 { color: rgba(245,240,232,0.95) !important; }
 }

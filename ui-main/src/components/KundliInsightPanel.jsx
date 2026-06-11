@@ -49,7 +49,7 @@ const NATURE_TINT = {
   trikona:  { border:'rgba(34,197,94,0.25)',  bg:'rgba(34,197,94,0.04)'   },
   dusthana: { border:'rgba(239,68,68,0.22)',  bg:'rgba(239,68,68,0.04)'   },
   upachaya: { border:'rgba(167,139,250,0.2)', bg:'rgba(167,139,250,0.04)' },
-  neutral:  { border:'rgba(212,175,55,0.1)',  bg:'rgba(17,20,40,0.35)'    },
+  neutral:  { border:'rgba(212,175,55,0.1)',  bg:'rgba(255,255,255,0.06)'    },
 };
 
 // Plain-language guna badge
@@ -72,7 +72,7 @@ function ExpandableText({ text, lang = 'en', limit = 340, textStyle }) {
   return (
     <>
       <span style={textStyle}>{display}</span>
-      {needsCut && !open && <span style={{ color:'rgba(245,240,232,0.3)' }}>… </span>}
+      {needsCut && !open && <span style={{ color:'rgba(245,240,232,0.70)' }}>… </span>}
       {needsCut && (
         <button type="button" onClick={() => setOpen(v => !v)} style={{
           background:'none', border:'none', cursor:'pointer',
@@ -237,7 +237,7 @@ function SummaryTab({ chart, enrichment, lang }) {
                 {' '}{t(lang,'in House','भाव में')} <strong style={{ color:'rgba(245,240,232,0.7)' }}>
                   {lagnaLordHouse}
                 </strong>
-                {' '}<span style={{ color:'rgba(245,240,232,0.35)', fontSize:9 }}>
+                {' '}<span style={{ color:'rgba(245,240,232,0.73)', fontSize:9 }}>
                   ({lang === 'hi' ? lagnaLordAreaHi : lagnaLordAreaEn})
                 </span>
               </p>
@@ -258,7 +258,7 @@ function SummaryTab({ chart, enrichment, lang }) {
                 {t(lang,'Nakshatra:','नक्षत्र:')} <span style={{ color:'rgba(245,240,232,0.65)' }}>
                   {lang === 'hi' ? (nak.hi || nak.en) : nak.en}
                 </span>
-                {nak.pada && <span style={{ color:'rgba(245,240,232,0.3)' }}> {t(lang,'Pada','चरण')} {nak.pada}</span>}
+                {nak.pada && <span style={{ color:'rgba(245,240,232,0.70)' }}> {t(lang,'Pada','चरण')} {nak.pada}</span>}
               </p>
             )}
           </div>
@@ -376,7 +376,7 @@ function SummaryTab({ chart, enrichment, lang }) {
               {lang === 'hi' ? PLANET_META[curDasha.lord]?.hi : curDasha.lord} {t(lang,'Mahadasha','महादशा')}
             </span>
             <Badge bg={`${dashaColor}18`} color={dashaColor}>{dashaLabel}</Badge>
-            <span style={{ color:'rgba(245,240,232,0.35)', fontSize:11 }}>
+            <span style={{ color:'rgba(245,240,232,0.73)', fontSize:11 }}>
               {curDasha.start} → {curDasha.end}
             </span>
           </div>
@@ -407,7 +407,7 @@ function SummaryTab({ chart, enrichment, lang }) {
             <p style={{ color:'rgba(245,240,232,0.6)', fontSize:11, marginTop:2 }}>
               {t(lang,'Active Yogas','सक्रिय योग')}
             </p>
-            <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginTop:4 }}>
+            <p style={{ color:'rgba(245,240,232,0.73)', fontSize:10, marginTop:4 }}>
               {t(lang,'Positive planetary combinations in your chart','आपकी कुंडली में शुभ ग्रह योग')}
             </p>
           </div>
@@ -419,7 +419,7 @@ function SummaryTab({ chart, enrichment, lang }) {
             <p style={{ color:'rgba(245,240,232,0.6)', fontSize:11, marginTop:2 }}>
               {t(lang,'Active Doshas','सक्रिय दोष')}
             </p>
-            <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginTop:4 }}>
+            <p style={{ color:'rgba(245,240,232,0.73)', fontSize:10, marginTop:4 }}>
               {doshasCount === 0
                 ? t(lang,'No doshas detected — good overall chart','कोई दोष नहीं — अच्छी कुंडली')
                 : t(lang,'Karmic patterns needing attention + remedies','उपाय की आवश्यकता वाले कार्मिक संयोग')}
@@ -442,12 +442,12 @@ function SummaryTab({ chart, enrichment, lang }) {
                   {lang === 'hi' ? PLANET_META[name]?.hi : name}
                 </span>
               </div>
-              <span style={{ color:'rgba(245,240,232,0.35)', fontSize:10 }}>
+              <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
                 {compactHouseText(pd.house, lang)} · {lang === 'hi' ? pd.rashi_hi : pd.rashi_en}
               </span>
             </div>
           )) : (
-            <p style={{ color:'rgba(245,240,232,0.3)', fontSize:11 }}>
+            <p style={{ color:'rgba(245,240,232,0.70)', fontSize:11 }}>
               {t(lang, 'None in exaltation, moolatrikona, or own sign', 'कोई उच्च, मूलत्रिकोण या स्वराशि में नहीं')}
             </p>
           )}
@@ -464,12 +464,12 @@ function SummaryTab({ chart, enrichment, lang }) {
                   {lang === 'hi' ? PLANET_META[name]?.hi : name}
                 </span>
               </div>
-              <span style={{ color:'rgba(245,240,232,0.35)', fontSize:10 }}>
+              <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
                 {compactHouseText(pd.house, lang)} · {t(lang,'Debilitated','नीच')}
               </span>
             </div>
           )) : (
-            <p style={{ color:'rgba(245,240,232,0.3)', fontSize:11 }}>
+            <p style={{ color:'rgba(245,240,232,0.70)', fontSize:11 }}>
               {t(lang, 'No debilitated planets — good overall strength', 'कोई नीच ग्रह नहीं — अच्छी समग्र शक्ति')}
             </p>
           )}
@@ -666,7 +666,7 @@ function HousesTab({ chart, enrichment, lang }) {
                     </span>
                   ))}
                   {!hasplanets && (
-                    <span style={{ color:'rgba(245,240,232,0.15)', fontSize:10 }}>
+                    <span style={{ color:'rgba(245,240,232,0.62)', fontSize:10 }}>
                       {t(lang, 'Empty', 'खाली')}
                     </span>
                   )}
@@ -686,7 +686,7 @@ function HousesTab({ chart, enrichment, lang }) {
                     );
                   })}
                   {house.bhava_nature_en && (
-                    <span style={{ color:'rgba(245,240,232,0.35)', fontSize:9, alignSelf:'center', marginLeft:2 }}>
+                    <span style={{ color:'rgba(245,240,232,0.73)', fontSize:9, alignSelf:'center', marginLeft:2 }}>
                       — {lang === 'hi' ? house.bhava_nature_hi : house.bhava_nature_en}
                     </span>
                   )}
@@ -702,7 +702,7 @@ function HousesTab({ chart, enrichment, lang }) {
               {house.health_organs_en && (
                 <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:4 }}>
                   <span style={{ fontSize:9 }}>🏥</span>
-                  <span style={{ color:'rgba(245,240,232,0.35)', fontSize:10 }}>
+                  <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
                     {lang === 'hi' ? house.health_organs_hi : house.health_organs_en}
                   </span>
                 </div>
@@ -779,7 +779,7 @@ function HealthTab({ chart, enrichment, lang }) {
                   🏥 {lang === 'hi' ? house.health_organs_hi : house.health_organs_en}
                 </p>
                 {planetsHere.length > 0 && (
-                  <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginTop:2 }}>
+                  <p style={{ color:'rgba(245,240,232,0.73)', fontSize:10, marginTop:2 }}>
                     {t(lang, 'Influenced by:', 'प्रभावित:')}
                     {' '}{planetsHere.map(p => lang === 'hi' ? PLANET_META[p]?.hi : p).join(', ')}
                   </p>
@@ -803,7 +803,7 @@ function HealthTab({ chart, enrichment, lang }) {
           );
         })}
       </div>
-      <p style={{ color:'rgba(245,240,232,0.2)', fontSize:10, marginTop:16, textAlign:'center' }}>
+      <p style={{ color:'rgba(245,240,232,0.65)', fontSize:10, marginTop:16, textAlign:'center' }}>
         ⚕️ {t(lang,
           'This is Jyotish guidance only — not a substitute for professional medical advice.',
           'यह केवल ज्योतिषीय मार्गदर्शन है — व्यावसायिक चिकित्सा सलाह का विकल्प नहीं।'

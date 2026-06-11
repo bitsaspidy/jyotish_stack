@@ -19,8 +19,9 @@ const CATEGORY_ICONS = {
   karmic:'🔮', vish:'☠️', grahan:'🌑', luminary:'☀️', general:'⚖️',
 };
 
-export default function YogasAndDoshasPanel({ chart, lang }) {
+export default function YogasAndDoshasPanel({ chart, lang, library, admin = false }) {
   const [tab, setTab] = useState('yogas');
+  const [openRef, setOpenRef] = useState(null);
   const yd = chart?.yogas_doshas;
   if (!yd) return null;
 
@@ -133,6 +134,48 @@ export default function YogasAndDoshasPanel({ chart, lang }) {
               </p>
             </div>
           )}
+
+          {/* Classical Reference (yogas_library / doshas_library — Class 11 & 12 PDF) */}
+          {(() => {
+            const lib = (isDosha ? library?.doshas : library?.yogas)?.[entry.name];
+            if (!lib) return null;
+            const refKey = `${type}-${index}`;
+            const isOpen = openRef === refKey;
+            const pick = (en, hi) => (lang === 'hi' ? (hi || en) : en);
+            const blocks = [
+              { label: t(lang, 'What is this', 'यह क्या है'),                txt: pick(lib.definition_en, lib.definition_hi),  color:'#D4AF37' },
+              { label: t(lang, 'Signs you may notice', 'संभावित लक्षण'),     txt: pick(lib.symptoms_en, lib.symptoms_hi),      color:'#60A5FA' },
+              { label: t(lang, 'Classical Effects', 'शास्त्रीय फल'),          txt: pick(lib.effects_en, lib.effects_hi),        color: isDosha ? '#F59E0B' : '#22C55E' },
+              !isDosha && { label: t(lang, 'Cancellation Rules', 'भंग नियम'), txt: pick(lib.cancellation_en, lib.cancellation_hi), color:'#22C55E' },
+              admin && isDosha && { label: t(lang, 'Technical Note (Astrologer)', 'तकनीकी नोट (ज्योतिषी)'), txt: pick(lib.technical_note_en, lib.technical_note_hi), color:'#A78BFA' },
+            ].filter((b) => b && b.txt);
+            if (!blocks.length) return null;
+            return (
+              <div style={{ border:'1px solid rgba(167,139,250,0.18)', borderRadius:6, background:'rgba(167,139,250,0.04)' }}>
+                <button onClick={() => setOpenRef(isOpen ? null : refKey)}
+                  style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center',
+                    padding:'7px 9px', background:'transparent', border:'none', cursor:'pointer' }}>
+                  <span style={{ color:'#A78BFA', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+                    📖 {t(lang, 'Classical Reference (BPHS)', 'शास्त्रीय संदर्भ (BPHS)')}
+                  </span>
+                  <span style={{ color:'#A78BFA', fontSize:10 }}>{isOpen ? '▲' : '▼'}</span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding:'0 9px 9px', display:'grid', gap:7 }}>
+                    {blocks.map((b, bi) => (
+                      <div key={bi}>
+                        <p style={{ color:b.color, fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:3 }}>{b.label}</p>
+                        <p className="text-ivory/68 text-[10.5px] leading-relaxed font-devanagari">{b.txt}</p>
+                      </div>
+                    ))}
+                    {admin && lib.source && (
+                      <p className="text-ivory/35 text-[9px] italic">{t(lang, 'Source', 'स्रोत')}: {lib.source}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {entry.planets_involved?.length > 0 && (

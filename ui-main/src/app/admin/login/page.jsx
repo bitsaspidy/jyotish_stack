@@ -24,7 +24,7 @@ function LoginForm() {
     setBusy(true);
     try {
       const user = await loginAdmin(email, password);
-      toast.success(`Welcome, ${user.name}!`);
+      toast.success(`Welcome, ${user.name}!`, { duration: 3000 });
       router.push('/admin/dashboard');
     } catch (e) {
       toast.error(e.response?.data?.message || e.message || 'Invalid credentials');

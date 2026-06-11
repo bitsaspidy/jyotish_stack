@@ -10,11 +10,13 @@ const PAGE_TITLES = {
   '/admin/users':         'User Management',
   '/admin/plans':         'Subscription Plans',
   '/admin/kundlis':       'Kundli Profiles',
+  '/admin/knowledge':     'Jyotish Knowledge Base',
   '/admin/newsletter':    'Newsletter',
   '/admin/email-blast':   'Email Blast',
   '/admin/email-logs':    'Email Logs',
   '/admin/notifications': 'Notifications',
   '/admin/settings':      'App Settings',
+  '/admin/panchang':      'Panchang Muhurta',
 };
 
 function ShellInner({ children }) {

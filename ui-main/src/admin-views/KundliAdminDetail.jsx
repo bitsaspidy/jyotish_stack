@@ -10,6 +10,11 @@ import KundliInsightPanel  from '../components/KundliInsightPanel';
 import PlanetImpactPanel   from '../components/PlanetImpactPanel';
 import BhavaLordPanel      from '../components/BhavaLordPanel';
 import LifeGuidancePanel   from '../components/LifeGuidancePanel';
+import FavouriteDaysPanel  from '../components/FavouriteDaysPanel';
+import TodayPredictionPanel from '../components/TodayPredictionPanel';
+import CharaKarakaPanel     from '../components/CharaKarakaPanel';
+import SadeSatiPanel        from '../components/SadeSatiPanel';
+import YutiPanel            from '../components/YutiPanel';
 import {
   PLANET_META,
   DIGNITY_STYLE,
@@ -76,7 +81,7 @@ function GSection({ title, items }) {
 }
 
 // ─── Admin Strength Section ───────────────────────────────────────────────────
-function AdminStrengthSection({ uuid }) {
+function AdminStrengthSection({ uuid, lang = 'en' }) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(false);
@@ -92,34 +97,76 @@ function AdminStrengthSection({ uuid }) {
   if (loading) return <p style={{ color:'rgba(245,240,232,0.3)', fontSize:13, padding:24 }}>⏳ Computing strength…</p>;
   if (error || !data) return <p style={{ color:'#F87171', fontSize:13, padding:24 }}>⚠ Could not load strength data</p>;
 
+  const T = (en, hi) => lang === 'hi' ? hi : en;
+  const score = data.overall_score ?? 0;
+  const lbl   = data.label || {};
+  const scoreColor = lbl.color || '#D4AF37';
+
   return (
     <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:24 }}>
-      <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:16, fontWeight:700, marginBottom:16 }}>
-        ⚡ Kundli Strength Analysis
-      </h2>
-      {/* Shadbala */}
-      {data.shadbala && (
+
+      {/* Header + Overall Score Ring */}
+      <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:20, flexWrap:'wrap' }}>
+        <div style={{ flex:1 }}>
+          <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:16, fontWeight:700, marginBottom:4 }}>
+            ⚡ {T('Kundli Strength Analysis', 'कुंडली बल विश्लेषण')}
+          </h2>
+          <p style={{ color:'rgba(245,240,232,0.45)', fontSize:12 }}>
+            {T(`${data.yoga_count ?? 0} yogas · ${data.dosha_count ?? 0} doshas`, `${data.yoga_count ?? 0} योग · ${data.dosha_count ?? 0} दोष`)}
+          </p>
+        </div>
+        <div style={{ textAlign:'center', flexShrink:0 }}>
+          <div style={{
+            width:80, height:80, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center',
+            background:`conic-gradient(${scoreColor} ${score * 3.6}deg, rgba(255,255,255,0.06) 0deg)`,
+            boxShadow:`0 0 16px ${scoreColor}44`,
+          }}>
+            <div style={{ width:62, height:62, borderRadius:'50%', background:'#0D0F1F', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ color:'#F5F0E8', fontSize:18, fontWeight:700, lineHeight:1 }}>{score}</span>
+              <span style={{ color:'rgba(245,240,232,0.3)', fontSize:9 }}>/100</span>
+            </div>
+          </div>
+          <p style={{ color:scoreColor, fontSize:11, fontWeight:700, marginTop:6 }}>{T(lbl.en, lbl.hi)}</p>
+        </div>
+      </div>
+
+      {/* Sub-scores row */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:20 }}>
+        {[
+          { l:T('Planet Avg','ग्रह औसत'),   v: data.planet_avg  ?? '—' },
+          { l:T('Yoga Score','योग स्कोर'),   v: data.yoga_score  ?? '—' },
+          { l:T('Domain Avg','क्षेत्र औसत'), v: data.domain_avg  ?? '—' },
+          { l:T('Dasha Score','दशा स्कोर'),  v: data.dasha_score ?? '—' },
+        ].map(({ l, v }) => (
+          <div key={l} style={{ background:'rgba(17,20,40,0.7)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:8, padding:'10px 12px', textAlign:'center' }}>
+            <p style={{ color:'#D4AF37', fontSize:16, fontWeight:700, lineHeight:1 }}>{v}</p>
+            <p style={{ color:'rgba(245,240,232,0.35)', fontSize:9, marginTop:4, textTransform:'uppercase', letterSpacing:'0.08em' }}>{l}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Planet strength bars */}
+      {data.planet_scores && Object.keys(data.planet_scores).length > 0 && (
         <div style={{ marginBottom:20 }}>
-          <p style={{ color:'rgba(212,175,55,0.7)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Shadbala (Six-fold Strength)</p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:10 }}>
-            {Object.entries(data.shadbala).map(([planet, val]) => {
+          <p style={{ color:'rgba(212,175,55,0.7)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>
+            {T('Planet Strengths (0–100)', 'ग्रह बल (0–100)')}
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))', gap:8 }}>
+            {Object.entries(data.planet_scores).map(([planet, val]) => {
               const meta = PLANET_META[planet] || {};
-              const pct  = Math.min(100, Math.round((val?.total || 0) / 10));
+              const barColor = val >= 72 ? '#10B981' : val >= 58 ? '#22C55E' : val >= 44 ? '#F59E0B' : '#EF4444';
               return (
                 <div key={planet} style={{ background:'rgba(17,20,40,0.7)', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:'10px 12px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
                     <span style={{ color:meta.color, fontSize:13 }}>{meta.icon}</span>
-                    <span style={{ color:'#F5F0E8', fontSize:12, fontWeight:600 }}>{planet}</span>
-                    <span style={{ marginLeft:'auto', color:'rgba(245,240,232,0.45)', fontSize:10 }}>{val?.total?.toFixed(1)}</span>
+                    <span style={{ color:'#F5F0E8', fontSize:11, fontWeight:600 }}>
+                      {lang === 'hi' ? (meta.hi || planet) : planet}
+                    </span>
+                    <span style={{ marginLeft:'auto', color:'rgba(245,240,232,0.45)', fontSize:10 }}>{val}</span>
                   </div>
                   <div style={{ height:4, borderRadius:2, background:'rgba(255,255,255,0.06)' }}>
-                    <div style={{ height:'100%', width:`${pct}%`, background:meta.color||'#D4AF37', borderRadius:2 }} />
+                    <div style={{ height:'100%', width:`${Math.min(100, val)}%`, background:barColor, borderRadius:2 }} />
                   </div>
-                  {val?.grade && (
-                    <p style={{ color: val.grade==='Strong'?'#22C55E': val.grade==='Average'?'#F59E0B':'#EF4444', fontSize:10, marginTop:4, fontWeight:600 }}>
-                      {val.grade}
-                    </p>
-                  )}
                 </div>
               );
             })}
@@ -127,31 +174,117 @@ function AdminStrengthSection({ uuid }) {
         </div>
       )}
 
-      {/* Summary */}
-      {data.summary && (
-        <div style={{ padding:'12px 16px', background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:8 }}>
-          {data.summary.strongest_planet && (
-            <p style={{ color:'rgba(245,240,232,0.7)', fontSize:12, marginBottom:6 }}>
-              <span style={{ color:'#D4AF37', fontWeight:600 }}>Strongest: </span>{data.summary.strongest_planet}
-            </p>
-          )}
-          {data.summary.weakest_planet && (
-            <p style={{ color:'rgba(245,240,232,0.7)', fontSize:12 }}>
-              <span style={{ color:'#F87171', fontWeight:600 }}>Weakest: </span>{data.summary.weakest_planet}
-            </p>
-          )}
+      {/* Life domain grid */}
+      {data.life_domain_list?.length > 0 && (
+        <div style={{ marginBottom:20 }}>
+          <p style={{ color:'rgba(212,175,55,0.7)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>
+            {T('Life Domains', 'जीवन क्षेत्र')}
+          </p>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:8 }}>
+            {data.life_domain_list.map(d => (
+              <div key={d.key} style={{ background:'rgba(17,20,40,0.7)', border:`1px solid ${d.label.color}44`, borderRadius:8, padding:'10px 12px' }}>
+                <p style={{ color:'#F5F0E8', fontSize:11, fontWeight:600, marginBottom:6 }}>
+                  {lang === 'hi' ? d.hi : d.en}
+                </p>
+                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                  <div style={{ flex:1, height:4, borderRadius:2, background:'rgba(255,255,255,0.06)' }}>
+                    <div style={{ height:'100%', width:`${d.score}%`, background:d.label.color, borderRadius:2 }} />
+                  </div>
+                  <span style={{ color:d.label.color, fontSize:10, fontWeight:700, flexShrink:0 }}>{d.score}</span>
+                </div>
+                <p style={{ color:d.label.color, fontSize:9, marginTop:4, fontWeight:600 }}>
+                  {lang === 'hi' ? d.label.hi : d.label.en}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {!data.shadbala && !data.summary && (
-        <p style={{ color:'rgba(245,240,232,0.4)', fontSize:13 }}>Strength data computed — see raw values below.</p>
+      {/* Current Dasha */}
+      {(data.current_mahadasha || data.current_antardasha) && (
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+          {data.current_mahadasha && (() => {
+            const meta = PLANET_META[data.current_mahadasha.planet] || {};
+            return (
+              <div style={{ background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:8, padding:'12px 14px' }}>
+                <p style={{ color:'rgba(212,175,55,0.6)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                  {T('Current Mahadasha', 'वर्तमान महादशा')}
+                </p>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ color:meta.color, fontSize:20 }}>{meta.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <p style={{ color:'#F5F0E8', fontSize:14, fontWeight:700 }}>
+                      {lang === 'hi' ? data.current_mahadasha.planet_hi : data.current_mahadasha.planet}
+                    </p>
+                    <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10 }}>→ {data.current_mahadasha.end_date}</p>
+                  </div>
+                  <span style={{ color:meta.color || '#D4AF37', fontWeight:700, fontSize:14 }}>{data.current_mahadasha.score}</span>
+                </div>
+              </div>
+            );
+          })()}
+          {data.current_antardasha && (() => {
+            const meta = PLANET_META[data.current_antardasha.planet] || {};
+            return (
+              <div style={{ background:'rgba(167,139,250,0.05)', border:'1px solid rgba(167,139,250,0.2)', borderRadius:8, padding:'12px 14px' }}>
+                <p style={{ color:'rgba(167,139,250,0.6)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:6 }}>
+                  {T('Current Antardasha', 'वर्तमान अंतर्दशा')}
+                </p>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ color:meta.color, fontSize:20 }}>{meta.icon}</span>
+                  <div style={{ flex:1 }}>
+                    <p style={{ color:'#F5F0E8', fontSize:14, fontWeight:700 }}>
+                      {lang === 'hi' ? data.current_antardasha.planet_hi : data.current_antardasha.planet}
+                    </p>
+                    <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10 }}>→ {data.current_antardasha.end_date}</p>
+                  </div>
+                  <span style={{ color:meta.color || '#A78BFA', fontWeight:700, fontSize:14 }}>{data.current_antardasha.score}</span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       )}
-      <details style={{ marginTop:12 }}>
-        <summary style={{ color:'rgba(212,175,55,0.4)', fontSize:11, cursor:'pointer' }}>Show raw strength data</summary>
-        <pre style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginTop:8, overflowX:'auto', maxHeight:200 }}>
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      </details>
+
+      {/* Strengths */}
+      {data.strengths_en?.length > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <p style={{ color:'rgba(16,185,129,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:8 }}>
+            {T('Strengths', 'शक्तियां')}
+          </p>
+          {(lang === 'hi' ? (data.strengths_hi?.length ? data.strengths_hi : data.strengths_en) : data.strengths_en).map((s, i) => (
+            <div key={i} style={{ display:'flex', gap:8, marginBottom:6 }}>
+              <span style={{ color:'#10B981', fontSize:13, flexShrink:0 }}>✓</span>
+              <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.5 }}>{s}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Challenges */}
+      {data.challenges_en?.length > 0 && (
+        <div style={{ marginBottom:16 }}>
+          <p style={{ color:'rgba(239,68,68,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:8 }}>
+            {T('Challenges', 'चुनौतियां')}
+          </p>
+          {(lang === 'hi' ? (data.challenges_hi?.length ? data.challenges_hi : data.challenges_en) : data.challenges_en).map((s, i) => (
+            <div key={i} style={{ display:'flex', gap:8, marginBottom:6 }}>
+              <span style={{ color:'#EF4444', fontSize:13, flexShrink:0 }}>⚠</span>
+              <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.5 }}>{s}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Verdict */}
+      {(data.verdict_en || data.verdict_hi) && (
+        <div style={{ padding:'12px 16px', background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:8 }}>
+          <p style={{ color:'rgba(245,240,232,0.8)', fontSize:12, lineHeight:1.7 }}>
+            {lang === 'hi' ? (data.verdict_hi || data.verdict_en) : data.verdict_en}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -431,10 +564,29 @@ function OwnerBanner({ owner }) {
   );
 }
 
+// ── Lang toggle ───────────────────────────────────────────────────────────────
+function LangToggle({ lang, setLang }) {
+  return (
+    <div style={{ display:'flex', borderRadius:7, overflow:'hidden', border:'1px solid rgba(212,175,55,0.25)' }}>
+      {['en','hi'].map(l => (
+        <button key={l} onClick={() => setLang(l)}
+          style={{
+            padding:'5px 12px', fontSize:11, fontWeight:700, border:'none', cursor:'pointer',
+            background: lang === l ? 'rgba(212,175,55,0.2)' : 'transparent',
+            color: lang === l ? '#D4AF37' : 'rgba(245,240,232,0.4)',
+            transition:'all 0.15s',
+          }}>
+          {l === 'en' ? 'EN' : 'हि'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function KundliAdminDetail({ kundliUuid }) {
   const router    = useRouter();
-  const lang      = 'en';
+  const [lang,    setLang]    = useState('en');
 
   const [kundli,       setKundli]       = useState(null);
   const [chartEnrich,  setChartEnrich]  = useState(null);
@@ -531,7 +683,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
       <div style={{ marginBottom:6 }}>
         <button onClick={() => router.push('/admin/kundlis')}
           style={{ background:'none', border:'none', color:'rgba(212,175,55,0.5)', cursor:'pointer', fontSize:12, padding:0, marginBottom:12 }}>
-          ← Back to Kundli Profiles
+          ← {lang === 'hi' ? 'कुंडली सूची पर वापस' : 'Back to Kundli Profiles'}
         </button>
       </div>
 
@@ -553,10 +705,23 @@ export default function KundliAdminDetail({ kundliUuid }) {
             )}
           </div>
         </div>
-        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center' }}>
+          <LangToggle lang={lang} setLang={setLang} />
           <button onClick={handleRecalc} disabled={recalcing}
             style={{ padding:'7px 14px', borderRadius:7, fontSize:12, fontWeight:600, background:'rgba(212,175,55,0.12)', border:'1px solid rgba(212,175,55,0.35)', color:'#D4AF37', cursor: recalcing ? 'not-allowed' : 'pointer', opacity: recalcing ? 0.6 : 1 }}>
-            {recalcing ? '⏳ Recalculating…' : '🔄 Recalculate'}
+            {recalcing ? (lang === 'hi' ? '⏳ पुनः गणना हो रही है…' : '⏳ Recalculating…') : (lang === 'hi' ? '🔄 पुनः गणना' : '🔄 Recalculate')}
+          </button>
+          <button onClick={async () => {
+              try {
+                const r = await adminApi.get(`/admin/kundlis/${kundliUuid}/report.pdf`, { responseType: 'blob' });
+                const url = URL.createObjectURL(new Blob([r.data], { type: 'application/pdf' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = `${kundli?.name || 'kundli'}-report.pdf`; a.click();
+                URL.revokeObjectURL(url);
+              } catch { toast.error('Unable to download PDF'); }
+            }}
+            style={{ padding:'7px 14px', borderRadius:7, fontSize:12, fontWeight:600, background:'rgba(96,165,250,0.1)', border:'1px solid rgba(96,165,250,0.35)', color:'#60A5FA', cursor:'pointer' }}>
+            📄 {lang === 'hi' ? 'PDF रिपोर्ट' : 'PDF Report'}
           </button>
         </div>
       </div>
@@ -573,13 +738,17 @@ export default function KundliAdminDetail({ kundliUuid }) {
                 color: activeTab === tab.key ? '#D4AF37' : 'rgba(245,240,232,0.55)',
                 cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.15s',
               }}>
-              {tab.icon} {tab.en}
+              {tab.icon} {lang === 'hi' ? (tab.hi || tab.en) : tab.en}
             </button>
           ))}
         </div>
       </div>
 
       {/* ══ TAB: KUNDLI ═══════════════════════════════════════════════════════ */}
+      {activeTab === 'kundli' && (
+        <TodayPredictionPanel uuid={kundliUuid} lang={lang} admin />
+      )}
+
       {activeTab === 'kundli' && (
         <div>
           <AdminGuide title="Birth Chart Interpretation">
@@ -645,10 +814,10 @@ export default function KundliAdminDetail({ kundliUuid }) {
               {chart && (
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   {[
-                    { l:'Ascendant',  v: chart.ascendant.rashi_en, s: chart.ascendant.degree_in_sign_dms, c:'#D4AF37' },
-                    { l:'Nakshatra',  v: chart.nakshatra.en,       s: `Pada ${chart.nakshatra.pada}`,    c:'#A78BFA' },
-                    { l:'Moon',       v: chart.planets.Moon.rashi_en, s: chart.planets.Moon.degree_in_sign_dms, c:'#94A3B8' },
-                    { l:'Sun',        v: chart.planets.Sun.rashi_en,  s: chart.planets.Sun.degree_in_sign_dms,  c:'#F59E0B' },
+                    { l: lang==='hi' ? 'लग्न'    : 'Ascendant', v: lang==='hi' ? (chart.ascendant.rashi_hi  || chart.ascendant.rashi_en)      : chart.ascendant.rashi_en,      s: chart.ascendant.degree_in_sign_dms,        c:'#D4AF37' },
+                    { l: lang==='hi' ? 'नक्षत्र' : 'Nakshatra', v: lang==='hi' ? (chart.nakshatra.hi        || chart.nakshatra.en)             : chart.nakshatra.en,             s: `${lang==='hi'?'पाद':'Pada'} ${chart.nakshatra.pada}`, c:'#A78BFA' },
+                    { l: lang==='hi' ? 'चंद्र'   : 'Moon',      v: lang==='hi' ? (chart.planets.Moon.rashi_hi || chart.planets.Moon.rashi_en) : chart.planets.Moon.rashi_en, s: chart.planets.Moon.degree_in_sign_dms, c:'#94A3B8' },
+                    { l: lang==='hi' ? 'सूर्य'   : 'Sun',       v: lang==='hi' ? (chart.planets.Sun.rashi_hi  || chart.planets.Sun.rashi_en)  : chart.planets.Sun.rashi_en,  s: chart.planets.Sun.degree_in_sign_dms,  c:'#F59E0B' },
                   ].map(({ l, v, s, c }) => (
                     <div key={l} style={{ background:'rgba(17,20,40,0.7)', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:12, textAlign:'center' }}>
                       <p style={{ color:c, fontFamily:'Georgia,serif', fontSize:15, fontWeight:700, lineHeight:1.2 }}>{v}</p>
@@ -696,7 +865,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
                 return (
                   <div style={{ background:'rgba(17,20,40,0.8)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:20 }}>
-                    <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:14, fontWeight:700, marginBottom:14 }}>🌌 Planet Positions</h2>
+                    <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:14, fontWeight:700, marginBottom:14 }}>🌌 {lang==='hi' ? 'ग्रह स्थिति' : 'Planet Positions'}</h2>
                     <div style={{ overflowX:'auto' }}>
                       <table style={{ width:'100%', borderCollapse:'collapse', minWidth:860 }}>
                         <thead>
@@ -757,8 +926,8 @@ export default function KundliAdminDetail({ kundliUuid }) {
               {chart?.dasha && (
                 <div style={{ background:'rgba(17,20,40,0.8)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:20 }}>
                   <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:14, fontWeight:700, marginBottom:14 }}>
-                    ⏳ Vimshottari Dasha
-                    {curDasha && <span style={{ color:'rgba(212,175,55,0.4)', fontSize:10, fontFamily:'sans-serif', fontWeight:400, marginLeft:8 }}>Current: {curDasha.lord}</span>}
+                    ⏳ {lang==='hi' ? 'विंशोत्तरी दशा' : 'Vimshottari Dasha'}
+                    {curDasha && <span style={{ color:'rgba(212,175,55,0.4)', fontSize:10, fontFamily:'sans-serif', fontWeight:400, marginLeft:8 }}>{lang==='hi' ? 'वर्तमान' : 'Current'}: {curDasha.lord}</span>}
                   </h2>
                   <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                     {chart.dasha.map((d, i) => {
@@ -791,7 +960,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
                         {/* Antardasha */}
                         <div style={{ marginTop:18, paddingTop:14, borderTop:'1px solid rgba(212,175,55,0.1)' }}>
                           <p style={{ color:'rgba(212,175,55,0.7)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:8 }}>
-                            Antardasha {curAntar && <span style={{ color:'rgba(212,175,55,0.4)', fontWeight:400, textTransform:'none', letterSpacing:0, marginLeft:6 }}>Current: {curAntar.lord}</span>}
+                            {lang==='hi' ? 'अंतर्दशा' : 'Antardasha'} {curAntar && <span style={{ color:'rgba(212,175,55,0.4)', fontWeight:400, textTransform:'none', letterSpacing:0, marginLeft:6 }}>{lang==='hi' ? 'वर्तमान' : 'Current'}: {curAntar.lord}</span>}
                           </p>
                           <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
                             {curDasha.antardasha.map(ad => {
@@ -814,7 +983,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
                         {curAntar?.pratyantardasha?.length > 0 && (
                           <div style={{ marginTop:14, paddingTop:14, borderTop:'1px solid rgba(212,175,55,0.07)' }}>
                             <p style={{ color:'rgba(167,139,250,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:8 }}>
-                              Pratyantardasha {curPratyantar && <span style={{ color:'rgba(167,139,250,0.4)', fontWeight:400, textTransform:'none', letterSpacing:0, marginLeft:6 }}>Current: {curPratyantar.lord}</span>}
+                              {lang==='hi' ? 'प्रत्यंतर्दशा' : 'Pratyantardasha'} {curPratyantar && <span style={{ color:'rgba(167,139,250,0.4)', fontWeight:400, textTransform:'none', letterSpacing:0, marginLeft:6 }}>{lang==='hi' ? 'वर्तमान' : 'Current'}: {curPratyantar.lord}</span>}
                             </p>
                             <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:6 }}>
                               {curAntar.pratyantardasha.map(pp => {
@@ -930,6 +1099,15 @@ export default function KundliAdminDetail({ kundliUuid }) {
         </div>
       )}
 
+      {/* Chara Karakas + Sade Sati Journey (kundli tab) */}
+      {activeTab === 'kundli' && (
+        <>
+          <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
+          <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
+          <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
+        </>
+      )}
+
       {/* ══ TAB: LIFE REPORT ══════════════════════════════════════════════════ */}
       {activeTab === 'life-report' && (
         <div>
@@ -963,7 +1141,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
             <GLine label="Interpretation" text="A planet with Shadbala > 1.0 Rupa is strong. 0.5-1.0 is average. Below 0.5 is weak. A weak planet in its dasha period will struggle to give good results even if well-placed." color="#A78BFA" />
             <GLine label="Practical use" text="Strong planets in dasha = reliable, predictable results. Weak planets in dasha = delays, reversals, health issues related to that planet's body parts and significations." color="#60A5FA" />
           </AdminGuide>
-          <AdminStrengthSection uuid={kundliUuid} />
+          <AdminStrengthSection uuid={kundliUuid} lang={lang} />
         </div>
       )}
 
@@ -1031,7 +1209,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
           </AdminGuide>
           {kundli?.life_guidance && (
             <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:24 }}>
-              <LifeGuidancePanel guidance={kundli.life_guidance} lang={lang} />
+              <LifeGuidancePanel guidance={kundli.life_guidance} lang={lang} marriageTiming={kundli?.marriage_timing} />
             </div>
           )}
         </div>
@@ -1335,7 +1513,24 @@ export default function KundliAdminDetail({ kundliUuid }) {
             ]} />
             <GLine label="Cancellation of Doshas" text="Most doshas have cancellation conditions (Dosha Bhanga). Always check for cancellations before presenting negative yogas. A cancelled dosha becomes a powerful yoga in many cases." color="#22C55E" />
           </AdminGuide>
-          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} />}
+          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} library={kundli?.yoga_dosha_library} admin />}
+        </div>
+      )}
+
+      {/* ══ TAB: FAVOURITE DAYS ══════════════════════════════════════════════ */}
+      {activeTab === 'fav-days' && (
+        <div>
+          <AdminGuide title="Favourite Days — Purpose-wise Auspicious Weekdays">
+            <GLine label="What this shows" text="For each life purpose (study, work, finance, love, health, travel, spiritual, new beginnings), the best weekday is derived from the strongest governing planet in the native's chart. Each weekday is ruled by a planet — the day of the stronger significator gives better results." />
+            <GSection title="How it is computed" items={[
+              "Each purpose has two significator planets (e.g. Study → Mercury & Jupiter; Work → Saturn & Sun).",
+              "Planet strength = dignity score (exalted 5 → debilitated 1) adjusted by house placement (Kendra/Trikona +0.5, Dusthana −0.5).",
+              "The stronger planet's weekday becomes the Best Day; the other planet's weekday is the Alternative.",
+              "If the weaker planet is debilitated or in an enemy sign (score ≤ 2), its weekday is flagged as a day to Avoid for that purpose.",
+            ]} />
+            <GLine label="Practical use" text="Advise the native to schedule important activities (exam, job interview, investment, journey) on their purpose-specific best day, and defer them on flagged avoid days." color="#60A5FA" />
+          </AdminGuide>
+          <FavouriteDaysPanel favouriteDays={kundli?.favourite_days} lang={lang} />
         </div>
       )}
 

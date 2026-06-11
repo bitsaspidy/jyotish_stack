@@ -1,4 +1,4 @@
-# Jyotish Stack AI — Claude Cold-Start Prompt (Session 38+)
+# Jyotish Stack AI — Claude Cold-Start Prompt (Session 41+)
 
 You are working on **Jyotish Stack AI** — a production Vedic astrology SaaS platform.
 Read this entire prompt before doing anything. This is your complete project memory.
@@ -44,7 +44,7 @@ npm run build:main     # Production build (29/29 pages)
 
 ---
 
-## 🗄 Database State (as of Session 37)
+## 🗄 Database State (as of Session 37, unchanged through Session 40)
 
 * **18 migrations | 15 seed files | 27 tables** (unchanged through Session 37)
 * Key fix: `knexfile.js` has `typeCast` — DATE columns return as "YYYY-MM-DD" strings
@@ -74,17 +74,24 @@ server/src/
                                   houseFromSign, rashiFromDeg, ordinal, formatDate
       varga-calc.js            ← All 18 Varga chart calculations
       dasha-calc.js            ← Vimshottari Mahadasha + Antardasha
-      panchang.js              ← Tithi, Yoga, Karana, Vara, Sunrise/Sunset
+      panchang.js              ← Tithi, Yoga, Karana, Vara, Sunrise/Sunset,
+                                  Moonrise/Moonset, Ritu, Ayana, Chaughadiya,
+                                  Hora (equal 60-min slots — FIXED S40),
+                                  computeEndTimes() — exact end time for tithi/nak/yoga/karana
+                                  calculateDailyPanchang() — full daily muhurta
       drishti-bhavkarak.js     ← Graha Drishti, Bhav Karak, Digbala
       drishti-life-impact.js   ← 7 life-area interpretation engine
       mangal-dosha.js          ← Mangal Dosha: houses 1,2,4,7,8,12; 3 types
                                   (Anshik/Poorna/Double); 4 cancellations; bilingual
                                   effects_en/hi; manglik_type/manglik_type_hi
       gochar.js                ← Gochar transit summary
-      ashtakoot.js             ← Ashtakoot Guna Milan: all 8 kootas with name_hi,
-                                  description_en/hi, has_dosha, dosha_name/hi,
-                                  status_en/hi, verdict_en/hi, mangal_note_en/hi,
-                                  summary_hi, active_dosha_count
+      ashtakoot.js             ← Ashtakoot Guna Milan + Rajju-Vedha (Dashakoot):
+                                  all 8 kootas with name_hi, description_en/hi,
+                                  has_dosha, dosha_name/hi, status_en/hi,
+                                  verdict_en/hi, mangal_note_en/hi, summary_hi,
+                                  active_dosha_count.
+                                  PLUS: rajju{has_dosha, group, status_en/hi},
+                                        vedha{has_dosha, nak_nums, status_en/hi}
       prediction-data.js       ← All prediction reference data
       predictions-engine.js    ← Rule-based prediction generation
       detailed-reports.js      ← Planet assessment, Yoga+Dasha, Event timing
@@ -118,16 +125,19 @@ server/src/
                                   GET /admin/kundlis/:uuid/varshphal?year=YYYY
                                   All async handlers wrapped with ah() asyncHandler
     horoscope.routes.js        ← GET /api/horoscope/daily (public, no auth)
+    panchang.routes.js         ← GET /api/panchang/daily (public, no auth) (NEW S40)
 
 ui-main/src/
   app/
     horoscope/page.jsx              ← /horoscope route
+    panchang-muhurat/page.jsx       ← /panchang-muhurat route (NEW S40)
     varshphal/page.jsx              ← /varshphal route
     admin/kundlis/page.jsx          ← /admin/kundlis (NEW S37)
     admin/kundlis/[uuid]/page.jsx   ← /admin/kundlis/:uuid (NEW S37)
   views/
     KundliDetail.jsx           ← Main Kundli detail page (very large)
     DailyHoroscope.jsx         ← 7-tab horoscope page
+    PanchangMuhurta.jsx        ← Public panchang page: location autocomplete, date pickers, full muhurta display (NEW S40)
     Predictions.jsx            ← Predictions page
     VarshphalPage.jsx          ← Dedicated /varshphal page with kundli selector
     Kundlis.jsx                ← Admin Kundli list: search + gender filter + pagination (NEW S37)
@@ -346,7 +356,8 @@ jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
 
 ## 🔮 What Is Pending
 
-* Dashakoot compatibility (beyond Ashtakoot)
+* ~~Dashakoot compatibility (beyond Ashtakoot)~~ **DONE Session 39 — Rajju + Vedha added**
+* ~~Hora System implementation~~ **DONE Session 40 — equal 60-min horas + end times + public page**
 * Swiss Ephemeris / astronomy-engine integration for higher planet accuracy
 * AI-generated personalized predictions (Claude API integration)
 * SMTP + Razorpay live key configuration
@@ -359,6 +370,20 @@ jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
 
 ## 🚀 Next Migration Number: 019
 ## 🌱 Next Seed Number: 016
-## 📄 Pages Count: 29
+## 📄 Pages Count: 30
 ## 🔧 Helper Modules: 19
+## 🎨 Brand / Logo (added Session 38)
+- Icon name: **"Jyot Chakra"** — shatkona (r=160) + Jyot flame in a cosmic disc
+- `ui-main/src/components/Logo.jsx` — new Jyot Chakra (replaced JS monogram)
+- `ui-main/public/logo-icon.svg` — 512×512 standalone icon (copyright + favicon)
+- `ui-main/public/logo.svg` — 800×220 full horizontal logo (dark bg)
+- `ui-main/public/logo-preview.html` — brand identity preview (serve at :4000)
+- Favicon wired: `layout.jsx` icons → `/logo-icon.svg` + OG image → `/logo.svg`
+- Copyright folder: `E:\2026\satsai-projects\jyotish-stack\ui-main\public\`
+- `.claude/launch.json` at repo root: ui-main (:3000) + logo-preview (:4000)
+
 ## 🔖 Last GitHub Commit: `516f063` — "Session 37: Admin panel complete + Admin Kundli Viewer"
+## 📝 Sessions 38–40 changes NOT yet committed
+- Session 38: admin toast fix + full Jyot Chakra logo system
+- Session 39: Dashakoot (Rajju + Vedha) in ashtakoot.js + Matchmaking.jsx
+- Session 40: Hora fix (equal 60-min) + end times + public /api/panchang/daily + PanchangMuhurta page + Navbar Muhurta link

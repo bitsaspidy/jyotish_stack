@@ -69,12 +69,19 @@ function computeKundliStrength(chart) {
   const planets = chart.planets;
   const ascNum  = chart.ascendant.rashi_num || 1;
 
+  // Whole-sign house — planet data doesn't pre-compute house, derive from rashi_num
+  const planetHouse = (pd) => {
+    if (pd.house) return pd.house;
+    if (pd.rashi_num) return ((pd.rashi_num - ascNum + 12) % 12) + 1;
+    return null;
+  };
+
   // ── 1. Planet scores ──────────────────────────────────────────
   const planetScores = {};
   let pTotal = 0;
 
   for (const [name, pd] of Object.entries(planets)) {
-    let s = dignityScore(pd) + houseMod(name, pd.house);
+    let s = dignityScore(pd) + houseMod(name, planetHouse(pd));
     if (pd.is_retrograde && !['Rahu','Ketu'].includes(name)) s -= 5;
     s = Math.max(10, Math.min(100, Math.round(s)));
     planetScores[name] = s;
@@ -84,16 +91,15 @@ function computeKundliStrength(chart) {
   const planetAvg = Math.round(pTotal / Object.keys(planetScores).length);
 
   // ── 2. Yoga / Dosha score ─────────────────────────────────────
-  const allYogas  = chart.yogas_doshas || [];
-  const goodYogas = allYogas.filter(y => y.polarity === 'positive' || y.type === 'yoga');
-  const doshas    = allYogas.filter(y => y.polarity === 'negative' || y.type === 'dosha');
+  const goodYogas = chart.yogas_doshas?.yogas  || [];
+  const doshas    = chart.yogas_doshas?.doshas || [];
 
   let yogaScore = 50;
   yogaScore += goodYogas.length * 7;
   yogaScore -= doshas.length  * 6;
   if (goodYogas.some(y => (y.name || '').toLowerCase().includes('raja')))  yogaScore += 15;
   if (goodYogas.some(y => (y.name || '').toLowerCase().includes('dhan')))  yogaScore += 10;
-  if (chart.mangal_dosha?.present) yogaScore -= 10;
+  if (chart.mangal_dosha?.has_dosha) yogaScore -= 10;
   yogaScore = Math.max(5, Math.min(100, yogaScore));
 
   // ── 3. Life domain scores ─────────────────────────────────────
@@ -122,12 +128,12 @@ function computeKundliStrength(chart) {
   );
 
   // ── 4. Dasha score ────────────────────────────────────────────
-  const curMaha  = (chart.dasha_periods || []).find(d => d.is_current);
-  const curAntar = curMaha?.antardashas?.find(a => a.is_current);
+  const curMaha  = (chart.dasha || []).find(d => d.is_current);
+  const curAntar = curMaha?.antardasha?.find(a => a.is_current);
   let dashaScore = 50;
   if (curMaha) {
-    const ms = planetScores[curMaha.planet] || 52;
-    const as = curAntar ? (planetScores[curAntar.planet] || 52) : 52;
+    const ms = planetScores[curMaha.lord] || 52;
+    const as = curAntar ? (planetScores[curAntar.lord] || 52) : 52;
     dashaScore = Math.round(ms * 0.6 + as * 0.4);
   }
 
@@ -156,9 +162,9 @@ function computeKundliStrength(chart) {
     if (score < 70 || strengths_en.length >= 3) break;
     const pd = planets[name];
     const dg = pd.dignity?.split('(')[0].trim() || 'well-placed';
-    const houseStr = ordinal(pd.house);
-    strengths_en.push(`${name} (${dg}) in the ${houseStr} house — strongly supports ${PLANET_KARAKATVA[name]?.[0] || 'its significations'}.`);
-    strengths_hi.push(`${PLANET_NAME_HI[name] || name} (${pd.dignity?.match(/\(([^)]+)\)/)?.[1] || 'शुभ'}) ${pd.house}वें भाव में — ${PLANET_KARAKATVA[name]?.[1] || 'जीवन को बल देता है'}।`);
+    const h  = planetHouse(pd);
+    strengths_en.push(`${name} (${dg}) in the ${ordinal(h)} house — strongly supports ${PLANET_KARAKATVA[name]?.[0] || 'its significations'}.`);
+    strengths_hi.push(`${PLANET_NAME_HI[name] || name} (${pd.dignity?.match(/\(([^)]+)\)/)?.[1] || 'शुभ'}) ${h}वें भाव में — ${PLANET_KARAKATVA[name]?.[1] || 'जीवन को बल देता है'}।`);
   }
 
   goodYogas.slice(0, 2).forEach(y => {
@@ -175,9 +181,10 @@ function computeKundliStrength(chart) {
     if (score > 40 || challenges_en.length >= 3) break;
     const pd = planets[name];
     const dg = pd.dignity?.split('(')[0].trim() || 'weakened';
-    const hs = HOUSE_SIGNIFICATION[pd.house] || 'its house area';
-    challenges_en.push(`${name} (${dg}) in the ${ordinal(pd.house)} house — the area of ${hs} requires remedies and mindful effort.`);
-    challenges_hi.push(`${PLANET_NAME_HI[name] || name} (${dg}) ${pd.house}वें भाव में — ${hs.split(',')[0]} क्षेत्र में उपाय और सचेत प्रयास आवश्यक।`);
+    const h  = planetHouse(pd);
+    const hs = HOUSE_SIGNIFICATION[h] || 'its house area';
+    challenges_en.push(`${name} (${dg}) in the ${ordinal(h)} house — the area of ${hs} requires remedies and mindful effort.`);
+    challenges_hi.push(`${PLANET_NAME_HI[name] || name} (${dg}) ${h}वें भाव में — ${hs.split(',')[0]} क्षेत्र में उपाय और सचेत प्रयास आवश्यक।`);
   }
 
   doshas.slice(0, 2).forEach(y => {
@@ -186,15 +193,15 @@ function computeKundliStrength(chart) {
     challenges_hi.push(`${y.name_hi || y.name || 'दोष'} उपस्थित — ${(y.description_hi || 'उपाय आवश्यक').split('।')[0]}।`);
   });
 
-  if (chart.mangal_dosha?.present && challenges_en.length < 4) {
+  if (chart.mangal_dosha?.has_dosha && challenges_en.length < 4) {
     challenges_en.push('Mangal Dosha present — marriage timing and partner compatibility need careful Jyotish guidance.');
     challenges_hi.push('मंगल दोष उपस्थित — विवाह काल और जीवनसाथी चुनाव में ज्योतिष मार्गदर्शन लें।');
   }
 
   // ── 8. Verdict ────────────────────────────────────────────────
   const lbl = getLabel(overallScore);
-  const verdict_en = `Overall Kundli strength: ${overallScore}/100 (${lbl.en}). Chart has ${goodYogas.length} positive yoga${goodYogas.length !== 1 ? 's' : ''} and ${doshas.length} dosha${doshas.length !== 1 ? 's' : ''}.${curMaha ? ` Current ${curMaha.planet} Mahadasha rates ${dashaScore}/100 for this chart.` : ''}`;
-  const verdict_hi = `समग्र कुंडली बल: ${overallScore}/100 (${lbl.hi})। ${goodYogas.length} शुभ योग और ${doshas.length} दोष। ${curMaha ? `वर्तमान ${PLANET_NAME_HI[curMaha.planet] || curMaha.planet} महादशा इस कुंडली के लिए ${dashaScore}/100।` : ''}`;
+  const verdict_en = `Overall Kundli strength: ${overallScore}/100 (${lbl.en}). Chart has ${goodYogas.length} positive yoga${goodYogas.length !== 1 ? 's' : ''} and ${doshas.length} dosha${doshas.length !== 1 ? 's' : ''}.${curMaha ? ` Current ${curMaha.lord} Mahadasha rates ${dashaScore}/100 for this chart.` : ''}`;
+  const verdict_hi = `समग्र कुंडली बल: ${overallScore}/100 (${lbl.hi})। ${goodYogas.length} शुभ योग और ${doshas.length} दोष। ${curMaha ? `वर्तमान ${PLANET_NAME_HI[curMaha.lord] || curMaha.lord} महादशा इस कुंडली के लिए ${dashaScore}/100।` : ''}`;
 
   return {
     overall_score: overallScore,
@@ -215,16 +222,16 @@ function computeKundliStrength(chart) {
     verdict_en,
     verdict_hi,
     current_mahadasha: curMaha ? {
-      planet:    curMaha.planet,
-      planet_hi: PLANET_NAME_HI[curMaha.planet] || curMaha.planet,
-      score:     Math.round(planetScores[curMaha.planet] || 50),
-      end_date:  curMaha.end_date,
+      planet:    curMaha.lord,
+      planet_hi: PLANET_NAME_HI[curMaha.lord] || curMaha.lord,
+      score:     Math.round(planetScores[curMaha.lord] || 50),
+      end_date:  curMaha.end,
     } : null,
     current_antardasha: curAntar ? {
-      planet:    curAntar.planet,
-      planet_hi: PLANET_NAME_HI[curAntar.planet] || curAntar.planet,
-      score:     Math.round(planetScores[curAntar.planet] || 50),
-      end_date:  curAntar.end_date,
+      planet:    curAntar.lord,
+      planet_hi: PLANET_NAME_HI[curAntar.lord] || curAntar.lord,
+      score:     Math.round(planetScores[curAntar.lord] || 50),
+      end_date:  curAntar.end,
     } : null,
   };
 }

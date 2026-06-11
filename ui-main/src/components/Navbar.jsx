@@ -10,8 +10,9 @@ import { useLang } from '../context/LangContext';
 const NAV = [
   { href: '/',            en: 'Home',        hi: 'होम'        },
   { href: '/kundli',      en: 'Kundli',      hi: 'कुंडली'     },
-  { href: '/horoscope',   en: 'Horoscope',   hi: 'राशिफल'     },
-  { href: '/varshphal',   en: 'Varshphal',   hi: 'वर्षफल'     },
+  { href: '/horoscope',        en: 'Horoscope',   hi: 'राशिफल'  },
+  { href: '/panchang-muhurat', en: 'Muhurta',     hi: 'मुहूर्त'  },
+  { href: '/varshphal',        en: 'Varshphal',   hi: 'वर्षफल'  },
   { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
   { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },
   { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'      },
@@ -45,7 +46,7 @@ export default function Navbar() {
       className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${navBg}`}>
 
       {/* ── Desktop bar ─────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-8xl mx-auto px-5 lg:px-8 h-16 flex items-center justify-between gap-4">
 
         {/* Brand */}
         <Link href="/" className="flex items-center gap-3 shrink-0">

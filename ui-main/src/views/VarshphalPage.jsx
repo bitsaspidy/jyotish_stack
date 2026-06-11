@@ -69,7 +69,7 @@ export default function VarshphalPage() {
   return (
     <div className="relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={55} />
-      <div className="relative z-10 max-w-7xl mx-auto">
+      <div className="relative z-10 max-w-8xl mx-auto">
 
         {/* ── Page Header ── */}
         <motion.div initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} style={{ marginBottom:32 }}>

@@ -107,7 +107,7 @@ export default function Home({ scrollTo }) {
 
       {/* ── FEATURES ──────────────────────────────────────────────────────── */}
       <section className="relative z-10 py-24 px-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-8xl mx-auto">
           <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
             className="text-center mb-14">
             <h2 className="section-title mb-3">{t('feat_h', lang)}</h2>
