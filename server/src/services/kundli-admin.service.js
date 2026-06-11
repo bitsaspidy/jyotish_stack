@@ -354,6 +354,8 @@ async function buildFullKundliResponse(uuid) {
   profile.sade_sati_journey  = computeSadeSatiJourney(chart, profile);
   profile.yuti_analysis      = computeYutiAnalysis(chart);
   profile.marriage_timing    = computeMarriageTiming(chart);
+  profile.dasha_journey      = computeDashaJourney(chart);
+  profile.antar_narratives   = computeAntardashaNarratives(chart);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
 
   // Attach owning user info

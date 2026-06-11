@@ -11,7 +11,7 @@ const { generateLifeGuidance }  = require('../services/helpers/life-guidance');
 const { computeFavouriteDays }  = require('../services/helpers/favourite-days');
 const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras } = require('../services/kundli-admin.service');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
-const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming } = require('../services/helpers/cosmic-extras');
+const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
 
@@ -533,6 +533,8 @@ router.get('/:id', async (req, res) => {
   profile.sade_sati_journey = computeSadeSatiJourney(cd, profile);
   profile.yuti_analysis     = computeYutiAnalysis(cd);
   profile.marriage_timing   = computeMarriageTiming(cd);
+  profile.dasha_journey     = computeDashaJourney(cd);
+  profile.antar_narratives  = computeAntardashaNarratives(cd);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
 
   return ok(res, { profile });
@@ -577,6 +579,8 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.sade_sati_journey = computeSadeSatiJourney(chart, freshProfile);
   freshProfile.yuti_analysis     = computeYutiAnalysis(chart);
   freshProfile.marriage_timing   = computeMarriageTiming(chart);
+  freshProfile.dasha_journey     = computeDashaJourney(chart);
+  freshProfile.antar_narratives  = computeAntardashaNarratives(chart);
   if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
