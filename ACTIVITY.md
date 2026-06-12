@@ -2,7 +2,47 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-10 (Session 40)
+> Last updated: 2026-06-12 (Session 41)
+
+---
+
+## Session 41 - 2026-06-12 | Asta/Vakri Analysis + GitHub Upload Prep
+
+### What was done
+
+**Backend - Asta/Vakri library and chart enrichment:**
+- Added migration `server/src/migrations/019_asta_vakri_library.js` for `asta_vakri_library`.
+- Added seed `server/src/seeds/016_asta_vakri_class13.js` with Class 13 combustion and retrograde reference content, rules, remedies, misconceptions, and strength rankings.
+- `server/src/services/vedic-calc.service.js` now stores `sun_distance` and `combust_level` (`mild`/`deep`) for combust planets.
+- `server/src/services/helpers/kundli-strength.js` now increases strength for non-shadow retrograde planets and applies combustion penalties.
+- `server/src/services/helpers/yogas-doshas.js` now treats retrograde debilitated planets as Vakri Neechabhanga.
+- `server/src/services/kundli-admin.service.js` now exposes `fetchAstaVakriAnalysis()` and attaches `profile.asta_vakri` for user detail, admin detail, and report extras.
+- `server/src/routes/kundli.routes.js` returns `asta_vakri` from `GET /api/kundli/:id` and recalculate responses.
+- `server/src/services/pdf/kundli-report.js` adds a Combustion & Retrograde Analysis section to premium Kundli PDFs when applicable.
+
+**Frontend - user/admin panels:**
+- Added `ui-main/src/components/AstaVakriPanel.jsx` for bilingual combustion and retrograde analysis.
+- Wired the panel into `ui-main/src/views/KundliDetail.jsx`.
+- Wired the panel into `ui-main/src/admin-views/KundliAdminDetail.jsx`.
+
+### Verification
+
+```bash
+git diff --check
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/kundli-strength.js
+node --check server/src/services/helpers/yogas-doshas.js
+node --check server/src/services/kundli-admin.service.js
+node --check server/src/services/pdf/kundli-report.js
+node --check server/src/services/vedic-calc.service.js
+node --check server/src/migrations/019_asta_vakri_library.js
+node --check server/src/seeds/016_asta_vakri_class13.js
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 31/31 pages generated
+```
+
+### Git/worktree note
+- `pdf-map.txt` and `test-report.pdf` are local generated/reference artifacts and were intentionally excluded from the GitHub upload.
 
 ---
 

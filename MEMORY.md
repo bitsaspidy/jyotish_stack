@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-03 (Session 24)
+> Last updated: 2026-06-12 (Session 41)
 
 ---
 
@@ -723,3 +723,36 @@ npm.cmd run build:main    # compiled successfully; 25/25 static pages generated
 ```bash
 npm.cmd run build:main    # compiled successfully; 25/25 static pages generated
 ```
+
+---
+
+## 25. Asta/Vakri Analysis and GitHub Upload Prep (Session 41)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-12
+
+### Added
+- Migration `server/src/migrations/019_asta_vakri_library.js` and seed `server/src/seeds/016_asta_vakri_class13.js` for combustion (Asta/Maudhya) and retrograde (Vakri) reference content.
+- `calculateVedicChart()` now includes `sun_distance` and `combust_level` for combust planets.
+- Kundli strength and Neech Bhanga logic now treat retrograde planets as stronger per the Class 13/BPHS rule, while combustion applies a penalty.
+- `fetchAstaVakriAnalysis()` enriches Kundli detail, admin Kundli detail, and PDF report payloads with combust/retrograde analysis.
+- `ui-main/src/components/AstaVakriPanel.jsx` renders the analysis in user and admin Kundli views.
+- Premium Kundli PDF reports include a Combustion & Retrograde Analysis section when applicable.
+
+### Verification
+```bash
+git diff --check
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/kundli-strength.js
+node --check server/src/services/helpers/yogas-doshas.js
+node --check server/src/services/kundli-admin.service.js
+node --check server/src/services/pdf/kundli-report.js
+node --check server/src/services/vedic-calc.service.js
+node --check server/src/migrations/019_asta_vakri_library.js
+node --check server/src/seeds/016_asta_vakri_class13.js
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 31/31 pages generated
+```
+
+### Git/worktree note
+`pdf-map.txt` and `test-report.pdf` were local generated/reference artifacts and were intentionally left untracked for the GitHub upload.

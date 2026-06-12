@@ -43,6 +43,7 @@ import TodayPredictionPanel from '../components/TodayPredictionPanel';
 import CharaKarakaPanel     from '../components/CharaKarakaPanel';
 import SadeSatiPanel        from '../components/SadeSatiPanel';
 import YutiPanel            from '../components/YutiPanel';
+import AstaVakriPanel       from '../components/AstaVakriPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
@@ -834,6 +835,7 @@ export default function KundliDetail({ uuid }) {
           <>
             <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
             <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
+            <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
             <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
             <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
           </>

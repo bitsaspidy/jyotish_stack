@@ -82,7 +82,11 @@ function computeKundliStrength(chart) {
 
   for (const [name, pd] of Object.entries(planets)) {
     let s = dignityScore(pd) + houseMod(name, planetHouse(pd));
-    if (pd.is_retrograde && !['Rahu','Ketu'].includes(name)) s -= 5;
+    // BPHS (Class 13): a retrograde planet GAINS strength (exaltation-equivalent),
+    // it does not lose it — "Vakri balavaan grahah svocchagatsamah"
+    if (pd.is_retrograde && !['Rahu','Ketu'].includes(name)) s += 5;
+    // Combustion (Maudhya) weakens — deep combustion severely (Saravali/BPHS)
+    if (pd.is_combust) s -= (pd.combust_level === 'deep' ? 15 : 8);
     s = Math.max(10, Math.min(100, Math.round(s)));
     planetScores[name] = s;
     pTotal += s;

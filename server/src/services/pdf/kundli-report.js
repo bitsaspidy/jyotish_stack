@@ -221,7 +221,8 @@ function buildKundliReport(profile, chart, extras = {}) {
   const r = new Report();
   const { strength, life_guidance: lg, favourite_days: fav, library, remedy, problems,
           chara_karakas: karakas, sade_sati: sadeSati, dasha_journey: dashaJourney, numerology,
-          yuti, antar_narratives: antarNarr, remedy_suite: suite, marriage_timing: marriage } = extras;
+          yuti, antar_narratives: antarNarr, remedy_suite: suite, marriage_timing: marriage,
+          asta_vakri: astaVakri } = extras;
   const maha  = (chart.dasha || []).find((p) => p.is_current) || chart.dasha?.[0];
   const antar = maha?.antardasha?.find((p) => p.is_current) || maha?.antardasha?.[0];
 
@@ -368,6 +369,43 @@ function buildKundliReport(profile, chart, extras = {}) {
       r.gap(1);
     });
   }
+  // ── Combustion & Retrograde analysis (Class 13) ──
+  if (astaVakri && (astaVakri.combust?.length || astaVakri.retro?.length)) {
+    r.gap(4);
+    r.heading('Combustion & Retrograde Analysis');
+    r.para('A combust (Asta) planet loses its light to the Sun and weakens; a retrograde (Vakri) planet gains exaltation-like strength but expresses it in unusual, karmic ways (BPHS).', { size: 7.6 });
+    (astaVakri.combust || []).forEach((c) => {
+      r.ensure(44);
+      let bx = M;
+      r.d.text(bx, r.y + 1, `${c.planet} - Combust in ${c.rashi_en} (House ${c.house})`, { size: 9, bold: true, color: RED });
+      bx += r.d.textWidth(`${c.planet} - Combust in ${c.rashi_en} (House ${c.house})`, 9, true) + 10;
+      bx += r.badge(bx, r.y, c.level === 'deep' ? 'DEEP COMBUSTION' : 'MILD COMBUSTION', c.level === 'deep' ? RED : AMBER) + 6;
+      if (c.sun_distance != null) r.badge(bx, r.y, `${c.sun_distance} DEG FROM SUN`, BLUE);
+      r.y += 17;
+      (c.planet_effects?.effects_en || []).slice(0, 4).forEach((e) => {
+        r.ensure(11);
+        r.d.text(M + 4, r.y, `- ${e}`, { size: 7.2, color: IVORY });
+        r.y += 10.5;
+      });
+      if (c.house_effect?.description_en) r.para(`In house ${c.house}: ${c.house_effect.description_en}`, { size: 7, color: AMBER });
+      if (c.remedy) r.para(`Remedy: ${c.remedy.mantra} | ${c.remedy.daan_en} | ${c.remedy.yantra} | ${c.remedy.gemstone}`, { size: 6.8, color: VIOLET });
+      r.gap(3);
+    });
+    (astaVakri.retro || []).forEach((rt) => {
+      r.ensure(34);
+      let bx = M;
+      r.d.text(bx, r.y + 1, `${rt.planet} - Retrograde in ${rt.rashi_en} (House ${rt.house})`, { size: 9, bold: true, color: VIOLET });
+      bx += r.d.textWidth(`${rt.planet} - Retrograde in ${rt.rashi_en} (House ${rt.house})`, 9, true) + 10;
+      bx += r.badge(bx, r.y, rt.is_benefic ? 'BENEFIC - ENHANCED' : 'MALEFIC - INTENSIFIED', VIOLET) + 6;
+      if (rt.is_debilitated) r.badge(bx, r.y, 'VAKRI NEECHABHANGA', GREEN);
+      else if (rt.is_exalted) r.badge(bx, r.y, 'VAKRI UCHCHA', GOLD);
+      r.y += 17;
+      r.para('Per BPHS this planet gains exaltation-level strength - results are powerful but arrive in unusual, internal or delayed ways, often tied to past-life karma.', { size: 7.2, color: IVORY });
+      if (rt.house_effect?.description_en) r.para(`In house ${rt.house}: ${rt.house_effect.description_en}`, { size: 7, color: VIOLET });
+      r.gap(3);
+    });
+  }
+
   r.gap(2);
   r.sub('Graha Drishti & Digbala');
   r.para('Full planetary aspects (Graha Drishti) with 7-life-area impact, directional strength (Digbala) and Bhava Karak significators are computed for this chart — explore them interactively in your dashboard.', { size: 7.8 });

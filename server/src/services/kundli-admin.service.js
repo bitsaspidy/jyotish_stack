@@ -142,6 +142,7 @@ async function buildKundliReportExtras(chart, profile = null) {
     fetchProblemRemedies(),
   ]);
   return {
+    asta_vakri:     await fetchAstaVakriAnalysis(chart),
     strength:       computeKundliStrength(chart),
     life_guidance:  generateLifeGuidance(chart),
     favourite_days: computeFavouriteDays(chart),
@@ -207,6 +208,58 @@ async function fetchPredictionHistory(kundliId, limit = 30) {
     if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch { meta = null; } }
     return { ...r, meta };
   });
+}
+
+// Combustion & Retrogression analysis (Class 13 PDF — asta_vakri_library)
+async function fetchAstaVakriAnalysis(chart) {
+  if (!chart?.planets || !chart?.ascendant?.rashi_num) return null;
+  try {
+    const ascR = chart.ascendant.rashi_num;
+    const houseOf = (p) => ((p.rashi_num - ascR + 12) % 12) + 1;
+    const combustP = [], retroP = [];
+    Object.entries(chart.planets).forEach(([name, p]) => {
+      if (p.is_combust) combustP.push({ name, p });
+      if (p.is_retrograde && !['Rahu', 'Ketu'].includes(name)) retroP.push({ name, p });
+    });
+    if (!combustP.length && !retroP.length) return { combust: [], retro: [], rules: [], misconceptions: [] };
+
+    const rows = await db('asta_vakri_library').select('*');
+    const parse = (v) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
+    const byCat = {};
+    rows.forEach((r) => {
+      r.effects_en = parse(r.effects_en); r.effects_hi = parse(r.effects_hi); r.extra_data = parse(r.extra_data);
+      (byCat[r.category] = byCat[r.category] || {})[r.item_key] = r;
+    });
+
+    const BENEFICS = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+    const combust = combustP.map(({ name, p }) => ({
+      planet: name, house: houseOf(p), rashi_en: p.rashi_en, rashi_hi: p.rashi_hi,
+      level: p.combust_level || 'mild', sun_distance: p.sun_distance ?? null,
+      also_retrograde: !!p.is_retrograde,
+      planet_effects: byCat.combust_planet?.[name] || null,
+      house_effect:   byCat.combust_house?.[`house_${houseOf(p)}`] || null,
+      remedy:         byCat.remedy?.[name]?.extra_data || null,
+    }));
+    const retro = retroP.map(({ name, p }) => ({
+      planet: name, house: houseOf(p), rashi_en: p.rashi_en, rashi_hi: p.rashi_hi,
+      is_benefic: BENEFICS.includes(name),
+      is_debilitated: /debil/i.test(p.dignity || ''),
+      is_exalted: /exalt/i.test(p.dignity || ''),
+      house_effect: byCat.retro_house?.[`house_${houseOf(p)}`] || null,
+      remedy:       byCat.remedy?.[name]?.extra_data || null,
+    }));
+    return {
+      combust, retro,
+      retro_count: retro.length,
+      rules: Object.values(byCat.retro_rule || {}).concat(Object.values(byCat.combust_rule || {})),
+      special_remedies: [byCat.remedy?.combust_special, byCat.remedy?.retro_special].filter(Boolean),
+      misconceptions: Object.values(byCat.misconception || {}),
+      strength_ranks: Object.values(byCat.strength_rank || {}),
+    };
+  } catch (e) {
+    console.error('[AstaVakri] Error:', e.message);
+    return null;
+  }
 }
 
 // Classical reference for detected yogas/doshas (Class 11 & 12 PDF library tables)
@@ -357,6 +410,7 @@ async function buildFullKundliResponse(uuid) {
   profile.dasha_journey      = computeDashaJourney(chart);
   profile.antar_narratives   = computeAntardashaNarratives(chart);
   profile.life_report_narratives = require('./helpers/life-report-narrative').buildLifeReportNarratives(chart, profile.bhava_lord_readings);
+  profile.asta_vakri         = await fetchAstaVakriAnalysis(chart);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
 
   // Attach owning user info
@@ -375,6 +429,7 @@ module.exports = {
   getOrCreateTodayPrediction,
   fetchPredictionHistory,
   buildKundliReportExtras,
+  fetchAstaVakriAnalysis,
   calcAndSave,
   ensureCalculatedChart,
   buildFullKundliResponse,

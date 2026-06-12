@@ -9,7 +9,7 @@ const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.se
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 const { generateLifeGuidance }  = require('../services/helpers/life-guidance');
 const { computeFavouriteDays }  = require('../services/helpers/favourite-days');
-const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras } = require('../services/kundli-admin.service');
+const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras, fetchAstaVakriAnalysis } = require('../services/kundli-admin.service');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
 const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
 const { buildLifeReportNarratives } = require('../services/helpers/life-report-narrative');
@@ -537,6 +537,7 @@ router.get('/:id', async (req, res) => {
   profile.dasha_journey     = computeDashaJourney(cd);
   profile.antar_narratives  = computeAntardashaNarratives(cd);
   profile.life_report_narratives = buildLifeReportNarratives(cd, profile.bhava_lord_readings);
+  profile.asta_vakri        = await fetchAstaVakriAnalysis(cd);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
 
   return ok(res, { profile });
@@ -584,6 +585,7 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.dasha_journey     = computeDashaJourney(chart);
   freshProfile.antar_narratives  = computeAntardashaNarratives(chart);
   freshProfile.life_report_narratives = buildLifeReportNarratives(chart, freshProfile.bhava_lord_readings);
+  freshProfile.asta_vakri        = await fetchAstaVakriAnalysis(chart);
   if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
