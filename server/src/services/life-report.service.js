@@ -5,6 +5,7 @@
  * and a 5-section life report (Finance, Family, Health, Problems, Profile).
  * Source: AstroAnsh Class 1–12, BPHS, Parashara tradition
  */
+const { computeVargaInsights, getChartRemedy } = require('./helpers/varga-insights');
 
 function norm(deg) { return ((deg % 360) + 360) % 360; }
 
@@ -573,6 +574,9 @@ function generateVargaAnalysis(chart) {
     if (!reading) continue;
     if (slug === 'd60') reading.past_life_reading = generateD60PastLifeReading(vc);
     if (slug === 'd20') reading.spiritual_reading  = generateD20SpiritualReading(vc, chart._ishtaDevata);
+    // Attach deep planet-by-planet insights + chart-level remedy
+    reading.planet_readings = computeVargaInsights(slug, vc, chart);
+    reading.chart_remedy    = getChartRemedy(slug);
     out[slug] = reading;
   }
   return out;

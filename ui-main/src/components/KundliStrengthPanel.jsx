@@ -213,7 +213,7 @@ export default function KundliStrengthPanel({ kundliUuid, natalPlanets, lang = '
   // ── Loading skeleton ──────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ padding:'18px 20px', background:'rgba(17,20,40,0.6)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:14, display:'flex', alignItems:'center', gap:14 }}>
+      <div style={{ padding:'18px 20px', background:'rgba(32,38,70,0.80)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:14, display:'flex', alignItems:'center', gap:14 }}>
         <div style={{ width:48, height:48, borderRadius:'50%', background:'rgba(212,175,55,0.1)', border:'2px solid rgba(212,175,55,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>🌟</div>
         <div>
           <div style={{ fontSize:14, fontWeight:700, color:'#E2E8F0', marginBottom:4 }}>{t(lang,'Kundli Strength Report','कुंडली बल रिपोर्ट')}</div>

@@ -43,7 +43,7 @@ export default function Dashboard() {
   return (
     <div className="relative min-h-screen pt-24 px-6 pb-20">
       <StarField count={80} />
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 max-w-8xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <h1 className="font-serif text-3xl md:text-4xl text-gradient-gold font-bold">
             {lang === 'hi' ? `नमस्ते, ${user.name.split(' ')[0]}` : `Namaste, ${user.name.split(' ')[0]}`} 🙏

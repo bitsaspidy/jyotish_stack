@@ -434,7 +434,7 @@ export default function DailyHoroscope() {
   return (
     <div className="relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={60} />
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 max-w-8xl mx-auto">
 
         {/* ── Header ── */}
         <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} style={{ marginBottom:28 }}>

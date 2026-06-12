@@ -7,6 +7,10 @@
 const db = require('../config/db');
 const { calculateVedicChart }   = require('./vedic-calc.service');
 const { generateLifeGuidance }  = require('./helpers/life-guidance');
+const { computeFavouriteDays }  = require('./helpers/favourite-days');
+const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('./helpers/cosmic-insights');
+const { computeYutiAnalysis, computeAntardashaNarratives, computeRemedySuite, computeMarriageTiming } = require('./helpers/cosmic-extras');
+const { buildPlacementNarratives } = require('./helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('./helpers/varshphal');
 const { computeKundliStrength } = require('./helpers/kundli-strength');
 
@@ -130,6 +134,170 @@ async function fetchDashaRemedies(dashaLord, lagnaLord) {
   } catch { return null; }
 }
 
+// Everything the designed PDF report needs beyond the chart itself
+async function buildKundliReportExtras(chart, profile = null) {
+  const curDasha = Array.isArray(chart?.dasha) ? chart.dasha.find((p) => p.is_current) || chart.dasha[0] : null;
+  const [library, remedy, problems] = await Promise.all([
+    fetchYogaDoshaLibrary(chart),
+    fetchDashaRemedies(curDasha?.lord, chart?.ascendant?.rashi_lord),
+    fetchProblemRemedies(),
+  ]);
+  return {
+    asta_vakri:     await fetchAstaVakriAnalysis(chart),
+    placement_narratives: buildPlacementNarratives(chart),
+    strength:       computeKundliStrength(chart),
+    life_guidance:  generateLifeGuidance(chart),
+    favourite_days: computeFavouriteDays(chart),
+    chara_karakas:  computeCharaKarakas(chart),
+    sade_sati:      profile ? computeSadeSatiJourney(chart, profile) : null,
+    dasha_journey:  computeDashaJourney(chart),
+    numerology:     profile ? computeNumerology(profile) : null,
+    yuti:           computeYutiAnalysis(chart),
+    antar_narratives: computeAntardashaNarratives(chart),
+    remedy_suite:   computeRemedySuite(chart),
+    marriage_timing: computeMarriageTiming(chart),
+    library,
+    remedy,
+    problems,
+  };
+}
+
+// Today's personal prediction — generated once per day per kundli, persisted
+// in the `predictions` table (type 'daily') so repeats are served from DB.
+async function getOrCreateTodayPrediction(profile, chart) {
+  const { v4: uuidv4 } = require('uuid');
+  const { generateTodayPrediction } = require('./helpers/today-prediction');
+  const now = new Date();
+
+  const existing = await db('predictions')
+    .where({ kundli_id: profile.id, type: 'daily' })
+    .where('valid_until', '>=', now)
+    .orderBy('id', 'desc')
+    .first();
+  if (existing) {
+    if (typeof existing.meta === 'string') { try { existing.meta = JSON.parse(existing.meta); } catch { existing.meta = null; } }
+    return { ...existing, from_cache: true };
+  }
+
+  const gen = generateTodayPrediction(chart, now);
+  if (!gen) return null;
+
+  const row = {
+    uuid:        uuidv4(),
+    kundli_id:   profile.id,
+    user_id:     profile.user_id,
+    type:        gen.type,
+    title:       gen.title,
+    content_en:  gen.content_en,
+    content_hi:  gen.content_hi,
+    meta:        JSON.stringify(gen.meta),
+    valid_from:  gen.valid_from,
+    valid_until: gen.valid_until,
+  };
+  const [id] = await db('predictions').insert(row);
+  return { id, ...row, meta: gen.meta, from_cache: false };
+}
+
+// Stored prediction history for one kundli (admin log)
+async function fetchPredictionHistory(kundliId, limit = 30) {
+  const rows = await db('predictions')
+    .where({ kundli_id: kundliId })
+    .orderBy('id', 'desc')
+    .limit(limit)
+    .select('uuid', 'type', 'title', 'meta', 'valid_from', 'valid_until', 'created_at');
+  return rows.map((r) => {
+    let meta = r.meta;
+    if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch { meta = null; } }
+    return { ...r, meta };
+  });
+}
+
+// Combustion & Retrogression analysis (Class 13 PDF — asta_vakri_library)
+async function fetchAstaVakriAnalysis(chart) {
+  if (!chart?.planets || !chart?.ascendant?.rashi_num) return null;
+  try {
+    const ascR = chart.ascendant.rashi_num;
+    const houseOf = (p) => ((p.rashi_num - ascR + 12) % 12) + 1;
+    const combustP = [], retroP = [];
+    Object.entries(chart.planets).forEach(([name, p]) => {
+      if (p.is_combust) combustP.push({ name, p });
+      if (p.is_retrograde && !['Rahu', 'Ketu'].includes(name)) retroP.push({ name, p });
+    });
+    if (!combustP.length && !retroP.length) return { combust: [], retro: [], rules: [], misconceptions: [] };
+
+    const rows = await db('asta_vakri_library').select('*');
+    const parse = (v) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
+    const byCat = {};
+    rows.forEach((r) => {
+      r.effects_en = parse(r.effects_en); r.effects_hi = parse(r.effects_hi); r.extra_data = parse(r.extra_data);
+      (byCat[r.category] = byCat[r.category] || {})[r.item_key] = r;
+    });
+
+    const BENEFICS = ['Jupiter', 'Venus', 'Mercury', 'Moon'];
+    const combust = combustP.map(({ name, p }) => ({
+      planet: name, house: houseOf(p), rashi_en: p.rashi_en, rashi_hi: p.rashi_hi,
+      level: p.combust_level || 'mild', sun_distance: p.sun_distance ?? null,
+      also_retrograde: !!p.is_retrograde,
+      planet_effects: byCat.combust_planet?.[name] || null,
+      house_effect:   byCat.combust_house?.[`house_${houseOf(p)}`] || null,
+      remedy:         byCat.remedy?.[name]?.extra_data || null,
+    }));
+    const retro = retroP.map(({ name, p }) => ({
+      planet: name, house: houseOf(p), rashi_en: p.rashi_en, rashi_hi: p.rashi_hi,
+      is_benefic: BENEFICS.includes(name),
+      is_debilitated: /debil/i.test(p.dignity || ''),
+      is_exalted: /exalt/i.test(p.dignity || ''),
+      house_effect: byCat.retro_house?.[`house_${houseOf(p)}`] || null,
+      remedy:       byCat.remedy?.[name]?.extra_data || null,
+    }));
+    return {
+      combust, retro,
+      retro_count: retro.length,
+      rules: Object.values(byCat.retro_rule || {}).concat(Object.values(byCat.combust_rule || {})),
+      special_remedies: [byCat.remedy?.combust_special, byCat.remedy?.retro_special].filter(Boolean),
+      misconceptions: Object.values(byCat.misconception || {}),
+      strength_ranks: Object.values(byCat.strength_rank || {}),
+    };
+  } catch (e) {
+    console.error('[AstaVakri] Error:', e.message);
+    return null;
+  }
+}
+
+// Classical reference for detected yogas/doshas (Class 11 & 12 PDF library tables)
+async function fetchYogaDoshaLibrary(chart) {
+  const yd = chart?.yogas_doshas;
+  if (!yd) return null;
+  try {
+    const yogaNames  = (yd.yogas  || []).map((y) => y.name).filter(Boolean);
+    const doshaNames = (yd.doshas || []).map((d) => d.name).filter(Boolean);
+    const fields = ['name','name_hi','category','definition_en','definition_hi','formation_en','formation_hi',
+                    'symptoms_en','symptoms_hi','effects_en','effects_hi','source'];
+    const [yogaRows, doshaRows] = await Promise.all([
+      yogaNames.length  ? db('yogas_library').whereIn('name', yogaNames)
+          .select([...fields, 'cancellation_en', 'cancellation_hi']) : [],
+      doshaNames.length ? db('doshas_library').whereIn('name', doshaNames)
+          .select([...fields, 'technical_note_en', 'technical_note_hi']) : [],
+    ]);
+    return {
+      yogas:  Object.fromEntries(yogaRows.map((r) => [r.name, r])),
+      doshas: Object.fromEntries(doshaRows.map((r) => [r.name, r])),
+    };
+  } catch (e) {
+    console.error('[YogaDoshaLibrary] Error:', e.message);
+    return null;
+  }
+}
+
+// Problem-based remedies (Remedy Class 1 PDF — remedy_problems table)
+async function fetchProblemRemedies() {
+  try {
+    const rows = await db('remedy_problems').orderBy('id');
+    const parse = (v) => { try { return JSON.parse(v); } catch { return Array.isArray(v) ? v : []; } };
+    return rows.map((r) => ({ ...r, mantras_en: parse(r.mantras_en), mantras_hi: parse(r.mantras_hi) }));
+  } catch { return null; }
+}
+
 async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
   try {
     const rashiIds = [...new Set([ascRashiNum, moonRashiNum].filter(Boolean))];
@@ -220,18 +388,33 @@ async function buildFullKundliResponse(uuid) {
   const nakNum        = chart?.nakshatra?.num;
   const currentDasha  = Array.isArray(chart?.dasha) ? chart.dasha.find((d) => d.is_current) || chart.dasha[0] : null;
 
-  const [nakshatra_insight, remedy_data, chart_enrichment, bhava_lord_readings] = await Promise.all([
+  const [nakshatra_insight, remedy_data, chart_enrichment, bhava_lord_readings, yoga_dosha_library, problem_remedies] = await Promise.all([
     fetchNakshatraInsight(nakNum),
     fetchDashaRemedies(currentDasha?.lord, chart?.ascendant?.rashi_lord),
     fetchChartEnrichment(chart?.ascendant?.rashi_num, chart?.planets?.Moon?.rashi_num),
     fetchBhavaLordReadings(chart),
+    fetchYogaDoshaLibrary(chart),
+    fetchProblemRemedies(),
   ]);
 
   profile.nakshatra_insight  = nakshatra_insight;
   profile.remedy_data        = remedy_data;
+  if (profile.remedy_data && problem_remedies) profile.remedy_data.problems = problem_remedies;
   profile.chart_enrichment   = chart_enrichment;
   profile.bhava_lord_readings = bhava_lord_readings;
+  profile.yoga_dosha_library = yoga_dosha_library;
   profile.life_guidance      = generateLifeGuidance(chart);
+  profile.favourite_days     = computeFavouriteDays(chart);
+  profile.chara_karakas      = computeCharaKarakas(chart);
+  profile.sade_sati_journey  = computeSadeSatiJourney(chart, profile);
+  profile.yuti_analysis      = computeYutiAnalysis(chart);
+  profile.marriage_timing    = computeMarriageTiming(chart);
+  profile.dasha_journey      = computeDashaJourney(chart);
+  profile.antar_narratives   = computeAntardashaNarratives(chart);
+  profile.life_report_narratives = require('./helpers/life-report-narrative').buildLifeReportNarratives(chart, profile.bhava_lord_readings);
+  profile.placement_narratives   = buildPlacementNarratives(chart);
+  profile.asta_vakri         = await fetchAstaVakriAnalysis(chart);
+  if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
 
   // Attach owning user info
   const owner = await db('users').where({ id: profile.user_id })
@@ -244,6 +427,12 @@ async function buildFullKundliResponse(uuid) {
 module.exports = {
   parseJsonMaybe,
   buildKundliListSummary,
+  fetchYogaDoshaLibrary,
+  fetchProblemRemedies,
+  getOrCreateTodayPrediction,
+  fetchPredictionHistory,
+  buildKundliReportExtras,
+  fetchAstaVakriAnalysis,
   calcAndSave,
   ensureCalculatedChart,
   buildFullKundliResponse,

@@ -2,7 +2,169 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-05 (Session 36)
+> Last updated: 2026-06-12 (Session 42)
+
+---
+
+## Session 42 - 2026-06-12 | GitHub Visibility Check + Latest Feature Push Prep
+
+### What was found
+
+- GitHub default branch is `main`, while the latest Codex work was on `origin/codex/yogas-doshas-hindi-ui`.
+- `origin/main` had merge commit `7ca534f`, but it did not contain the newest branch commits including `509ea82 Add Asta Vakri analysis`.
+- The local workspace also had newer uncommitted work after the previous push, so those files were not visible on GitHub yet.
+
+### What was done
+
+**Backend:**
+- Added `buildPlacementNarratives()` integration so Kundli detail, admin detail, and PDF extras include per-planet Graha Phal placement narratives.
+- Added Samvat calculation in `server/src/services/helpers/panchang.js` for Vikram, Shaka, Kali, and Samvatsara.
+- Added Samvat output to daily Panchang and Kundli Panchang data.
+- Extended premium Kundli PDF with Avakahada Chakra fields and Graha Phal placement narratives.
+
+**Frontend:**
+- Added `AvakahadaPanel` to user and admin Kundli detail views.
+- Added `PlacementNarrativesPanel` to user and admin Kundli detail views.
+- Panchang Muhurta page now shows Vikram Samvat, Shaka Samvat, Samvatsara, and Kali Samvat.
+
+**Build stability:**
+- Updated `ui-main/next.config.js` with serialized build settings (`experimental.cpus = 1`, `experimental.webpackBuildWorker = false`) after Next generated an incomplete `app-paths-manifest.json` on Windows and failed page-data collection.
+
+### Verification
+
+```bash
+git fetch origin --prune
+git ls-remote origin refs/heads/main refs/heads/codex/yogas-doshas-hindi-ui
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/panchang.js
+node --check server/src/services/helpers/placement-narratives.js
+node --check server/src/services/kundli-admin.service.js
+node --check server/src/services/pdf/kundli-report.js
+git diff --check
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 31/31 pages generated after serialized Next build config
+```
+
+### Git/worktree note
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
+
+---
+
+## Session 41 - 2026-06-12 | Asta/Vakri Analysis + GitHub Upload Prep
+
+### What was done
+
+**Backend - Asta/Vakri library and chart enrichment:**
+- Added migration `server/src/migrations/019_asta_vakri_library.js` for `asta_vakri_library`.
+- Added seed `server/src/seeds/016_asta_vakri_class13.js` with Class 13 combustion and retrograde reference content, rules, remedies, misconceptions, and strength rankings.
+- `server/src/services/vedic-calc.service.js` now stores `sun_distance` and `combust_level` (`mild`/`deep`) for combust planets.
+- `server/src/services/helpers/kundli-strength.js` now increases strength for non-shadow retrograde planets and applies combustion penalties.
+- `server/src/services/helpers/yogas-doshas.js` now treats retrograde debilitated planets as Vakri Neechabhanga.
+- `server/src/services/kundli-admin.service.js` now exposes `fetchAstaVakriAnalysis()` and attaches `profile.asta_vakri` for user detail, admin detail, and report extras.
+- `server/src/routes/kundli.routes.js` returns `asta_vakri` from `GET /api/kundli/:id` and recalculate responses.
+- `server/src/services/pdf/kundli-report.js` adds a Combustion & Retrograde Analysis section to premium Kundli PDFs when applicable.
+
+**Frontend - user/admin panels:**
+- Added `ui-main/src/components/AstaVakriPanel.jsx` for bilingual combustion and retrograde analysis.
+- Wired the panel into `ui-main/src/views/KundliDetail.jsx`.
+- Wired the panel into `ui-main/src/admin-views/KundliAdminDetail.jsx`.
+
+### Verification
+
+```bash
+git diff --check
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/kundli-strength.js
+node --check server/src/services/helpers/yogas-doshas.js
+node --check server/src/services/kundli-admin.service.js
+node --check server/src/services/pdf/kundli-report.js
+node --check server/src/services/vedic-calc.service.js
+node --check server/src/migrations/019_asta_vakri_library.js
+node --check server/src/seeds/016_asta_vakri_class13.js
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 31/31 pages generated
+```
+
+### Git/worktree note
+- `pdf-map.txt` and `test-report.pdf` are local generated/reference artifacts and were intentionally excluded from the GitHub upload.
+
+---
+
+## Session 40 — 2026-06-10 | Panchang Muhurta — Hora System, End Times, Public Page
+
+### What was done
+
+**Backend — `server/src/services/helpers/panchang.js`:**
+- **Fixed `calculateHora()`**: Changed from variable-length proportional horas (dayspan/12) to equal 60-minute fixed horas (BPHS: 1 Hora = ~60 min, 24 Horas = 24 hours). Day horas 1–12 start from sunrise; night horas 13–24 start 12 hrs after sunrise.
+- **Added `nature` / `nature_hi`** fields per hora (Powerful, Artistic, Intelligent, Emotional, Disciplined, Auspicious, Active + Hindi)
+- **Added `hora_num`**, `start_mins`, `end_mins` fields to every hora entry (for client-side "current hora" detection)
+- **Added `jdToLocalHMS(jd, tz)`** helper — converts Julian Day to local HH:MM:SS string
+- **Added `computeEndTimes(year, month, day, tz)`** — computes exact end times for Tithi, Nakshatra, Yoga, Karana via 10-min forward scan + 25-iter binary search on ephemeris (< 5 ms total, accuracy ≈ 1 second)
+- **Updated `calculateDailyPanchang()`** — now attaches `end_time` to tithi/nakshatra/yoga/karana objects in the response
+- Updated `module.exports` to expose `computeEndTimes` and `jdToLocalHMS`
+
+**Backend — `server/src/routes/panchang.routes.js` (NEW):**
+- Public `GET /api/panchang/daily?lat=&lon=&date=YYYY-MM-DD&tz=&place=` endpoint (no auth required)
+- Returns full panchang including end times, chaughadiya, hora
+
+**Backend — `server/src/index.js`:**
+- Registered `app.use('/api/panchang', panchangRoutes)`
+
+**Frontend — `ui-main/src/views/PanchangMuhurta.jsx` (NEW):**
+- Full public Panchang Muhurta page
+- **Location search with autocomplete**: Nominatim debounced search (400 ms), dropdown of up to 6 suggestions, click to select — auto-fills lat/lon, auto-detects timezone from longitude
+- **Date selection**: separate Day / Month / Year dropdowns (handles leap years / month-end correctly)
+- **Timezone selector**: 8 common zones (IST, PKT, NPT, BST, UTC, UAE, CET, EST) auto-selected from longitude
+- **Results layout** matching BPHS Panchang format:
+  - Result header: Day, formatted date, location name, Masa + Paksha + Ayana pills
+  - Celestial times: 4 cards (Sunrise / Sunset / Moonrise / Moonset)
+  - 5 Panchang elements (Tithi, Nakshatra, Yoga, Karana, Paksha) — each with `End: HH:MM:SS`
+  - 4 Astro details (Ritu, Sun Sign, Moon Sign, Ayana)
+  - Special Yogas (Sarvartha Siddhi, Amrit Siddhi, Ravi Yog, Dwipushkar, Tripushkar) — if present
+  - **Chaughadiya** tab: Day/Night sub-toggle, 8 periods each with auspicious/inauspicious color, start–end times
+  - **Hora** tab: Day/Night sub-toggle, 24 one-hour horas with planet icon, color, nature, time range, "NOW" badge for current hora
+- Bilingual EN/HI toggle throughout
+- BPHS attribution footer
+
+**Frontend — `ui-main/src/app/panchang-muhurat/page.jsx` (NEW):**
+- `/panchang-muhurat` page route
+
+**Frontend — `ui-main/src/components/Navbar.jsx`:**
+- Added `{ href: '/panchang-muhurat', en: 'Muhurta', hi: 'मुहूर्त' }` between Horoscope and Varshphal
+
+### Counts
+- 18 migrations · 15 seeds · 27 tables · **30 pages** · 19 helpers
+- **14/14 tests ✓ | 30/30 build pages ✓**
+
+---
+
+## Session 39 — 2026-06-07 | Dashakoot: Rajju + Vedha Compatibility
+
+### What was done
+
+**Backend — `server/src/services/helpers/ashtakoot.js`:**
+- Added `RAJJU_GROUP` map: all 27 nakshatras → 5 body-zone groups (Pada/Kati/Udara/Kantha/Sira)
+- Added `RAJJU_LABEL` + `RAJJU_EFFECT`: bilingual EN+HI names and dosha effects per group
+- Added `VEDHA_PAIRS` set: all 26 BPHS-standard bidirectional piercing nakshatra pairs
+  (1↔18, 2↔17, 3↔16, 4↔15, 5↔14, 6↔13, 7↔12, 8↔11, 9↔10, 19↔27, 20↔26, 21↔25, 22↔24; nak 23 exempt)
+- `calculateAshtakoot()` now computes and returns `rajju` + `vedha` objects:
+  - `rajju`: group for each partner, `has_dosha` (same group = dosha), bilingual status, dosha severity notes
+  - `vedha`: nakshatra numbers, `has_dosha`, bilingual status with nakshatra names
+- `system` field updated: `'Ashtakoot Guna Milan + Rajju-Vedha'`
+
+**Tests — `server/tests/vedic-calc.test.js`:**
+- Updated Ashtakoot test: relaxed `system` to `includes('Ashtakoot')`, added assertions for `rajju` + `vedha` presence and type
+
+**Frontend — `ui-main/src/views/Matchmaking.jsx`:**
+- Added `RajjuVedhaSection` component: 2-card grid (Rajju + Vedha)
+  - Each card: name, description, group detail, pass/fail badge, bilingual status text
+  - Dosha: red border + "Dosha" badge; Clear: green border + "✓ Clear" badge
+- Inserted `RajjuVedhaSection` between 8-koot grid and MangalSection
+- Header label updated to "Ashtakoot + Rajju-Vedha (Dashakoot)" / "अष्टकूट + राज्जु-वेध (दशकूट)"
+
+### Counts (unchanged)
+- 18 migrations · 15 seeds · 27 tables · 29 pages · 19 helpers
+- **14/14 tests ✓ | 29/29 build pages ✓**
 
 ---
 

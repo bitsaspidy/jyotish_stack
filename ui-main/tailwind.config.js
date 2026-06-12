@@ -10,6 +10,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      maxWidth: {
+        '8xl': '100rem',
+      },
       colors: {
         cosmos: { DEFAULT: '#0B0D1A', 900: '#06070F', 800: '#0B0D1A', 700: '#111428', 600: '#181C35' },
         gold: { DEFAULT: '#D4AF37', light: '#F0D060', dark: '#A88B20', muted: '#8B7030' },

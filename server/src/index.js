@@ -16,7 +16,8 @@ const kundliRoutes = require('./routes/kundli.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
 const newsletterRoutes = require('./routes/newsletter.routes');
 const settingsRoutes = require('./routes/settings.routes');
-const horoscopeRoutes = require('./routes/horoscope.routes');
+const horoscopeRoutes  = require('./routes/horoscope.routes');
+const panchangRoutes   = require('./routes/panchang.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -64,6 +65,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
+app.use('/api/panchang', panchangRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => fail(res, 'Route not found', 404));

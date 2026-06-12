@@ -7,7 +7,13 @@ const { ok, fail } = require('../utils/response');
 const { calculateVedicChart, calculateAshtakoot } = require('../services/vedic-calc.service');
 const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.service');
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
-const { generateLifeGuidance } = require('../services/helpers/life-guidance');
+const { generateLifeGuidance }  = require('../services/helpers/life-guidance');
+const { computeFavouriteDays }  = require('../services/helpers/favourite-days');
+const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras, fetchAstaVakriAnalysis } = require('../services/kundli-admin.service');
+const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
+const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
+const { buildLifeReportNarratives } = require('../services/helpers/life-report-narrative');
+const { buildPlacementNarratives }  = require('../services/helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
 
@@ -480,7 +486,8 @@ router.get('/:id/report.pdf', async (req, res) => {
     const chart = await ensureCalculatedChart(profile);
     if (!chart) return fail(res, 'Unable to calculate Kundli report', 500);
 
-    const pdf = kundliReportPdf(profile, chart);
+    const extras = await buildKundliReportExtras(chart, profile);
+    const pdf = kundliReportPdf(profile, chart, extras);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${fileSafe(`${profile.name}-kundli`)}.pdf"`);
     return res.send(pdf);
@@ -520,7 +527,20 @@ router.get('/:id', async (req, res) => {
   profile.bhava_lord_readings = await fetchBhavaLordReadings(cd);
 
   // Attach life guidance (Session 33: career, work location, business timing, relationships, marriage, parents, children, remedies)
-  profile.life_guidance = generateLifeGuidance(cd);
+  profile.life_guidance   = generateLifeGuidance(cd);
+  profile.favourite_days  = computeFavouriteDays(cd);
+  profile.yoga_dosha_library = await fetchYogaDoshaLibrary(cd);
+  if (profile.remedy_data) profile.remedy_data.problems = await fetchProblemRemedies();
+  profile.chara_karakas     = computeCharaKarakas(cd);
+  profile.sade_sati_journey = computeSadeSatiJourney(cd, profile);
+  profile.yuti_analysis     = computeYutiAnalysis(cd);
+  profile.marriage_timing   = computeMarriageTiming(cd);
+  profile.dasha_journey     = computeDashaJourney(cd);
+  profile.antar_narratives  = computeAntardashaNarratives(cd);
+  profile.life_report_narratives = buildLifeReportNarratives(cd, profile.bhava_lord_readings);
+  profile.placement_narratives   = buildPlacementNarratives(cd);
+  profile.asta_vakri        = await fetchAstaVakriAnalysis(cd);
+  if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
 
   return ok(res, { profile });
 });
@@ -556,7 +576,20 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.bhava_lord_readings = await fetchBhavaLordReadings(chart);
 
   // Attach life guidance
-  freshProfile.life_guidance = generateLifeGuidance(chart);
+  freshProfile.life_guidance  = generateLifeGuidance(chart);
+  freshProfile.favourite_days = computeFavouriteDays(chart);
+  freshProfile.yoga_dosha_library = await fetchYogaDoshaLibrary(chart);
+  if (freshProfile.remedy_data) freshProfile.remedy_data.problems = await fetchProblemRemedies();
+  freshProfile.chara_karakas     = computeCharaKarakas(chart);
+  freshProfile.sade_sati_journey = computeSadeSatiJourney(chart, freshProfile);
+  freshProfile.yuti_analysis     = computeYutiAnalysis(chart);
+  freshProfile.marriage_timing   = computeMarriageTiming(chart);
+  freshProfile.dasha_journey     = computeDashaJourney(chart);
+  freshProfile.antar_narratives  = computeAntardashaNarratives(chart);
+  freshProfile.life_report_narratives = buildLifeReportNarratives(chart, freshProfile.bhava_lord_readings);
+  freshProfile.placement_narratives   = buildPlacementNarratives(chart);
+  freshProfile.asta_vakri        = await fetchAstaVakriAnalysis(chart);
+  if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });
@@ -652,6 +685,27 @@ router.get('/:id/strength', async (req, res) => {
   } catch (e) {
     console.error('[Strength] Error:', e.message);
     return fail(res, 'Unable to generate strength report', 500);
+  }
+});
+
+// ── GET /api/kundli/:id/today — personal daily prediction (persisted) ─────────
+router.get('/:id/today', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const prediction = await getOrCreateTodayPrediction(profile, chart);
+    if (!prediction) return fail(res, 'Unable to generate today prediction', 500);
+
+    return ok(res, { prediction });
+  } catch (e) {
+    console.error('[TodayPrediction] Error:', e.message);
+    return fail(res, 'Unable to generate today prediction', 500);
   }
 });
 

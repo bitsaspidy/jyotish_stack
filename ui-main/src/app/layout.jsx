@@ -10,6 +10,11 @@ export const metadata = {
   title: 'Jyotish Stack AI — Ancient Wisdom. Modern Intelligence.',
   description: 'Discover your cosmic destiny with Jyotish Stack AI — Kundli, matchmaking, and personalised Bhavishya Vani powered by Vedic astrology and AI.',
   keywords: ['jyotish', 'kundli', 'astrology', 'bhavishya vani', 'vedic astrology', 'matchmaking', 'horoscope'],
+  icons: {
+    icon: '/logo-icon.svg',
+    shortcut: '/logo-icon.svg',
+    apple: '/logo-icon.svg',
+  },
   openGraph: {
     title: 'Jyotish Stack AI',
     description: 'Ancient Vedic wisdom meets modern AI intelligence.',
@@ -17,6 +22,7 @@ export const metadata = {
     siteName: 'Jyotish Stack AI',
     locale: 'en_IN',
     type: 'website',
+    images: [{ url: '/logo.svg', width: 800, height: 220, alt: 'Jyotish Stack AI' }],
   },
 };
 

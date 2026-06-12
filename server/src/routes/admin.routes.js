@@ -9,7 +9,9 @@ const { ok, fail } = require('../utils/response');
 const {
   parseJsonMaybe, buildKundliListSummary, ensureCalculatedChart, calcAndSave,
   buildFullKundliResponse, generateVarshphal, computeKundliStrength,
+  getOrCreateTodayPrediction, fetchPredictionHistory, buildKundliReportExtras,
 } = require('../services/kundli-admin.service');
+const { kundliReportPdf } = require('../services/report.service');
 
 // Async error wrapper — passes any thrown/rejected error to Express global handler
 // (Express 4 does NOT auto-handle async errors; without this, unhandled rejections
@@ -234,6 +236,45 @@ router.patch('/plans/:id', ah(async (req, res) => {
 }));
 
 // ─── KUNDLI MANAGEMENT ───────────────────────────────────────────────────────
+
+// Create a kundli for any user (admin override — no ownership restriction)
+router.post('/kundlis', ah(async (req, res) => {
+  const { user_email, name, date_of_birth, time_of_birth, place_of_birth,
+          latitude, longitude, timezone_offset, gender } = req.body;
+
+  if (!user_email || !name || !date_of_birth || !time_of_birth || !place_of_birth
+      || latitude == null || longitude == null || timezone_offset == null || !gender)
+    return fail(res, 'user_email and all birth details are required', 400);
+
+  const user = await db('users').where({ email: user_email.trim().toLowerCase() }).first();
+  if (!user) return fail(res, `No user found with email "${user_email}"`, 404);
+
+  const newUuid = uuidv4();
+  const [id] = await db('kundli_profiles').insert({
+    uuid: newUuid, user_id: user.id,
+    name, date_of_birth, time_of_birth, place_of_birth,
+    latitude, longitude, timezone_offset, gender,
+  });
+
+  const profile = await db('kundli_profiles').where({ id }).first();
+  const chart   = await calcAndSave(profile);
+
+  return ok(res, { uuid: newUuid, profile, chart_calculated: !!chart }, 'Kundli created for user', 201);
+}));
+
+// Jyotish Knowledge Base (Class 1 PDF — jyotish_basics: Vedas, Vedangas, Angas, Karma, Hora, Graha BPHS)
+router.get('/jyotish-basics', ah(async (req, res) => {
+  const rows = await db('jyotish_basics').orderBy([{ column: 'category' }, { column: 'sort_order' }]);
+  const parsed = rows.map((r) => {
+    let extra = r.extra_data;
+    if (typeof extra === 'string') { try { extra = JSON.parse(extra); } catch { extra = null; } }
+    return { ...r, extra_data: extra };
+  });
+  const grouped = {};
+  parsed.forEach((r) => { (grouped[r.category] = grouped[r.category] || []).push(r); });
+  return ok(res, { categories: grouped, total: parsed.length });
+}));
+
 // List all kundli profiles across all users (paginated + searchable)
 router.get('/kundlis', ah(async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page)  || 1);
@@ -313,6 +354,39 @@ router.get('/kundlis/:uuid/strength', ah(async (req, res) => {
   return ok(res, { strength });
 }));
 
+// Today's personal prediction (persisted in predictions table)
+router.get('/kundlis/:uuid/today', ah(async (req, res) => {
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  const prediction = await getOrCreateTodayPrediction(profile, chart);
+  if (!prediction) return fail(res, 'Unable to generate prediction', 500);
+  return ok(res, { prediction });
+}));
+
+// Stored prediction history for one kundli (what the user has been shown)
+router.get('/kundlis/:uuid/predictions', ah(async (req, res) => {
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  const history = await fetchPredictionHistory(profile.id, Math.min(100, parseInt(req.query.limit) || 30));
+  return ok(res, { history });
+}));
+
+// Designed PDF report (same as user-side report)
+router.get('/kundlis/:uuid/report.pdf', ah(async (req, res) => {
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  const extras = await buildKundliReportExtras(chart, profile);
+  const pdf = kundliReportPdf(profile, chart, extras);
+  const safe = String(profile.name || 'kundli').replace(/[^a-z0-9-_]+/gi, '-').slice(0, 60);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safe}-kundli-report.pdf"`);
+  return res.send(pdf);
+}));
+
 // Force recalculate (admin override)
 router.post('/kundlis/:uuid/recalculate', ah(async (req, res) => {
   const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
@@ -333,6 +407,27 @@ router.get('/email-logs', ah(async (req, res) => {
     db('email_logs').orderBy('created_at', 'desc').limit(20).offset(offset),
   ]);
   return ok(res, { logs, pagination: { page, limit: 20, total: Number(total.count) } });
+}));
+
+// ─── PANCHANG ────────────────────────────────────────────────────────────────
+const { calculateDailyPanchang } = require('../services/helpers/panchang');
+
+router.get('/panchang', ah(async (req, res) => {
+  const { date, lat, lon, tz, place } = req.query;
+  if (!date || lat === undefined || lon === undefined || tz === undefined)
+    return fail(res, 'date, lat, lon, tz are required', 400);
+
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return fail(res, 'date must be YYYY-MM-DD', 400);
+
+  const panchang = calculateDailyPanchang({
+    year, month, day,
+    lat: parseFloat(lat),
+    lon: parseFloat(lon),
+    tz:  parseFloat(tz),
+  });
+
+  return ok(res, { panchang, place: place || null });
 }));
 
 module.exports = router;

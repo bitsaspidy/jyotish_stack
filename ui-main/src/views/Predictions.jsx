@@ -108,7 +108,7 @@ function LifeAreaCard({ areaKey, area, chart, lang, delay = 0 }) {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           {area?.outlook && <OutlookBadge outlook={area.outlook} lang={lang} />}
-          <span style={{ color:'rgba(245,240,232,0.3)', fontSize:12 }}>{open ? '▲' : '▼'}</span>
+          <span style={{ color:'rgba(245,240,232,0.68)', fontSize:12 }}>{open ? '▲' : '▼'}</span>
         </div>
       </button>
 
@@ -273,6 +273,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
   const hasDashaRemedy  = !!remedyData?.dasha_planet;
   const hasLagnaRemedy  = !!remedyData?.lagna_planet;
   const hasPujaSequence = remedyData?.puja_sequence?.length > 0;
+  const hasProblems     = remedyData?.problems?.length > 0;
+  const hasSuite        = remedyData?.suite?.items?.length > 0;
   const hasFallback     = fallbackRemedies?.length > 0;
 
   if (!hasLifeIshta && !hasDashaRemedy && !hasFallback) return null;
@@ -282,6 +284,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
     hasDashaRemedy  && { key:'dasha',  label: chooseText(lang, 'Dasha Remedy', 'दशा उपाय')   },
     hasLagnaRemedy  && { key:'lagna',  label: chooseText(lang, 'Lagna Remedy', 'लग्न उपाय')   },
     hasPujaSequence && { key:'puja',   label: chooseText(lang, 'Puja Sequence', 'पूजा क्रम')  },
+    hasProblems     && { key:'problems', label: chooseText(lang, 'Problem Remedies', 'समस्या उपाय') },
+    hasSuite        && { key:'sacred',   label: chooseText(lang, 'Rudraksha · Yantra · Daan', 'रुद्राक्ष · यंत्र · दान') },
   ].filter(Boolean);
   const activeTab = tabs.some((item) => item.key === tab) ? tab : tabs[0]?.key;
 
@@ -391,6 +395,80 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
       {activeTab === 'ishta' && renderLifeIshtaCard()}
       {activeTab === 'dasha' && renderPlanetCard(remedyData?.dasha_planet)}
       {activeTab === 'lagna' && renderPlanetCard(remedyData?.lagna_planet)}
+
+      {activeTab === 'sacred' && hasSuite && (
+        <div className="space-y-4">
+          {remedyData.suite.items.map((it) => (
+            <div key={it.planet}>
+              <p style={{ color:'#D4AF37', fontSize:13, fontWeight:700, marginBottom:3 }} className="font-devanagari">
+                {chooseText(lang, `For ${it.planet}`, `${it.planet_hi} के लिए`)}
+              </p>
+              <p style={{ color:'rgba(245,240,232,0.5)', fontSize:10.5, lineHeight:1.6, marginBottom:8 }} className="font-devanagari">
+                {lang === 'hi' ? it.reason_hi : it.reason_en}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { label: chooseText(lang,'Rudraksha','रुद्राक्ष'), title: it.rudraksha.mukhi, txt: lang==='hi' ? it.rudraksha.hi : it.rudraksha.en, color:'#A78BFA', icon:'📿' },
+                  { label: chooseText(lang,'Yantra','यंत्र'), title: it.yantra.name, txt: lang==='hi' ? it.yantra.hi : it.yantra.en, color:'#60A5FA', icon:'🔯' },
+                  { label: chooseText(lang,'Daan (Charity)','दान'), title: lang==='hi' ? it.daan.day_hi : it.daan.day, txt: lang==='hi' ? it.daan.hi : it.daan.en, color:'#22C55E', icon:'🤲' },
+                ].map((c) => (
+                  <div key={c.label} style={{ borderRadius:8, padding:'10px 12px', background:'rgba(255,255,255,0.025)', borderTop:`2px solid ${c.color}`, border:`1px solid ${c.color}33` }}>
+                    <p style={{ color:c.color, fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:3 }}>{c.icon} {c.label}</p>
+                    <p style={{ color:'rgba(245,240,232,0.92)', fontSize:11.5, fontWeight:700, marginBottom:4 }} className="font-devanagari">{c.title}</p>
+                    <p style={{ color:'rgba(245,240,232,0.55)', fontSize:10, lineHeight:1.65 }} className="font-devanagari">{c.txt}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div style={{ padding:'10px 12px', borderRadius:8, background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.15)' }}>
+            <p style={{ color:'#D4AF37', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
+              📌 {chooseText(lang, 'How to use', 'उपयोग विधि')}
+            </p>
+            <p style={{ color:'rgba(245,240,232,0.7)', fontSize:11, lineHeight:1.75 }} className="font-devanagari">
+              {lang === 'hi' ? remedyData.suite.wearing_hi : remedyData.suite.wearing_en}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'problems' && hasProblems && (
+        <div className="space-y-3">
+          <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, lineHeight:1.7, marginBottom:10 }}>
+            {chooseText(lang, 'Specific life problems and their classical planetary remedies — devata, mantras and method.', 'विशिष्ट जीवन समस्याएं और उनके शास्त्रीय ग्रह उपाय — देवता, मंत्र और विधि।')}
+          </p>
+          {remedyData.problems.map((pr) => {
+            const mantras = lang === 'hi' ? (pr.mantras_hi?.length ? pr.mantras_hi : pr.mantras_en) : pr.mantras_en;
+            return (
+              <div key={pr.id} style={{ padding:'12px 14px', borderRadius:8, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.12)' }}>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <p style={{ color:'#D4AF37', fontSize:13, fontWeight:700, fontFamily:'var(--font-devanagari),Georgia,serif' }}>
+                    {lang === 'hi' ? (pr.problem_hi || pr.problem_en) : pr.problem_en}
+                  </p>
+                  <span style={{ fontSize:9, color:'#A78BFA', background:'rgba(167,139,250,0.1)', borderRadius:10, padding:'2px 8px', fontWeight:700, whiteSpace:'nowrap' }}>
+                    {pr.planet}
+                  </span>
+                </div>
+                {(pr.devata_en || pr.devata_hi) && (
+                  <p style={{ color:'rgba(245,240,232,0.7)', fontSize:11, marginBottom:6, fontFamily:'var(--font-devanagari),sans-serif' }}>
+                    🙏 {chooseText(lang, 'Devata', 'देवता')}: {lang === 'hi' ? (pr.devata_hi || pr.devata_en) : pr.devata_en}
+                  </p>
+                )}
+                {mantras?.length > 0 && mantras.map((m, i) => (
+                  <p key={i} style={{ color:'rgba(245,240,232,0.82)', fontSize:11.5, lineHeight:1.7, marginBottom:3, fontFamily:'var(--font-devanagari),sans-serif' }}>
+                    ◆ {m}
+                  </p>
+                ))}
+                {(pr.notes_en || pr.notes_hi) && (
+                  <p style={{ color:'rgba(245,240,232,0.5)', fontSize:10.5, lineHeight:1.65, marginTop:5, fontFamily:'var(--font-devanagari),sans-serif' }}>
+                    📌 {lang === 'hi' ? (pr.notes_hi || pr.notes_en) : pr.notes_en}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {activeTab === 'puja' && hasPujaSequence && (
         <div className="space-y-3">
@@ -517,7 +595,7 @@ export default function Predictions() {
   return (
     <div className="relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={70} />
-      <div className="relative z-10 max-w-6xl mx-auto">
+      <div className="relative z-10 max-w-8xl mx-auto">
 
         {/* Page header */}
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
@@ -666,12 +744,12 @@ export default function Predictions() {
                         <div style={{ padding:'6px 14px', borderRadius:20, background:'rgba(212,175,55,0.12)', border:'1px solid rgba(212,175,55,0.35)' }}>
                           <p style={{ color:'rgba(245,240,232,0.4)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.12em' }}>{t('Mahadasha', 'महादशा')}</p>
                           <p style={{ color:'#D4AF37', fontSize:16, fontWeight:700, fontFamily:'Georgia,serif', marginTop:2 }}>{planetName(pred.current_period.mahadasha?.lord, lang)}</p>
-                          <p style={{ color:'rgba(245,240,232,0.3)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(pred.current_period.mahadasha?.end), lang)}</p>
+                          <p style={{ color:'rgba(245,240,232,0.68)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(pred.current_period.mahadasha?.end), lang)}</p>
                         </div>
                         <div style={{ padding:'6px 14px', borderRadius:20, background:'rgba(167,139,250,0.1)', border:'1px solid rgba(167,139,250,0.3)' }}>
                           <p style={{ color:'rgba(245,240,232,0.4)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.12em' }}>{t('Antardasha', 'अंतर्दशा')}</p>
                           <p style={{ color:'#A78BFA', fontSize:16, fontWeight:700, fontFamily:'Georgia,serif', marginTop:2 }}>{planetName(pred.current_period.antardasha?.lord, lang)}</p>
-                          <p style={{ color:'rgba(245,240,232,0.3)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(pred.current_period.antardasha?.end), lang)}</p>
+                          <p style={{ color:'rgba(245,240,232,0.68)', fontSize:9, marginTop:2 }}>{untilText(fmtDate(pred.current_period.antardasha?.end), lang)}</p>
                         </div>
                       </div>
                       <p style={{ color:'rgba(245,240,232,0.8)', fontSize:13, lineHeight:1.85 }}>
@@ -693,7 +771,7 @@ export default function Predictions() {
                   {/* ── Life Areas ── */}
                   {pred?.life_areas && (
                     <div>
-                      <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.3em', marginBottom:12 }}>
+                      <p style={{ color:'rgba(245,240,232,0.68)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.3em', marginBottom:12 }}>
                         {t('Life Area Readings', 'जीवन क्षेत्र रीडिंग')}
                       </p>
                       <div className="space-y-3">
@@ -731,7 +809,7 @@ export default function Predictions() {
                         borderRadius:12, border:'1px solid rgba(212,175,55,0.12)',
                         background:'rgba(17,20,40,0.65)', padding:20,
                       }}>
-                      <LifeGuidancePanel guidance={lifeGuidance} lang={lang} />
+                      <LifeGuidancePanel guidance={lifeGuidance} lang={lang} marriageTiming={selected?.marriage_timing} />
                     </motion.div>
                   )}
                 </>

@@ -284,7 +284,8 @@ test('calculates Mangal Dosha and transit-backed prediction sections', () => {
   const gochar = calculateTransitSummary(chart, undefined, new Date('2026-06-02T00:00:00Z'));
 
   assert.equal(chart.mangal_dosha.has_dosha, true);
-  assert.equal(chart.mangal_dosha.severity, 'moderate');
+  // Jupiter aspects Mars in reference chart → cancellation reduces moderate → mild (per PDF Class 17)
+  assert.equal(chart.mangal_dosha.severity, 'mild');
   assert.equal(chart.mangal_dosha.checks.length, 3);
 
   assert.equal(Object.keys(gochar.planets).length, 9);
@@ -313,12 +314,17 @@ test('calculates Ashtakoot Guna Milan with Mangal compatibility', () => {
 
   const result = calculateAshtakoot(boyChart, girlChart);
 
-  assert.equal(result.system, 'Ashtakoot Guna Milan');
+  assert.ok(result.system.includes('Ashtakoot Guna Milan'));
   assert.equal(result.kootas.length, 8);
   assert.equal(result.max, 36);
   assert.equal(result.total, 17.5);
   assert.equal(result.verdict, 'caution');
   assert.equal(result.mangal_compatible, true);
+  // Dashakoot extras
+  assert.ok(result.rajju, 'rajju field present');
+  assert.ok(result.vedha, 'vedha field present');
+  assert.equal(typeof result.rajju.has_dosha, 'boolean');
+  assert.equal(typeof result.vedha.has_dosha, 'boolean');
 });
 
 test('generates PDF report buffers for Kundli and Matchmaking exports', () => {

@@ -60,6 +60,8 @@ function computeAvastha(rashiNum, degreeInSign) {
 // Orbs per BPHS — reduced orb when planet is retrograde for Mercury/Venus
 const COMBUST_ORB       = { Moon:12, Mars:17, Mercury:14, Jupiter:11, Venus:10, Saturn:15 };
 const COMBUST_ORB_RETRO = { Mercury:12, Venus:8 };
+// Deep combustion (Teevra Maudhya) — AstroAnsh Class 13 / BPHS, Phaladeepika, Saravali
+const COMBUST_DEEP      = { Moon:6, Mars:8, Mercury:5, Jupiter:5, Venus:3, Saturn:7 };
 function _angularDiff(a, b) { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; }
 
 // ── Main Chart Calculation ────────────────────────────────────────────────────
@@ -123,7 +125,10 @@ function calculateVedicChart(p) {
     const baseOrb = COMBUST_ORB[name];
     if (!baseOrb) { pd.is_combust = false; continue; }
     const orb = pd.is_retrograde && COMBUST_ORB_RETRO[name] ? COMBUST_ORB_RETRO[name] : baseOrb;
-    pd.is_combust = _angularDiff(pd.longitude, sunLon) <= orb;
+    const dist = _angularDiff(pd.longitude, sunLon);
+    pd.is_combust    = dist <= orb;
+    pd.sun_distance  = +dist.toFixed(2);
+    pd.combust_level = pd.is_combust ? (dist <= (COMBUST_DEEP[name] || orb / 2) ? 'deep' : 'mild') : null;
   }
 
   const ascRashi   = rashiFromDeg(sidAsc);
