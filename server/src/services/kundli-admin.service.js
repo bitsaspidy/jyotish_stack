@@ -356,6 +356,7 @@ async function buildFullKundliResponse(uuid) {
   profile.marriage_timing    = computeMarriageTiming(chart);
   profile.dasha_journey      = computeDashaJourney(chart);
   profile.antar_narratives   = computeAntardashaNarratives(chart);
+  profile.life_report_narratives = require('./helpers/life-report-narrative').buildLifeReportNarratives(chart, profile.bhava_lord_readings);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
 
   // Attach owning user info

@@ -218,7 +218,30 @@ function SectionWithIndicators({ section, lang }) {
   );
 }
 
-export default function LifeReportPanel({ lifeReport, lang }) {
+// Multi-paragraph "true understanding" reading per section — composed
+// server-side from BPHS house-lord interpretations + karaka conditions +
+// running dasha (profile.life_report_narratives, life-report-narrative.js)
+function DetailedReading({ paras, lang }) {
+  if (!paras?.length) return null;
+  return (
+    <div style={{ marginTop:14, border:'1px solid rgba(212,175,55,0.22)', borderRadius:10,
+      background:'linear-gradient(150deg, rgba(212,175,55,0.06), rgba(255,255,255,0.015) 50%)', padding:'13px 15px' }}>
+      <p style={{ color:'#D4AF37', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:9 }}
+        className="font-devanagari">
+        📖 {t(lang, 'Detailed Reading — True Understanding', 'विस्तृत विश्लेषण — सच्ची समझ')}
+      </p>
+      <div className="space-y-2.5">
+        {paras.map((p, i) => (
+          <p key={i} className="text-ivory/75 text-[11.5px] leading-[1.85] font-devanagari">
+            {lang === 'hi' ? (p.hi || p.en) : p.en}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function LifeReportPanel({ lifeReport, lang, narratives = null }) {
   const [activeTab, setActiveTab] = useState('profile');
 
   if (!lifeReport?.sections) return null;
@@ -287,6 +310,8 @@ export default function LifeReportPanel({ lifeReport, lang }) {
             ? <ProfileSection section={activeSection} lang={lang} />
             : <SectionWithIndicators section={activeSection} lang={lang} />
           }
+
+          <DetailedReading paras={narratives?.[activeTab]} lang={lang} />
         </motion.div>
       </AnimatePresence>
     </motion.div>

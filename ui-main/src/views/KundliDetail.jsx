@@ -842,7 +842,7 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: LIFE REPORT ════════════════════════════════════════════ */}
         {activeTab === 'life-report' && (
         <div>
-          {chart?.life_report?.sections && <LifeReportPanel lifeReport={chart.life_report} lang={lang} />}
+          {chart?.life_report?.sections && <LifeReportPanel lifeReport={chart.life_report} lang={lang} narratives={kundli?.life_report_narratives} />}
         </div>
         )}
 
