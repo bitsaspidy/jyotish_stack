@@ -12,6 +12,41 @@ function hinduMasa(sunSiderealDeg) {
   return { name: MASA_NAMES[idx], name_hi: MASA_NAMES_HI[idx], num: idx + 1 };
 }
 
+// ── Samvat years (Vikram, Shaka, Kali) + 60-year Samvatsara cycle ─────────────
+const SAMVATSARA_NAMES = [
+  'Prabhava','Vibhava','Shukla','Pramoda','Prajapati','Angirasa','Shrimukha','Bhava','Yuva','Dhatri',
+  'Ishvara','Bahudhanya','Pramathi','Vikrama','Vrisha','Chitrabhanu','Svabhanu','Tarana','Parthiva','Vyaya',
+  'Sarvajit','Sarvadhari','Virodhi','Vikriti','Khara','Nandana','Vijaya','Jaya','Manmatha','Durmukha',
+  'Hemalamba','Vilambi','Vikari','Sharvari','Plava','Shubhakrit','Shobhakrit','Krodhi','Vishvavasu','Parabhava',
+  'Plavanga','Kilaka','Saumya','Sadharana','Virodhikrit','Paridhavi','Pramadi','Ananda','Rakshasa','Anala',
+  'Pingala','Kalayukta','Siddharthi','Raudra','Durmati','Dundubhi','Rudhirodgari','Raktakshi','Krodhana','Akshaya',
+];
+const SAMVATSARA_NAMES_HI = [
+  'प्रभव','विभव','शुक्ल','प्रमोद','प्रजापति','अंगिरस','श्रीमुख','भाव','युव','धाता',
+  'ईश्वर','बहुधान्य','प्रमाथी','विक्रम','वृष','चित्रभानु','स्वभानु','तारण','पार्थिव','व्यय',
+  'सर्वजित','सर्वधारी','विरोधी','विकृति','खर','नंदन','विजय','जय','मन्मथ','दुर्मुख',
+  'हेमलंब','विलंबी','विकारी','शार्वरी','प्लव','शुभकृत','शोभकृत','क्रोधी','विश्वावसु','पराभव',
+  'प्लवंग','कीलक','सौम्य','साधारण','विरोधकृत','परिधावी','प्रमादी','आनंद','राक्षस','अनल',
+  'पिंगल','कालयुक्त','सिद्धार्थी','रौद्र','दुर्मति','दुंदुभि','रुधिरोद्गारी','रक्ताक्षी','क्रोधन','अक्षय',
+];
+
+function calculateSamvat(year, month, masaNum) {
+  // The Hindu year begins at Chaitra (Mar/Apr). For Jan–Apr dates whose masa is
+  // still Pausa/Magha/Phalguna (10–12), the year started in the previous CE year.
+  const startYear = (month <= 4 && masaNum >= 10) ? year - 1 : year;
+  const vikram = startYear + 57;   // Vikram Samvat (Chaitra-based)
+  const shaka  = startYear - 78;   // Shaka / Shalivahana Samvat
+  const kali   = startYear + 3101; // Kali Samvat
+  // Anchor: Shaka 1947 (2025–26 CE) = Vishvavasu (#39): (1947+11) % 60 = 38 → idx 38
+  const idx = (((shaka + 11) % 60) + 60) % 60;
+  return {
+    vikram, shaka, kali,
+    samvatsara_num: idx + 1,
+    samvatsara_en:  SAMVATSARA_NAMES[idx],
+    samvatsara_hi:  SAMVATSARA_NAMES_HI[idx],
+  };
+}
+
 // ── Nitya Yoga ────────────────────────────────────────────────────────────────
 const NITYA_YOGA_NAMES = ['Vishkambha','Preeti','Ayushman','Saubhagya','Sobhana','Atiganda','Sukarma','Dhriti','Shula','Ganda','Vriddhi','Dhruva','Vyaghat','Harshana','Vajra','Siddhi','Vyatipata','Variyan','Parigha','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra','Vaidhriti'];
 const YOGA_AUSPICIOUS  = new Set(['Preeti','Ayushman','Saubhagya','Sobhana','Sukarma','Dhriti','Vriddhi','Dhruva','Harshana','Siddhi','Shiva','Siddha','Sadhya','Shubha','Shukla','Brahma','Indra']);
@@ -109,7 +144,8 @@ function calculatePanchang(sunSidLon, moonSidLon, year, month, day, hour, minute
   const vara      = calculateVara(year, month, day, hour, minute, tzOffsetHrs);
   const masa      = hinduMasa(sunSidLon);
   const pahar     = sunRise.sunrise_mins ? calculatePahar(hour, minute, sunRise.sunrise_mins) : null;
-  return { masa, tithi, vara, yoga, karana, pahar, moon_phase: tithi.num, sunrise: sunRise.sunrise, sunset: sunRise.sunset, sunrise_mins: sunRise.sunrise_mins, sunset_mins: sunRise.sunset_mins };
+  const samvat    = calculateSamvat(year, month, masa.num);
+  return { masa, samvat, tithi, vara, yoga, karana, pahar, moon_phase: tithi.num, sunrise: sunRise.sunrise, sunset: sunRise.sunset, sunrise_mins: sunRise.sunrise_mins, sunset_mins: sunRise.sunset_mins };
 }
 
 // ── calculateAstroDetails ─────────────────────────────────────────────────────
@@ -416,6 +452,7 @@ function calculateDailyPanchang({ year, month, day, lat, lon, tz }) {
     date: `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`,
     vara,
     masa,
+    samvat: calculateSamvat(year, month, masa.num),
     ritu,
     ayana,
     sunrise:  sunData.sunrise,
@@ -435,4 +472,4 @@ function calculateDailyPanchang({ year, month, day, lat, lon, tz }) {
   };
 }
 
-module.exports = { hinduMasa, calculateNityaYoga, calculateTithi, calculateKarana, calculateVara, calculatePahar, sunriseSunset, calculatePanchang, calculateAstroDetails, calculatePaya, calculateYunja, getTatva, NAK_AKSHAR, getRitu, getAyana, moonriseMoonset, calculateChaughadiya, calculateHora, calculateSpecialYogas, computeEndTimes, jdToLocalHMS, calculateDailyPanchang };
+module.exports = { hinduMasa, calculateSamvat, calculateNityaYoga, calculateTithi, calculateKarana, calculateVara, calculatePahar, sunriseSunset, calculatePanchang, calculateAstroDetails, calculatePaya, calculateYunja, getTatva, NAK_AKSHAR, getRitu, getAyana, moonriseMoonset, calculateChaughadiya, calculateHora, calculateSpecialYogas, computeEndTimes, jdToLocalHMS, calculateDailyPanchang };

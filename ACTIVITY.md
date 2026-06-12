@@ -2,7 +2,51 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-12 (Session 41)
+> Last updated: 2026-06-12 (Session 42)
+
+---
+
+## Session 42 - 2026-06-12 | GitHub Visibility Check + Latest Feature Push Prep
+
+### What was found
+
+- GitHub default branch is `main`, while the latest Codex work was on `origin/codex/yogas-doshas-hindi-ui`.
+- `origin/main` had merge commit `7ca534f`, but it did not contain the newest branch commits including `509ea82 Add Asta Vakri analysis`.
+- The local workspace also had newer uncommitted work after the previous push, so those files were not visible on GitHub yet.
+
+### What was done
+
+**Backend:**
+- Added `buildPlacementNarratives()` integration so Kundli detail, admin detail, and PDF extras include per-planet Graha Phal placement narratives.
+- Added Samvat calculation in `server/src/services/helpers/panchang.js` for Vikram, Shaka, Kali, and Samvatsara.
+- Added Samvat output to daily Panchang and Kundli Panchang data.
+- Extended premium Kundli PDF with Avakahada Chakra fields and Graha Phal placement narratives.
+
+**Frontend:**
+- Added `AvakahadaPanel` to user and admin Kundli detail views.
+- Added `PlacementNarrativesPanel` to user and admin Kundli detail views.
+- Panchang Muhurta page now shows Vikram Samvat, Shaka Samvat, Samvatsara, and Kali Samvat.
+
+**Build stability:**
+- Updated `ui-main/next.config.js` with serialized build settings (`experimental.cpus = 1`, `experimental.webpackBuildWorker = false`) after Next generated an incomplete `app-paths-manifest.json` on Windows and failed page-data collection.
+
+### Verification
+
+```bash
+git fetch origin --prune
+git ls-remote origin refs/heads/main refs/heads/codex/yogas-doshas-hindi-ui
+node --check server/src/routes/kundli.routes.js
+node --check server/src/services/helpers/panchang.js
+node --check server/src/services/helpers/placement-narratives.js
+node --check server/src/services/kundli-admin.service.js
+node --check server/src/services/pdf/kundli-report.js
+git diff --check
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 31/31 pages generated after serialized Next build config
+```
+
+### Git/worktree note
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 

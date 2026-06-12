@@ -213,6 +213,7 @@ function buildHousesMap(ascRashi, planets, retroSrc) {
 // ── helpers ───────────────────────────────────────────────────────────────────
 const nm = (v) => (v && typeof v === 'object' ? (v.name_en || v.en || v.name || v.day_en || '') : (v ?? ''));
 const dt = (v) => String(v || '').slice(0, 10);
+const capz = (v) => (typeof v === 'string' && v ? v[0].toUpperCase() + v.slice(1) : v);
 const scoreColor = (s) => (s >= 70 ? GREEN : s >= 55 ? '#84CC16' : s >= 40 ? AMBER : RED);
 const STRENGTH_COLOR = { strong: GREEN, moderate: AMBER, weak: RED, mild: BLUE };
 
@@ -222,7 +223,7 @@ function buildKundliReport(profile, chart, extras = {}) {
   const { strength, life_guidance: lg, favourite_days: fav, library, remedy, problems,
           chara_karakas: karakas, sade_sati: sadeSati, dasha_journey: dashaJourney, numerology,
           yuti, antar_narratives: antarNarr, remedy_suite: suite, marriage_timing: marriage,
-          asta_vakri: astaVakri } = extras;
+          asta_vakri: astaVakri, placement_narratives: placements } = extras;
   const maha  = (chart.dasha || []).find((p) => p.is_current) || chart.dasha?.[0];
   const antar = maha?.antardasha?.find((p) => p.is_current) || maha?.antardasha?.[0];
 
@@ -286,19 +287,22 @@ function buildKundliReport(profile, chart, extras = {}) {
     ['Tithi', nm(pan.tithi)], ['Vara (Weekday)', nm(pan.vara)],
     ['Nakshatra', `${chart.nakshatra?.en || ''} (Pada ${chart.nakshatra?.pada || ''})`], ['Yoga', nm(pan.yoga)],
     ['Karana', nm(pan.karana)], ['Masa (Month)', nm(pan.masa)],
+    ['Vikram Samvat', pan.samvat ? `${pan.samvat.vikram} (${pan.samvat.samvatsara_en})` : null], ['Shaka Samvat', pan.samvat?.shaka],
     ['Sunrise', pan.sunrise], ['Sunset', pan.sunset],
     ['Lunar Day (of 30)', pan.moon_phase], ['Pahar', pan.pahar],
   ]);
   r.gap(4);
-  r.heading('Astro Details');
+  r.heading('Avakahada Chakra (Astro Details)');
   const ad = chart.astro_details || {};
   r.kvGrid([
-    ['Varna', nm(ad.varna)], ['Vashya', nm(ad.vashya)],
-    ['Yoni', nm(ad.yoni)], ['Gana', nm(ad.gana)],
-    ['Nadi', nm(ad.nadi)], ['Tatva', nm(ad.tatva)],
+    ['Rashi (Moon Sign)', nm(ad.moon_sign_en)], ['Rashi Swami', nm(ad.moon_sign_lord)],
+    ['Lagna', nm(ad.ascendant_rashi_en)], ['Lagna Swami', nm(ad.ascendant_lord)],
+    ['Nakshatra-Charan', `${ad.moon_nakshatra_en || chart.nakshatra?.en || ''} - ${ad.moon_pada || chart.nakshatra?.pada || ''}`], ['Nakshatra Swami', nm(ad.moon_nakshatra_lord)],
+    ['Varna', capz(nm(ad.varna))], ['Vashya', capz(nm(ad.vashya))],
+    ['Yoni', capz(nm(ad.yoni))], ['Gana', capz(nm(ad.gana))],
+    ['Nadi', capz(nm(ad.nadi))], ['Tatva', capz(nm(ad.tatva))],
     ['Yunja', ad.yunja?.yunja || nm(ad.yunja)], ['Paya', ad.paya?.paya || nm(ad.paya)],
-    ['Naam Akshar', nm(ad.naam_akshar)], ['Moon Sign Lord', nm(ad.moon_sign_lord)],
-    ['Ascendant Lord', nm(ad.ascendant_lord)], ['Nakshatra Lord', nm(ad.moon_nakshatra_lord)],
+    ['Naam Akshar', nm(ad.naam_akshar)], ['Nakshatra Deity', nm(chart.nakshatra?.deity_en)],
   ]);
 
   // ════ 2. CHARTS ════
@@ -369,6 +373,31 @@ function buildKundliReport(profile, chart, extras = {}) {
       r.gap(1);
     });
   }
+  // ── Graha Phal — per-planet placement narratives (sign + house) ──
+  if (placements?.length) {
+    r.gap(4);
+    r.heading('Graha Phal — What Each Planet Says About You');
+    r.para('A direct reading of every planet\'s rashi (sign) and bhava (house) placement in your chart — the two coordinates that shape how each graha expresses in your life.', { size: 7.6 });
+    placements.forEach((pl) => {
+      r.ensure(56);
+      let bx = M;
+      const title = `${pl.planet} in ${pl.rashi_en} - House ${pl.house}`;
+      r.d.text(bx, r.y + 1, title, { size: 9, bold: true, color: GOLD });
+      bx += r.d.textWidth(title, 9, true) + 10;
+      const dig = (pl.dignity || '').toLowerCase();
+      if (/exalt/.test(dig))      bx += r.badge(bx, r.y, 'EXALTED', GREEN) + 5;
+      else if (/debil/.test(dig)) bx += r.badge(bx, r.y, 'DEBILITATED', RED) + 5;
+      else if (/own|mool/.test(dig)) bx += r.badge(bx, r.y, 'OWN SIGN', BLUE) + 5;
+      if (pl.is_retrograde) bx += r.badge(bx, r.y, 'RETRO', VIOLET) + 5;
+      if (pl.is_combust)    r.badge(bx, r.y, pl.combust_level === 'deep' ? 'DEEP COMBUST' : 'COMBUST', pl.combust_level === 'deep' ? RED : AMBER);
+      r.y += 15;
+      if (pl.sign_text?.en)  r.para(pl.sign_text.en,  { size: 7.4, color: IVORY });
+      if (pl.house_text?.en) r.para(pl.house_text.en, { size: 7.4, color: IVORY });
+      (pl.modifiers || []).forEach((m) => { if (m.en) r.para(`* ${m.en}`, { size: 7, color: AMBER }); });
+      r.gap(3);
+    });
+  }
+
   // ── Combustion & Retrograde analysis (Class 13) ──
   if (astaVakri && (astaVakri.combust?.length || astaVakri.retro?.length)) {
     r.gap(4);
@@ -388,7 +417,11 @@ function buildKundliReport(profile, chart, extras = {}) {
         r.y += 10.5;
       });
       if (c.house_effect?.description_en) r.para(`In house ${c.house}: ${c.house_effect.description_en}`, { size: 7, color: AMBER });
-      if (c.remedy) r.para(`Remedy: ${c.remedy.mantra} | ${c.remedy.daan_en} | ${c.remedy.yantra} | ${c.remedy.gemstone}`, { size: 6.8, color: VIOLET });
+      if (c.remedy) {
+        // mantra is stored as "देवनागरी | Latin transliteration" — keep the Latin part for the ASCII-only PDF
+        const mantra = String(c.remedy.mantra || '').split('|').map((s) => s.trim()).filter((s) => /[A-Za-z]/.test(s)).pop() || '';
+        r.para(`Remedy: ${mantra} | ${c.remedy.daan_en} | ${c.remedy.yantra} | ${c.remedy.gemstone}`, { size: 6.8, color: VIOLET });
+      }
       r.gap(3);
     });
     (astaVakri.retro || []).forEach((rt) => {

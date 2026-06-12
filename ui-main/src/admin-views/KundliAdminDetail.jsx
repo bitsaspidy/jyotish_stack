@@ -16,6 +16,8 @@ import CharaKarakaPanel     from '../components/CharaKarakaPanel';
 import SadeSatiPanel        from '../components/SadeSatiPanel';
 import YutiPanel            from '../components/YutiPanel';
 import AstaVakriPanel       from '../components/AstaVakriPanel';
+import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
+import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import {
   PLANET_META,
@@ -1104,6 +1106,8 @@ export default function KundliAdminDetail({ kundliUuid }) {
       {/* Chara Karakas + Sade Sati Journey (kundli tab) */}
       {activeTab === 'kundli' && (
         <>
+          <AvakahadaPanel chart={chart} lang={lang} />
+          <PlacementNarrativesPanel data={kundli?.placement_narratives} lang={lang} />
           <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
           <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
           <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />

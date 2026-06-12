@@ -10,6 +10,7 @@ const { generateLifeGuidance }  = require('./helpers/life-guidance');
 const { computeFavouriteDays }  = require('./helpers/favourite-days');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('./helpers/cosmic-insights');
 const { computeYutiAnalysis, computeAntardashaNarratives, computeRemedySuite, computeMarriageTiming } = require('./helpers/cosmic-extras');
+const { buildPlacementNarratives } = require('./helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('./helpers/varshphal');
 const { computeKundliStrength } = require('./helpers/kundli-strength');
 
@@ -143,6 +144,7 @@ async function buildKundliReportExtras(chart, profile = null) {
   ]);
   return {
     asta_vakri:     await fetchAstaVakriAnalysis(chart),
+    placement_narratives: buildPlacementNarratives(chart),
     strength:       computeKundliStrength(chart),
     life_guidance:  generateLifeGuidance(chart),
     favourite_days: computeFavouriteDays(chart),
@@ -410,6 +412,7 @@ async function buildFullKundliResponse(uuid) {
   profile.dasha_journey      = computeDashaJourney(chart);
   profile.antar_narratives   = computeAntardashaNarratives(chart);
   profile.life_report_narratives = require('./helpers/life-report-narrative').buildLifeReportNarratives(chart, profile.bhava_lord_readings);
+  profile.placement_narratives   = buildPlacementNarratives(chart);
   profile.asta_vakri         = await fetchAstaVakriAnalysis(chart);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
 

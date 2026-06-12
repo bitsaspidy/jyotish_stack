@@ -492,6 +492,12 @@ export default function PanchangMuhurta() {
                 { label:'Sun Sign', label_hi:'सूर्य राशि', value: T(p.sun_sign.en, p.sun_sign.hi), color:'#F59E0B' },
                 { label:'Moon Sign', label_hi:'चंद्र राशि', value: T(p.moon_sign.en, p.moon_sign.hi), color:'#94A3B8' },
                 { label:'Ayana', label_hi:'अयन', value: T(p.ayana.en, p.ayana.hi), color:'#60A5FA' },
+                ...(p.samvat ? [
+                  { label:'Vikram Samvat', label_hi:'विक्रम संवत', value: String(p.samvat.vikram), color:'#D4AF37' },
+                  { label:'Shaka Samvat', label_hi:'शक संवत', value: String(p.samvat.shaka), color:'#F472B6' },
+                  { label:'Samvatsara', label_hi:'संवत्सर', value: T(p.samvat.samvatsara_en, p.samvat.samvatsara_hi), color:'#10B981' },
+                  { label:'Kali Samvat', label_hi:'कलि संवत', value: String(p.samvat.kali), color:'#818CF8' },
+                ] : []),
               ].map((item, i) => (
                 <div key={i} className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center justify-between">
                   <span className="text-ivory/40 text-xs">{lang === 'hi' ? item.label_hi : item.label}</span>

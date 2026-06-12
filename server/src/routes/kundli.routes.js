@@ -13,6 +13,7 @@ const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction,
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
 const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
 const { buildLifeReportNarratives } = require('../services/helpers/life-report-narrative');
+const { buildPlacementNarratives }  = require('../services/helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
 
@@ -537,6 +538,7 @@ router.get('/:id', async (req, res) => {
   profile.dasha_journey     = computeDashaJourney(cd);
   profile.antar_narratives  = computeAntardashaNarratives(cd);
   profile.life_report_narratives = buildLifeReportNarratives(cd, profile.bhava_lord_readings);
+  profile.placement_narratives   = buildPlacementNarratives(cd);
   profile.asta_vakri        = await fetchAstaVakriAnalysis(cd);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
 
@@ -585,6 +587,7 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.dasha_journey     = computeDashaJourney(chart);
   freshProfile.antar_narratives  = computeAntardashaNarratives(chart);
   freshProfile.life_report_narratives = buildLifeReportNarratives(chart, freshProfile.bhava_lord_readings);
+  freshProfile.placement_narratives   = buildPlacementNarratives(chart);
   freshProfile.asta_vakri        = await fetchAstaVakriAnalysis(chart);
   if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
 
