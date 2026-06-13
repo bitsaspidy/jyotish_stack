@@ -40,9 +40,9 @@ pm2 reload ecosystem.config.js --env production --update-env
 # 7. Save PM2 process list (so it survives server reboot)
 pm2 save
 
-# 8. Reload Nginx
-echo "▶ Reloading Nginx…"
-sudo nginx -t && sudo systemctl reload nginx
+# 8. Reload Apache
+echo "▶ Reloading Apache…"
+sudo apache2ctl configtest && sudo systemctl reload apache2
 
 echo ""
 echo "✅ Deployment complete."
