@@ -18,6 +18,7 @@ const newsletterRoutes = require('./routes/newsletter.routes');
 const settingsRoutes = require('./routes/settings.routes');
 const horoscopeRoutes  = require('./routes/horoscope.routes');
 const panchangRoutes   = require('./routes/panchang.routes');
+const publicRoutes     = require('./routes/public.routes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -66,6 +67,7 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/panchang', panchangRoutes);
+app.use('/api/public',   publicRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => fail(res, 'Route not found', 404));

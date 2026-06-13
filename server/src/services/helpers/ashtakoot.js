@@ -240,6 +240,44 @@ function calculateAshtakoot(boyChart, girlChart) {
       : `वेध नहीं — ${boyNak.hi || 'नक्ष '+boyNak.num} और ${girlNak.hi || 'नक्ष '+girlNak.num} BPHS वेध युग्म नहीं हैं। शुभ संकेत।`,
   };
 
+  // ── Mahendra (Dashakoot supplement) ───────────────────────────────────────
+  // Count from girl's nakshatra to boy's (inclusive). Auspicious at 4,7,10,13,16,19,22,25
+  const mahendraCount = inclusiveNakDistance(girlNak.num, boyNak.num);
+  const mahendraGood = [4, 7, 10, 13, 16, 19, 22, 25].includes(mahendraCount);
+  const mahendra = {
+    name: 'Mahendra', name_hi: 'महेंद्र',
+    description_en: 'Progeny, prosperity & longevity — Dashakoot supplementary check',
+    description_hi: 'संतान, समृद्धि और आयु — दशकूट अनुपूरक जांच',
+    count: mahendraCount,
+    has_dosha: !mahendraGood,
+    status_en: mahendraGood
+      ? `Mahendra count ${mahendraCount} — auspicious. Indicates prosperity, children, and long life for the couple.`
+      : `Mahendra count ${mahendraCount} — not in the auspicious set (4,7,10,13,16,19,22,25). May need remedial attention.`,
+    status_hi: mahendraGood
+      ? `महेंद्र गणना ${mahendraCount} — शुभ। दंपती के लिए समृद्धि, संतान और दीर्घायु का संकेत।`
+      : `महेंद्र गणना ${mahendraCount} — शुभ सेट में नहीं। उपाय की आवश्यकता हो सकती है।`,
+  };
+
+  // ── Stree Deergha (Dashakoot supplement) ──────────────────────────────────
+  // Count from girl's nakshatra to boy's (inclusive). Should be ≥ 9 for the girl's well-being.
+  const streeDeerghaDist = inclusiveNakDistance(girlNak.num, boyNak.num);
+  const streeDeerghaGood = streeDeerghaDist >= 9;
+  const streeDeergha = {
+    name: 'Stree Deergha', name_hi: 'स्त्री दीर्घ',
+    description_en: 'Girl\'s longevity & well-being in marriage — Dashakoot supplementary check',
+    description_hi: 'विवाह में स्त्री की आयु और कल्याण — दशकूट अनुपूरक जांच',
+    distance: streeDeerghaDist,
+    has_dosha: !streeDeerghaGood,
+    dosha_name:    !streeDeerghaGood ? 'Stree Deergha Dosha' : null,
+    dosha_name_hi: !streeDeerghaGood ? 'स्त्री दीर्घ दोष' : null,
+    status_en: streeDeerghaGood
+      ? `Stree Deergha distance ${streeDeerghaDist} (≥ 9) — auspicious. Girl's longevity and happiness in marriage is well supported.`
+      : `Stree Deergha distance ${streeDeerghaDist} (< 9) — Stree Deergha Dosha present. May affect the bride's well-being; remedies advised.`,
+    status_hi: streeDeerghaGood
+      ? `स्त्री दीर्घ दूरी ${streeDeerghaDist} (≥ 9) — शुभ। विवाह में वधू की आयु और सुख का संकेत।`
+      : `स्त्री दीर्घ दूरी ${streeDeerghaDist} (< 9) — स्त्री दीर्घ दोष। वधू के कल्याण पर प्रतिकूल; उपाय अपेक्षित।`,
+  };
+
   const total = +kootas.reduce((sum, k) => sum + k.score, 0).toFixed(2);
 
   // ── Overall verdict ─────────────────────────────────────────────────────────
@@ -293,7 +331,7 @@ function calculateAshtakoot(boyChart, girlChart) {
   const summary_hi = `गुण मिलान ${total}/36 — ${verdict_hi}। ${activeDosha.length ? `सक्रिय दोष: ${kootas.filter((k)=>k.has_dosha).map((k)=>k.dosha_name_hi).join(', ')}।` : 'कोई प्रमुख कूट दोष नहीं।'} मंगल: ${mangalNote_hi}`;
 
   return {
-    system: 'Ashtakoot Guna Milan + Rajju-Vedha',
+    system: 'Ashtakoot Guna Milan + Dashakoot Supplements (Rajju · Vedha · Mahendra · Stree Deergha)',
     note: 'Classical BPHS rule-based implementation. Verify against an approved Panchang before life decisions.',
     total, max: 36,
     percentage: +((total / 36) * 100).toFixed(1),
@@ -303,6 +341,8 @@ function calculateAshtakoot(boyChart, girlChart) {
     kootas,
     rajju,
     vedha,
+    mahendra,
+    stree_deergha: streeDeergha,
     mangal,
     mangal_compatible: mangalCompatible,
     mangal_note_en: mangalNote_en,

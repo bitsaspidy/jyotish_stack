@@ -12,7 +12,8 @@ const { computeFavouriteDays }  = require('../services/helpers/favourite-days');
 const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras, fetchAstaVakriAnalysis } = require('../services/kundli-admin.service');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
 const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
-const { buildLifeReportNarratives } = require('../services/helpers/life-report-narrative');
+const { buildLifeReportNarratives }  = require('../services/helpers/life-report-narrative');
+const { generateAIPrediction }        = require('../services/ai-prediction.service');
 const { buildPlacementNarratives }  = require('../services/helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
@@ -709,6 +710,25 @@ router.get('/:id/today', async (req, res) => {
   } catch (e) {
     console.error('[TodayPrediction] Error:', e.message);
     return fail(res, 'Unable to generate today prediction', 500);
+  }
+});
+
+// ── POST /api/kundli/:id/ai-reading — Claude-powered personalised reading ────
+router.post('/:id/ai-reading', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const result = await generateAIPrediction(chart);
+    return ok(res, result);
+  } catch (e) {
+    console.error('[AI Reading]', e.message);
+    return fail(res, 'AI reading failed', 500);
   }
 });
 

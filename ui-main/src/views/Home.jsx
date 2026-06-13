@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+
+const GOLD = '#D4AF37'; const IVORY = '#F5F0E8'; const DIM = 'rgba(245,240,232,0.45)';
 
 const T = {
   tagline:    ['Ancient Wisdom. Modern Intelligence.','प्राचीन ज्ञान। आधुनिक बुद्धि।'],
@@ -65,6 +67,251 @@ const PLANS = [
 
 const fadeUp = { hidden:{ opacity:0, y:28 }, show:{ opacity:1, y:0, transition:{ duration:0.55 } } };
 const stag   = { show:{ transition:{ staggerChildren:0.09 } } };
+
+// ─── Testimonials Section ────────────────────────────────────────────────────
+function TestimonialsSection({ lang }) {
+  const hi = lang === 'hi';
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/public/testimonials')
+      .then(r => r.json())
+      .then(d => setItems(d.data?.testimonials || []))
+      .catch(() => {});
+  }, []);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="relative z-10 py-24 px-6">
+      <div style={{ maxWidth:1100, margin:'0 auto' }}>
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
+          className="text-center mb-14">
+          <h2 className="section-title mb-3">{hi ? 'हमारे उपयोगकर्ता क्या कहते हैं' : 'What Our Users Say'}</h2>
+          <p style={{ color:DIM }}>{hi ? 'हजारों संतुष्ट उपयोगकर्ताओं का विश्वास' : 'Trusted by thousands of satisfied users'}</p>
+          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
+        </motion.div>
+
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
+          style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
+          {items.map((t, i) => (
+            <motion.div key={t.id} variants={fadeUp}
+              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.12)',
+                borderRadius:14, padding:'22px 24px' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+                {t.avatar_url
+                  ? <img src={t.avatar_url} alt={t.name} style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover' }} />
+                  : <div style={{ width:44, height:44, borderRadius:'50%', background:`${GOLD}20`,
+                      border:`1px solid ${GOLD}40`, display:'flex', alignItems:'center',
+                      justifyContent:'center', color:GOLD, fontFamily:'Georgia,serif',
+                      fontWeight:700, fontSize:17 }}>
+                      {(t.name || '?')[0].toUpperCase()}
+                    </div>
+                }
+                <div>
+                  <p style={{ color:IVORY, fontFamily:'Georgia,serif', fontWeight:600, fontSize:14 }}>{t.name}</p>
+                  {(t.role || t.location) && (
+                    <p style={{ color:DIM, fontSize:11 }}>
+                      {[t.role, t.location].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
+                {t.rating > 0 && (
+                  <span style={{ marginLeft:'auto', color:GOLD, fontSize:12, letterSpacing:1 }}>
+                    {'★'.repeat(Math.min(5, t.rating))}
+                  </span>
+                )}
+              </div>
+              <p style={{ color:DIM, fontSize:13, lineHeight:1.75, fontStyle:'italic', fontFamily:'Georgia,serif' }}>
+                "{t.content}"
+              </p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Team Section ─────────────────────────────────────────────────────────────
+function TeamSection({ lang }) {
+  const hi = lang === 'hi';
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/public/team')
+      .then(r => r.json())
+      .then(d => setMembers(d.data?.members || []))
+      .catch(() => {});
+  }, []);
+
+  if (members.length === 0) return null;
+
+  return (
+    <section className="relative z-10 py-20 px-6">
+      <div style={{ maxWidth:1100, margin:'0 auto' }}>
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
+          className="text-center mb-14">
+          <h2 className="section-title mb-3">{hi ? 'हमारी टीम' : 'Our Team'}</h2>
+          <p style={{ color:DIM }}>{hi ? 'अनुभवी ज्योतिषी और AI विशेषज्ञ' : 'Experienced astrologers and AI specialists'}</p>
+          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
+        </motion.div>
+
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
+          style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
+          {members.map(m => (
+            <motion.div key={m.id} variants={fadeUp}
+              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.1)',
+                borderRadius:14, padding:'28px 24px', textAlign:'center', width:220, flexShrink:0 }}>
+              {m.avatar_url
+                ? <img src={m.avatar_url} alt={m.name} style={{ width:72, height:72, borderRadius:'50%',
+                    objectFit:'cover', margin:'0 auto 14px', border:`2px solid ${GOLD}30` }} />
+                : <div style={{ width:72, height:72, borderRadius:'50%', background:`${GOLD}15`,
+                    border:`2px solid ${GOLD}30`, display:'flex', alignItems:'center',
+                    justifyContent:'center', color:GOLD, fontFamily:'Georgia,serif',
+                    fontWeight:700, fontSize:26, margin:'0 auto 14px' }}>
+                    {(m.name || '?')[0].toUpperCase()}
+                  </div>
+              }
+              <p style={{ color:IVORY, fontFamily:'Georgia,serif', fontWeight:700, fontSize:15, marginBottom:4 }}>{m.name}</p>
+              {m.role && <p style={{ color:GOLD, fontSize:12, marginBottom:8, fontWeight:600 }}>{m.role}</p>}
+              {m.bio && <p style={{ color:DIM, fontSize:11, lineHeight:1.65, marginBottom:12 }}>{m.bio}</p>}
+              <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
+                {m.linkedin && (
+                  <a href={m.linkedin} target="_blank" rel="noreferrer"
+                    style={{ color:DIM, fontSize:11, textDecoration:'none' }}>💼 LinkedIn</a>
+                )}
+                {m.twitter && (
+                  <a href={m.twitter} target="_blank" rel="noreferrer"
+                    style={{ color:DIM, fontSize:11, textDecoration:'none' }}>𝕏 Twitter</a>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Contact Section ──────────────────────────────────────────────────────────
+function ContactSection({ lang }) {
+  const hi = lang === 'hi';
+  const [form, setForm]     = useState({ name:'', email:'', subject:'', message:'' });
+  const [status, setStatus] = useState('idle'); // idle | sending | done | error
+  const [errMsg, setErrMsg] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setStatus('sending');
+    try {
+      const r = await fetch('/api/public/contact', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(form),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message || 'Failed');
+      setStatus('done');
+      setForm({ name:'', email:'', subject:'', message:'' });
+    } catch (e) {
+      setErrMsg(e.message);
+      setStatus('error');
+    }
+  };
+
+  const inp = {
+    width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(212,175,55,0.18)',
+    borderRadius:8, color:IVORY, fontSize:13, padding:'11px 14px', boxSizing:'border-box',
+    outline:'none', fontFamily:'inherit',
+  };
+
+  return (
+    <section className="relative z-10 py-20 px-6">
+      <div style={{ maxWidth:640, margin:'0 auto' }}>
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
+          className="text-center mb-12">
+          <h2 className="section-title mb-3">{hi ? 'संपर्क करें' : 'Contact Us'}</h2>
+          <p style={{ color:DIM }}>{hi ? 'हम आपकी सहायता के लिए यहाँ हैं' : "We're here to help"}</p>
+          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
+        </motion.div>
+
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
+          style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.14)',
+            borderRadius:16, padding:'36px 40px' }}>
+
+          {status === 'done' ? (
+            <div style={{ textAlign:'center', padding:'20px 0' }}>
+              <p style={{ fontSize:52, marginBottom:14 }}>✅</p>
+              <h3 style={{ color:GOLD, fontFamily:'Georgia,serif', fontSize:20, marginBottom:8 }}>
+                {hi ? 'संदेश भेजा गया!' : 'Message Sent!'}
+              </h3>
+              <p style={{ color:DIM, fontSize:13, marginBottom:20 }}>
+                {hi ? 'हम जल्द ही आपसे संपर्क करेंगे।' : "We'll get back to you soon."}
+              </p>
+              <button onClick={() => setStatus('idle')} style={{
+                background:'transparent', border:`1px solid ${GOLD}40`, color:GOLD,
+                borderRadius:8, fontSize:13, padding:'8px 20px', cursor:'pointer',
+              }}>
+                {hi ? 'नया संदेश' : 'Send another'}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <div>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                    {hi ? 'नाम *' : 'Name *'}
+                  </label>
+                  <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
+                    required placeholder={hi ? 'आपका नाम' : 'Your name'} style={inp} />
+                </div>
+                <div>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                    {hi ? 'ईमेल *' : 'Email *'}
+                  </label>
+                  <input type="email" value={form.email} onChange={e => setForm(f=>({...f,email:e.target.value}))}
+                    required placeholder="you@example.com" style={inp} />
+                </div>
+              </div>
+              <div>
+                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                  {hi ? 'विषय' : 'Subject'}
+                </label>
+                <input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))}
+                  placeholder={hi ? 'विषय लिखें' : 'Subject'} style={inp} />
+              </div>
+              <div>
+                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                  {hi ? 'संदेश *' : 'Message *'}
+                </label>
+                <textarea value={form.message} onChange={e => setForm(f=>({...f,message:e.target.value}))}
+                  required rows={5}
+                  placeholder={hi ? 'अपना संदेश लिखें…' : 'Write your message…'}
+                  style={{ ...inp, resize:'vertical' }} />
+              </div>
+
+              {status === 'error' && (
+                <p style={{ color:'#EF4444', fontSize:12 }}>⚠ {errMsg || (hi ? 'त्रुटि हुई।' : 'Something went wrong.')}</p>
+              )}
+
+              <button type="submit" disabled={status === 'sending'} style={{
+                background:`linear-gradient(135deg, #B8952A, ${GOLD})`,
+                color:'#06070F', border:'none', borderRadius:8,
+                fontWeight:800, fontSize:14, padding:'13px 24px',
+                cursor: status === 'sending' ? 'not-allowed' : 'pointer',
+                opacity: status === 'sending' ? 0.7 : 1,
+              }}>
+                {status === 'sending'
+                  ? (hi ? 'भेजा जा रहा है…' : 'Sending…')
+                  : (hi ? 'संदेश भेजें ✦' : 'Send Message ✦')}
+              </button>
+            </form>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
 export default function Home({ scrollTo }) {
   const { lang } = useLang();
@@ -221,6 +468,15 @@ export default function Home({ scrollTo }) {
           </motion.div>
         </div>
       </section>
+
+      {/* ── TESTIMONIALS ──────────────────────────────────────────────────── */}
+      <TestimonialsSection lang={lang} />
+
+      {/* ── TEAM ──────────────────────────────────────────────────────────── */}
+      <TeamSection lang={lang} />
+
+      {/* ── CONTACT ───────────────────────────────────────────────────────── */}
+      <ContactSection lang={lang} />
 
       {/* ── BOTTOM CTA ────────────────────────────────────────────────────── */}
       <section className="relative z-10 py-16 px-6">

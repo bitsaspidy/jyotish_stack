@@ -74,6 +74,7 @@ export const MAIN_TABS = [
   { key:'yogas',       en:'Yogas',         hi:'योग-दोष',        icon:'✨' },
   { key:'fav-days',    en:'Fav Days',      hi:'शुभ दिन',        icon:'📅' },
   { key:'results',     en:'Final Results', hi:'संपूर्ण निर्णय',  icon:'🌟' },
+  { key:'ai-reading',  en:'AI Reading',   hi:'AI पठन',          icon:'🤖' },
 ];
 
 // Life area icons (Drishti section)

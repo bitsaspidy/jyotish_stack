@@ -49,6 +49,7 @@ import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
 import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
+import AIPredictionPanel    from '../components/AIPredictionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
@@ -1222,6 +1223,13 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: FINAL RESULTS (SYNTHESIS) ══════════════════════════════ */}
         {activeTab === 'results' && (
           <KundliSynthesisPanel kundli={kundli} lang={lang} admin={false} />
+        )}
+
+        {/* ══ TAB: AI READING ══════════════════════════════════════════════ */}
+        {activeTab === 'ai-reading' && (
+          <div className="max-w-3xl mx-auto">
+            <AIPredictionPanel uuid={kundli?.uuid || uuid} lang={lang} />
+          </div>
         )}
 
         {/* Bottom nav */}
