@@ -298,6 +298,59 @@ async function fetchProblemRemedies() {
   } catch { return null; }
 }
 
+// Remedy Manual — Ishta Devata per planet + puja sequence + sadhana guidance (Remedy Class 1 PDF)
+async function fetchRemedyManual() {
+  try {
+    const parseEd = (v) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
+
+    const [planetRows, remedyLibRows, pujaSeq, sadhanaGuidance] = await Promise.all([
+      db('planets').select(
+        'name', 'name_hi',
+        'ishta_devata_en', 'ishta_devata_hi',
+        'primary_suktam_en', 'primary_suktam_hi',
+        'gemstone', 'gemstone_hi'
+      ).orderBy('id'),
+      db('asta_vakri_library')
+        .where({ category: 'remedy' })
+        .whereNotIn('item_key', ['combust_special', 'retro_special'])
+        .select('item_key', 'title_en', 'title_hi', 'extra_data'),
+      db('asta_vakri_library').where({ category: 'puja_sequence' }).orderBy('sort_order').select('*'),
+      db('asta_vakri_library').where({ category: 'sadhana_guidance' }).orderBy('sort_order').select('*'),
+    ]);
+
+    const remedyMap = Object.fromEntries(
+      remedyLibRows.map((r) => [r.item_key, parseEd(r.extra_data)])
+    );
+
+    const planet_deities = planetRows.map((p) => {
+      const lib = remedyMap[p.name] || {};
+      return {
+        name: p.name,
+        name_hi: p.name_hi,
+        ishta_devata_en: p.ishta_devata_en,
+        ishta_devata_hi: p.ishta_devata_hi,
+        primary_suktam_en: p.primary_suktam_en,
+        primary_suktam_hi: p.primary_suktam_hi,
+        gemstone: p.gemstone,
+        gemstone_hi: p.gemstone_hi,
+        beeja_mantra: lib.mantra || null,
+        yantra: lib.yantra || null,
+        daan_en: lib.daan_en || null,
+        daan_hi: lib.daan_hi || null,
+      };
+    });
+
+    return {
+      planet_deities,
+      puja_sequence: pujaSeq.map((r) => ({ ...r, extra_data: parseEd(r.extra_data) })),
+      sadhana_guidance: sadhanaGuidance.map((r) => ({ ...r, extra_data: parseEd(r.extra_data) })),
+    };
+  } catch (e) {
+    console.error('[RemedyManual] Error:', e.message);
+    return null;
+  }
+}
+
 async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
   try {
     const rashiIds = [...new Set([ascRashiNum, moonRashiNum].filter(Boolean))];
@@ -388,18 +441,20 @@ async function buildFullKundliResponse(uuid) {
   const nakNum        = chart?.nakshatra?.num;
   const currentDasha  = Array.isArray(chart?.dasha) ? chart.dasha.find((d) => d.is_current) || chart.dasha[0] : null;
 
-  const [nakshatra_insight, remedy_data, chart_enrichment, bhava_lord_readings, yoga_dosha_library, problem_remedies] = await Promise.all([
+  const [nakshatra_insight, remedy_data, chart_enrichment, bhava_lord_readings, yoga_dosha_library, problem_remedies, remedy_manual] = await Promise.all([
     fetchNakshatraInsight(nakNum),
     fetchDashaRemedies(currentDasha?.lord, chart?.ascendant?.rashi_lord),
     fetchChartEnrichment(chart?.ascendant?.rashi_num, chart?.planets?.Moon?.rashi_num),
     fetchBhavaLordReadings(chart),
     fetchYogaDoshaLibrary(chart),
     fetchProblemRemedies(),
+    fetchRemedyManual(),
   ]);
 
   profile.nakshatra_insight  = nakshatra_insight;
   profile.remedy_data        = remedy_data;
   if (profile.remedy_data && problem_remedies) profile.remedy_data.problems = problem_remedies;
+  profile.remedy_manual      = remedy_manual;
   profile.chart_enrichment   = chart_enrichment;
   profile.bhava_lord_readings = bhava_lord_readings;
   profile.yoga_dosha_library = yoga_dosha_library;
@@ -429,6 +484,7 @@ module.exports = {
   buildKundliListSummary,
   fetchYogaDoshaLibrary,
   fetchProblemRemedies,
+  fetchRemedyManual,
   getOrCreateTodayPrediction,
   fetchPredictionHistory,
   buildKundliReportExtras,

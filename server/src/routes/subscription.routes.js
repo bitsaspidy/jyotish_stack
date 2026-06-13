@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
 const { authenticate } = require('../middleware/auth');
-const { createOrder, verifySignature } = require('../services/razorpay.service');
+const { createOrder, verifySignature, getKeys } = require('../services/razorpay.service');
 const { sendEmail } = require('../services/email.service');
 const { ok, fail } = require('../utils/response');
 
@@ -34,12 +34,13 @@ router.post('/order', authenticate, async (req, res) => {
     uuid: uuidv4(), user_id: req.user.id, plan_id: plan.id, status: 'pending', amount_paid: plan.price, razorpay_order_id: order.id,
   });
 
+  const { key_id } = await getKeys();
   return ok(res, {
     order_id: order.id,
     amount: order.amount,
     currency: order.currency,
     subscription_id: id,
-    key_id: process.env.RAZORPAY_KEY_ID,
+    key_id,
   }, 'Order created');
 });
 
@@ -48,7 +49,7 @@ router.post('/verify', authenticate, async (req, res) => {
   const { order_id, payment_id, signature, subscription_id } = req.body;
   if (!order_id || !payment_id || !signature || !subscription_id) return fail(res, 'Missing payment details', 400);
 
-  const valid = verifySignature({ orderId: order_id, paymentId: payment_id, signature });
+  const valid = await verifySignature({ orderId: order_id, paymentId: payment_id, signature });
   if (!valid) return fail(res, 'Payment verification failed', 400);
 
   const sub = await db('user_subscriptions').where({ id: subscription_id, user_id: req.user.id }).first();

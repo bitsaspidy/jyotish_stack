@@ -16,9 +16,11 @@ import CharaKarakaPanel     from '../components/CharaKarakaPanel';
 import SadeSatiPanel        from '../components/SadeSatiPanel';
 import YutiPanel            from '../components/YutiPanel';
 import AstaVakriPanel       from '../components/AstaVakriPanel';
+import RemedyManualPanel    from '../components/RemedyManualPanel';
 import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
 import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
+import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
 import {
   PLANET_META,
   DIGNITY_STYLE,
@@ -1111,6 +1113,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
           <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
           <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
           <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
+          <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
           <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
           <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
         </>
@@ -1539,6 +1542,18 @@ export default function KundliAdminDetail({ kundliUuid }) {
             <GLine label="Practical use" text="Advise the native to schedule important activities (exam, job interview, investment, journey) on their purpose-specific best day, and defer them on flagged avoid days." color="#60A5FA" />
           </AdminGuide>
           <FavouriteDaysPanel favouriteDays={kundli?.favourite_days} lang={lang} />
+        </div>
+      )}
+
+      {/* ══ TAB: FINAL RESULTS ═══════════════════════════════════════════════ */}
+      {activeTab === 'results' && (
+        <div>
+          <AdminGuide title="Final Results — Kundli Synthesis">
+            <GLine label="What this shows" text="Aggregates the most important signals from all 13 analysis tabs — strength score, top yogas, current Dasha phase, career/marriage verdicts, best Bhava lord placements, active Yutis, key remedies, and life domain scores — into a single executive view." />
+            <GLine label="How to use" text="Use this tab for a rapid end-to-end assessment before a client consultation. The strength ring gives the overall score; the domain bars pinpoint areas needing attention; the remedy section gives the most targeted prescription." color="#60A5FA" />
+            <GLine label="Key rules" text="Strength score 70+ = strongly positive chart; 50–69 = balanced; 35–49 = mixed; below 35 = challenging. Multiple active Raja Yogas elevate the score significantly." color="#FBBF24" />
+          </AdminGuide>
+          <KundliSynthesisPanel kundli={kundli} lang={lang} admin={true} />
         </div>
       )}
 

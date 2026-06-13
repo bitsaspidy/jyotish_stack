@@ -13,7 +13,9 @@ exports.seed = async function (knex) {
     { key: 'site_tagline', value: 'Ancient Wisdom. Modern Intelligence.', description: 'Site tagline' },
     { key: 'site_tagline_hi', value: 'प्राचीन ज्ञान। आधुनिक बुद्धि।', description: 'Hindi tagline' },
     { key: 'contact_email', value: 'contact@jyotishstack.com', description: 'Public contact email' },
-    { key: 'razorpay_enabled', value: 'false', description: 'Enable Razorpay payments' },
+    { key: 'razorpay_enabled',    value: 'false', description: 'Enable Razorpay payments' },
+    { key: 'razorpay_key_id',     value: '',      description: 'Razorpay Key ID (rzp_live_... or rzp_test_...)' },
+    { key: 'razorpay_key_secret', value: '',      description: 'Razorpay Key Secret — stored securely, never exposed in API' },
   ]);
 
   // Default accounts — upsert so re-running seeds never wipes real user accounts

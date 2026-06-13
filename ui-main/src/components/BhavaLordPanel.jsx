@@ -155,6 +155,30 @@ function BhavaLordCard({ reading, lang, index }) {
             </p>
           </div>
 
+          {/* Key results */}
+          {Array.isArray(reading.key_results_en) && reading.key_results_en.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 10, color: '#64748B', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 6 }}>
+                {t(lang, 'KEY RESULTS', 'मुख्य फल')}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {(lang === 'hi'
+                  ? (reading.key_results_hi || reading.key_results_en)
+                  : reading.key_results_en
+                ).map((pt, i) => (
+                  <span key={i} style={{
+                    fontSize: 11, padding: '3px 10px', borderRadius: 20,
+                    background: `${eff.color}12`, color: eff.color,
+                    border: `1px solid ${eff.color}30`, fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}>
+                    <span style={{ opacity: 0.6 }}>•</span> {pt}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* VRY explanation */}
           {reading.forms_viparita_yoga && (
             <div style={{
@@ -169,6 +193,22 @@ function BhavaLordCard({ reading, lang, index }) {
                 'This dusthana lord in another dusthana creates a powerful reversal yoga — the native rises strongly after adversity.',
                 'यह दुष्टस्थान का स्वामी दूसरे दुष्टस्थान में जाकर शक्तिशाली विपरीत राज योग बनाता है — जातक प्रतिकूलता के बाद प्रबल रूप से उठता है।'
               )}
+            </div>
+          )}
+
+          {/* 📌 PDF Example callout */}
+          {reading.example_en && (
+            <div style={{
+              marginTop: 10, padding: '10px 14px', borderRadius: 8,
+              background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.25)',
+              borderLeft: '3px solid rgba(212,175,55,0.6)',
+            }}>
+              <div style={{ fontSize: 10, color: '#D4AF37', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4 }}>
+                📌 {t(lang, 'EXAMPLE (BPHS)', 'उदाहरण (BPHS)')}
+              </div>
+              <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.65, fontStyle: 'italic' }}>
+                {t(lang, reading.example_en, reading.example_hi || reading.example_en)}
+              </div>
             </div>
           )}
         </div>

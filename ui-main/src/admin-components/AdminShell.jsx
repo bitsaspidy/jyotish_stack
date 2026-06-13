@@ -17,6 +17,12 @@ const PAGE_TITLES = {
   '/admin/notifications': 'Notifications',
   '/admin/settings':      'App Settings',
   '/admin/panchang':      'Panchang Muhurta',
+  '/admin/blog':          'Blog',
+  '/admin/testimonials':  'Testimonials',
+  '/admin/inquiries':     'Inquiries',
+  '/admin/team':          'Team',
+  '/admin/activity':      'Activity Log',
+  '/admin/profile':       'My Profile',
 };
 
 function ShellInner({ children }) {

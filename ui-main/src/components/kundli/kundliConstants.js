@@ -72,7 +72,8 @@ export const MAIN_TABS = [
   { key:'bhav-karak',  en:'Bhav Karak',    hi:'भाव कारक',       icon:'🪐' },
   { key:'drishti',     en:'Drishti',       hi:'दृष्टि',          icon:'👁' },
   { key:'yogas',       en:'Yogas',         hi:'योग-दोष',        icon:'✨' },
-  { key:'fav-days',   en:'Fav Days',      hi:'शुभ दिन',        icon:'📅' },
+  { key:'fav-days',    en:'Fav Days',      hi:'शुभ दिन',        icon:'📅' },
+  { key:'results',     en:'Final Results', hi:'संपूर्ण निर्णय',  icon:'🌟' },
 ];
 
 // Life area icons (Drishti section)

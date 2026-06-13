@@ -89,6 +89,10 @@ export default function BasicDetailsPanel({ kundli, chart, lang }) {
           <InfoRow label={label('Karan', 'करण')}      value={p ? karanaName(p.karana, lang) : '—'} />
           <InfoRow label={label('Pahar', 'पहर')}      value={p?.pahar != null ? String(p.pahar) : '—'} />
           <InfoRow label={label('Moon Phase', 'चंद्र कला')} value={p?.moon_phase != null ? String(p.moon_phase) : '—'} />
+          <InfoRow label={label('Vikram Samvat', 'विक्रम संवत')} value={p?.samvat ? String(p.samvat.vikram) : '—'} />
+          <InfoRow label={label('Shaka Samvat', 'शक संवत')}    value={p?.samvat ? String(p.samvat.shaka)  : '—'} />
+          <InfoRow label={label('Samvatsara', 'संवत्सर')}       value={p?.samvat ? (lang==='hi' ? p.samvat.samvatsara_hi : p.samvat.samvatsara_en) : '—'} />
+          <InfoRow label={label('Kali Samvat', 'कलि संवत')}    value={p?.samvat ? String(p.samvat.kali)   : '—'} />
         </div>
       )}
 

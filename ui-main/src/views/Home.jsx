@@ -30,9 +30,37 @@ const FEATURES = [
 ];
 
 const PLANS = [
-  { en:'Basic',   hi:'आधारभूत',  price:'₹0',    pe:'/month', ph:'/माह', feats:['1 Kundli profile','Daily prediction','Basic matchmaking'],                                                            hot:false },
-  { en:'Premium', hi:'प्रीमियम', price:'₹499',  pe:'/month', ph:'/माह', feats:['5 Kundli profiles','All prediction types','Advanced matchmaking','Dasha analysis','Transit report'],                hot:true  },
-  { en:'Yearly',  hi:'वार्षिक',  price:'₹3,999',pe:'/year',  ph:'/वर्ष', feats:['Unlimited profiles','Every feature included','Priority support','Muhurta calculator','Gemstone & remedy advice'], hot:false },
+  {
+    en:'Basic', hi:'आधारभूत', price:'₹0', pe:'/month', ph:'/माह', hot:false,
+    cta_en:'Get Started', cta_hi:'निःशुल्क शुरू करें',
+    feats:[
+      { en:'1 Kundli profile',    hi:'1 कुंडली प्रोफ़ाइल' },
+      { en:'Daily prediction',    hi:'दैनिक भविष्यवाणी' },
+      { en:'Basic matchmaking',   hi:'बेसिक विवाह मिलान' },
+    ],
+  },
+  {
+    en:'Premium', hi:'प्रीमियम', price:'₹499', pe:'/month', ph:'/माह', hot:true,
+    cta_en:'Get Premium', cta_hi:'प्रीमियम लें',
+    feats:[
+      { en:'5 Kundli profiles',      hi:'5 कुंडली प्रोफ़ाइल' },
+      { en:'All prediction types',   hi:'सभी भविष्यवाणी प्रकार' },
+      { en:'Advanced matchmaking',   hi:'उन्नत विवाह मिलान' },
+      { en:'Dasha analysis',         hi:'दशा विश्लेषण' },
+      { en:'Transit report',         hi:'गोचर रिपोर्ट' },
+    ],
+  },
+  {
+    en:'Yearly', hi:'वार्षिक', price:'₹3,999', pe:'/year', ph:'/वर्ष', hot:false,
+    cta_en:'Get Yearly', cta_hi:'वार्षिक योजना लें',
+    feats:[
+      { en:'Unlimited profiles',        hi:'असीमित प्रोफ़ाइल' },
+      { en:'Every feature included',    hi:'सभी सुविधाएं शामिल' },
+      { en:'Priority support',          hi:'प्राथमिकता सहायता' },
+      { en:'Muhurta calculator',        hi:'मुहूर्त कैलकुलेटर' },
+      { en:'Gemstone & remedy advice',  hi:'रत्न एवं उपाय परामर्श' },
+    ],
+  },
 ];
 
 const fadeUp = { hidden:{ opacity:0, y:28 }, show:{ opacity:1, y:0, transition:{ duration:0.55 } } };
@@ -175,9 +203,9 @@ export default function Home({ scrollTo }) {
 
                 <ul className="space-y-2.5 text-sm text-ivory/65 flex-1 mb-8">
                   {p.feats.map(f=>(
-                    <li key={f} className="flex items-start gap-2">
+                    <li key={f.en} className="flex items-start gap-2">
                       <span className="text-gold text-xs mt-0.5 shrink-0">✦</span>
-                      <span>{f}</span>
+                      <span className="font-devanagari">{lang==='hi' ? f.hi : f.en}</span>
                     </li>
                   ))}
                 </ul>
@@ -186,7 +214,7 @@ export default function Home({ scrollTo }) {
                   className={`text-center py-3 rounded-sm text-sm font-semibold block transition-all ${
                     p.hot ? 'btn-gold shadow-gold' : 'btn-outline-gold'
                   }`}>
-                  {t('start', lang)}
+                  {lang==='hi' ? p.cta_hi : p.cta_en}
                 </Link>
               </motion.div>
             ))}

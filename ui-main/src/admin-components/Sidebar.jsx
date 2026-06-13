@@ -30,6 +30,20 @@ const NAV = [
     ],
   },
   {
+    section: 'Content',
+    items: [
+      { href:'/admin/blog',          icon:'◈', emoji:'📝', label:'Blog' },
+      { href:'/admin/testimonials',  icon:'◈', emoji:'⭐', label:'Testimonials' },
+      { href:'/admin/team',          icon:'◈', emoji:'👥', label:'Team' },
+    ],
+  },
+  {
+    section: 'Inbox',
+    items: [
+      { href:'/admin/inquiries', icon:'◈', emoji:'📩', label:'Inquiries' },
+    ],
+  },
+  {
     section: 'Jyotish Tools',
     items: [
       { href:'/admin/panchang', icon:'◈', emoji:'🕉', label:'Panchang Muhurta' },
@@ -38,7 +52,9 @@ const NAV = [
   {
     section: 'System',
     items: [
+      { href:'/admin/activity', icon:'◈', emoji:'📋', label:'Activity Log' },
       { href:'/admin/settings', icon:'◧', emoji:'⚙️', label:'Settings' },
+      { href:'/admin/profile',  icon:'◈', emoji:'👤', label:'My Profile' },
     ],
   },
 ];

@@ -35,6 +35,8 @@ export default function Settings() {
   const [saving,   setSaving]   = useState(false);
   const [dirty,    setDirty]    = useState(false);
   const [tab,      setTab]      = useState('general');
+  // Tracked separately — never pre-filled from API (secret is masked as '[SET]')
+  const [secretInput, setSecretInput] = useState('');
 
   useEffect(() => {
     adminApi.get('/admin/settings')
@@ -51,9 +53,19 @@ export default function Settings() {
   const save = async () => {
     setSaving(true);
     try {
-      await adminApi.patch('/admin/settings', settings);
+      const payload = { ...settings };
+      // Never send the '[SET]' sentinel back — backend would skip it anyway,
+      // but cleaner to omit it entirely
+      delete payload.razorpay_key_secret;
+      // Only include the secret if the admin actually typed a new value
+      if (secretInput.trim()) payload.razorpay_key_secret = secretInput.trim();
+      await adminApi.patch('/admin/settings', payload);
       toast.success('Settings saved successfully');
       setDirty(false);
+      setSecretInput('');
+      // Refresh so secretIsSet reflects new state
+      const { data } = await adminApi.get('/admin/settings');
+      setSettings(data.settings);
     } catch { toast.error('Failed to save settings'); }
     finally { setSaving(false); }
   };
@@ -146,12 +158,12 @@ export default function Settings() {
       {/* ── Payments Tab ──────────────────────────────────────────────────── */}
       {tab === 'payments' && (
         <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px 24px' }}>
-          <h2 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700, marginBottom:4 }}>💳 Payment Configuration</h2>
-          <p style={{ color:'rgba(245,240,232,0.35)', fontSize:12, marginBottom:18 }}>Control payment gateway availability</p>
+          <h2 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700, marginBottom:4 }}>💳 Razorpay Configuration</h2>
+          <p style={{ color:'rgba(245,240,232,0.35)', fontSize:12, marginBottom:18 }}>API keys and payment gateway settings</p>
 
           <Field
-            label="Razorpay Payments"
-            description="Enable to allow users to purchase subscriptions via Razorpay">
+            label="Enable Payments"
+            description="Show the payment UI to users — only activate once keys are configured below">
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontSize:11, fontWeight:600, color: settings.razorpay_enabled==='true' ? '#34D399' : 'rgba(245,240,232,0.35)' }}>
                 {settings.razorpay_enabled === 'true' ? '● Enabled' : '○ Disabled'}
@@ -160,11 +172,53 @@ export default function Settings() {
             </div>
           </Field>
 
-          <div style={{ marginTop:20, padding:'14px 16px', background:'rgba(96,165,250,0.06)', border:'1px solid rgba(96,165,250,0.18)', borderRadius:8 }}>
-            <p style={{ color:'#60A5FA', fontSize:12, fontWeight:600, marginBottom:5 }}>ℹ Note</p>
-            <p style={{ color:'rgba(245,240,232,0.45)', fontSize:12, lineHeight:1.6 }}>
-              Razorpay API keys are configured via environment variables (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) on the server. This toggle only controls whether the payment UI is shown to users.
-            </p>
+          <div style={{ marginTop:22, borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:20 }}>
+            <p style={{ color:'rgba(245,240,232,0.5)', fontSize:12, fontWeight:600, marginBottom:14, textTransform:'uppercase', letterSpacing:'0.08em' }}>API Keys</p>
+
+            {/* Key ID */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', color:'rgba(245,240,232,0.5)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:3 }}>
+                Key ID
+              </label>
+              <p style={{ color:'rgba(245,240,232,0.28)', fontSize:11, marginBottom:6 }}>
+                Starts with <code style={{ color:'rgba(212,175,55,0.7)', background:'rgba(212,175,55,0.08)', padding:'1px 5px', borderRadius:3 }}>rzp_live_</code> for production or <code style={{ color:'rgba(212,175,55,0.7)', background:'rgba(212,175,55,0.08)', padding:'1px 5px', borderRadius:3 }}>rzp_test_</code> for testing
+              </p>
+              <input
+                value={settings.razorpay_key_id || ''}
+                onChange={e => set('razorpay_key_id', e.target.value)}
+                placeholder="rzp_live_xxxxxxxxxxxx"
+                style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'8px 12px', fontSize:13, outline:'none', fontFamily:'monospace' }}
+              />
+            </div>
+
+            {/* Key Secret */}
+            <div style={{ marginBottom:8 }}>
+              <label style={{ display:'block', color:'rgba(245,240,232,0.5)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:3 }}>
+                Key Secret
+              </label>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                <p style={{ color:'rgba(245,240,232,0.28)', fontSize:11 }}>Never shared publicly — stored in the database</p>
+                {settings.razorpay_key_secret === '[SET]' && (
+                  <span style={{ fontSize:10, padding:'1px 8px', borderRadius:10, background:'rgba(34,197,94,0.1)', color:'#22C55E', border:'1px solid rgba(34,197,94,0.25)', fontWeight:600 }}>
+                    ● Currently set
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                value={secretInput}
+                onChange={e => { setSecretInput(e.target.value); setDirty(true); }}
+                placeholder={settings.razorpay_key_secret === '[SET]' ? '••••••••••••••••  (leave blank to keep current)' : 'Enter key secret'}
+                style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'8px 12px', fontSize:13, outline:'none', fontFamily:'monospace' }}
+              />
+            </div>
+
+            <div style={{ marginTop:16, padding:'12px 14px', background:'rgba(251,191,36,0.05)', border:'1px solid rgba(251,191,36,0.15)', borderRadius:8 }}>
+              <p style={{ color:'#FBBF24', fontSize:12, fontWeight:600, marginBottom:4 }}>⚠ Security reminder</p>
+              <p style={{ color:'rgba(245,240,232,0.45)', fontSize:11, lineHeight:1.6 }}>
+                Use <strong style={{ color:'rgba(245,240,232,0.7)' }}>test keys</strong> during development. Switch to live keys only when going to production. Keys saved here take effect immediately — no server restart needed.
+              </p>
+            </div>
           </div>
         </div>
       )}

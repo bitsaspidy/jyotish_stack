@@ -44,9 +44,11 @@ import CharaKarakaPanel     from '../components/CharaKarakaPanel';
 import SadeSatiPanel        from '../components/SadeSatiPanel';
 import YutiPanel            from '../components/YutiPanel';
 import AstaVakriPanel       from '../components/AstaVakriPanel';
+import RemedyManualPanel    from '../components/RemedyManualPanel';
 import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
 import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
+import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
@@ -124,7 +126,16 @@ export default function KundliDetail({ uuid }) {
     fetchKundli();
   }, [fetchKundli]);
 
+  const isPremium = user?.plan === 'premium' || user?.role === 'admin';
+
   const handlePdf = async () => {
+    if (!isPremium) {
+      toast.error(t(lang,
+        '🔒 PDF export requires Premium plan. Please upgrade to download reports.',
+        '🔒 PDF डाउनलोड के लिए Premium plan चाहिए। कृपया अपग्रेड करें।'
+      ));
+      return;
+    }
     try {
       const response = await api.get(`/kundli/${uuid}/report.pdf`, { responseType: 'blob' });
       const url  = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
@@ -212,9 +223,21 @@ export default function KundliDetail({ uuid }) {
               )}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 shrink-0">
-            <button onClick={handlePdf} className="btn-outline-gold text-xs px-4 py-2">
-              📄 {t(lang, 'PDF Report', 'PDF रिपोर्ट')}
+          <div className="flex flex-wrap gap-2 shrink-0 items-center">
+            {/* Plan badge */}
+            <span style={{
+              fontSize:9, fontWeight:800, letterSpacing:'0.12em', textTransform:'uppercase',
+              padding:'2px 8px', borderRadius:6,
+              background: isPremium ? 'rgba(212,175,55,0.18)' : 'rgba(148,163,184,0.12)',
+              color: isPremium ? '#D4AF37' : '#94A3B8',
+              border: isPremium ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(148,163,184,0.25)',
+            }}>
+              {isPremium ? (user?.role === 'admin' ? '👑 Admin' : '⭐ Premium') : '🔒 Basic'}
+            </span>
+            <button onClick={handlePdf}
+              className="btn-outline-gold text-xs px-4 py-2"
+              style={!isPremium ? { opacity:0.55, cursor:'not-allowed' } : {}}>
+              {isPremium ? '📄' : '🔒'} {t(lang, 'PDF Report', 'PDF रिपोर्ट')}
             </button>
             <button onClick={handleRecalc} disabled={recalcing} className="btn-outline-gold text-xs px-4 py-2">
               {recalcing ? `⏳ ${t(lang, 'Recalculating…', 'पुनः गणना हो रही है…')}` : `🔄 ${t(lang, 'Recalculate', 'पुनः गणना')}`}
@@ -840,6 +863,7 @@ export default function KundliDetail({ uuid }) {
             <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
             <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
             <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
+            <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
             <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
             <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
           </>
@@ -1193,6 +1217,11 @@ export default function KundliDetail({ uuid }) {
           </h3>
           <FavouriteDaysPanel favouriteDays={kundli?.favourite_days} lang={lang} />
         </div>
+        )}
+
+        {/* ══ TAB: FINAL RESULTS (SYNTHESIS) ══════════════════════════════ */}
+        {activeTab === 'results' && (
+          <KundliSynthesisPanel kundli={kundli} lang={lang} admin={false} />
         )}
 
         {/* Bottom nav */}

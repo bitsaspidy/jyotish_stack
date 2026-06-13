@@ -475,8 +475,11 @@ router.get('/reference/varga', async (req, res) => {
   }
 });
 
-// GET /api/kundli/:id/report.pdf
+// GET /api/kundli/:id/report.pdf  (premium / admin only)
 router.get('/:id/report.pdf', async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.plan !== 'premium') {
+    return fail(res, 'PDF export requires a Premium plan. Please upgrade to download reports.', 403);
+  }
   try {
     const profile = await db('kundli_profiles')
       .where({ uuid: req.params.id, user_id: req.user.id })

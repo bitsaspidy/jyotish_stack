@@ -12,6 +12,7 @@ const {
   getOrCreateTodayPrediction, fetchPredictionHistory, buildKundliReportExtras,
 } = require('../services/kundli-admin.service');
 const { kundliReportPdf } = require('../services/report.service');
+const { resetInstance: resetRazorpay } = require('../services/razorpay.service');
 
 // Async error wrapper — passes any thrown/rejected error to Express global handler
 // (Express 4 does NOT auto-handle async errors; without this, unhandled rejections
@@ -172,17 +173,32 @@ router.get('/notifications', ah(async (req, res) => {
 router.get('/settings', ah(async (_req, res) => {
   const settings = await db('app_settings').select();
   const map = {};
-  settings.forEach((s) => (map[s.key] = s.value));
+  settings.forEach((s) => {
+    // Never expose the raw secret — return a sentinel so the UI knows it's set
+    if (s.key === 'razorpay_key_secret') {
+      map[s.key] = s.value ? '[SET]' : '';
+    } else {
+      map[s.key] = s.value;
+    }
+  });
   return ok(res, { settings: map });
 }));
 
 router.patch('/settings', ah(async (req, res) => {
   const updates = req.body; // { key: value, ... }
+  let razorpayChanged = false;
   for (const [key, value] of Object.entries(updates)) {
-    await db('app_settings').where({ key }).update({ value: String(value) });
+    // Skip the placeholder sentinel — means the admin didn't touch the secret
+    if (key === 'razorpay_key_secret' && value === '[SET]') continue;
+    // Upsert: insert if not exists, update value if exists
+    await db('app_settings')
+      .insert({ key, value: String(value), description: '' })
+      .onConflict('key')
+      .merge({ value: String(value) });
+    if (key === 'razorpay_key_id' || key === 'razorpay_key_secret') razorpayChanged = true;
   }
-  // Invalidate maintenance cache if needed
   if ('maintenance_mode' in updates) maintenanceGuard.invalidate();
+  if (razorpayChanged) resetRazorpay();
   return ok(res, {}, 'Settings updated');
 }));
 
@@ -428,6 +444,273 @@ router.get('/panchang', ah(async (req, res) => {
   });
 
   return ok(res, { panchang, place: place || null });
+}));
+
+// ─── ACTIVITY LOG helper ─────────────────────────────────────────────────────
+async function logActivity(req, action, entity, entityId, detail) {
+  try {
+    await db('activity_logs').insert({
+      admin_id:   req.user?.id || null,
+      admin_name: req.user?.name || 'Admin',
+      action, entity,
+      entity_id:  entityId ? String(entityId) : null,
+      detail:     detail || null,
+      ip_address: req.ip || req.headers['x-forwarded-for'] || null,
+    });
+  } catch (_) { /* non-fatal */ }
+}
+
+// ─── BLOG CATEGORIES ─────────────────────────────────────────────────────────
+router.get('/blog/categories', ah(async (_req, res) => {
+  const cats = await db('blog_categories').orderBy('name');
+  return ok(res, cats);
+}));
+
+router.post('/blog/categories', ah(async (req, res) => {
+  const { name, color } = req.body;
+  if (!name?.trim()) return fail(res, 'Category name required', 422);
+  const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const [id] = await db('blog_categories').insert({ name: name.trim(), slug, color: color || '#D4AF37' });
+  return ok(res, { id, name: name.trim(), slug, color: color || '#D4AF37' }, 201);
+}));
+
+router.delete('/blog/categories/:id', ah(async (req, res) => {
+  await db('blog_categories').where({ id: req.params.id }).delete();
+  return ok(res, null, 204);
+}));
+
+// ─── BLOG POSTS ──────────────────────────────────────────────────────────────
+router.get('/blog', ah(async (req, res) => {
+  const page  = Math.max(1, parseInt(req.query.page  || 1));
+  const limit = Math.min(50, parseInt(req.query.limit || 20));
+  const offset = (page - 1) * limit;
+  const status = req.query.status;
+  const q      = req.query.q?.trim();
+
+  let qb = db('blog_posts as bp')
+    .leftJoin('blog_categories as bc', 'bp.category_id', 'bc.id')
+    .select('bp.id','bp.title','bp.slug','bp.excerpt','bp.cover_image','bp.status',
+            'bp.author','bp.view_count','bp.published_at','bp.created_at',
+            'bc.name as category_name','bc.color as category_color');
+
+  if (status) qb = qb.where('bp.status', status);
+  if (q)      qb = qb.where('bp.title', 'like', `%${q}%`);
+
+  const [{ total }] = await qb.clone().count('bp.id as total');
+  const posts = await qb.orderBy('bp.created_at', 'desc').limit(limit).offset(offset);
+
+  return ok(res, posts, 200, {
+    pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
+  });
+}));
+
+router.post('/blog', ah(async (req, res) => {
+  const { title, excerpt, content, cover_image, category_id, status, author, seo_title, seo_description, tags } = req.body;
+  if (!title?.trim()) return fail(res, 'Title required', 422);
+  const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now().toString(36);
+  const [id] = await db('blog_posts').insert({
+    title: title.trim(), slug, excerpt, content, cover_image, category_id: category_id || null,
+    status: status || 'draft', author: author || req.user.name,
+    seo_title, seo_description, tags,
+    published_at: status === 'published' ? new Date() : null,
+  });
+  await logActivity(req, 'create', 'blog_post', id, `Created: ${title.trim()}`);
+  return ok(res, { id, slug }, 201);
+}));
+
+router.get('/blog/:id', ah(async (req, res) => {
+  const post = await db('blog_posts as bp')
+    .leftJoin('blog_categories as bc', 'bp.category_id', 'bc.id')
+    .where('bp.id', req.params.id)
+    .select('bp.*', 'bc.name as category_name', 'bc.color as category_color')
+    .first();
+  if (!post) return fail(res, 'Post not found', 404);
+  return ok(res, post);
+}));
+
+router.put('/blog/:id', ah(async (req, res) => {
+  const { title, excerpt, content, cover_image, category_id, status, author, seo_title, seo_description, tags } = req.body;
+  const existing = await db('blog_posts').where({ id: req.params.id }).first();
+  if (!existing) return fail(res, 'Post not found', 404);
+  await db('blog_posts').where({ id: req.params.id }).update({
+    title, excerpt, content, cover_image,
+    category_id: category_id || null, status, author, seo_title, seo_description, tags,
+    published_at: status === 'published' && !existing.published_at ? new Date() : existing.published_at,
+    updated_at: new Date(),
+  });
+  await logActivity(req, 'update', 'blog_post', req.params.id, `Updated: ${title}`);
+  return ok(res, { id: req.params.id });
+}));
+
+router.delete('/blog/:id', ah(async (req, res) => {
+  const post = await db('blog_posts').where({ id: req.params.id }).first();
+  if (!post) return fail(res, 'Post not found', 404);
+  await db('blog_posts').where({ id: req.params.id }).delete();
+  await logActivity(req, 'delete', 'blog_post', req.params.id, `Deleted: ${post.title}`);
+  return ok(res, null, 204);
+}));
+
+// ─── TESTIMONIALS ─────────────────────────────────────────────────────────────
+router.get('/testimonials', ah(async (_req, res) => {
+  const rows = await db('testimonials').orderBy('sort_order').orderBy('created_at', 'desc');
+  return ok(res, rows);
+}));
+
+router.post('/testimonials', ah(async (req, res) => {
+  const { name, role, location, content, rating, avatar, is_featured } = req.body;
+  if (!name?.trim() || !content?.trim()) return fail(res, 'Name and content required', 422);
+  const maxOrder = await db('testimonials').max('sort_order as m').first();
+  const [id] = await db('testimonials').insert({
+    name: name.trim(), role, location, content: content.trim(),
+    rating: parseInt(rating || 5), avatar, is_featured: !!is_featured,
+    sort_order: (maxOrder?.m || 0) + 1,
+  });
+  await logActivity(req, 'create', 'testimonial', id, `Added testimonial from ${name.trim()}`);
+  return ok(res, { id }, 201);
+}));
+
+router.put('/testimonials/:id', ah(async (req, res) => {
+  const { name, role, location, content, rating, avatar, is_featured } = req.body;
+  await db('testimonials').where({ id: req.params.id })
+    .update({ name, role, location, content, rating: parseInt(rating || 5), avatar, is_featured: !!is_featured, updated_at: new Date() });
+  await logActivity(req, 'update', 'testimonial', req.params.id, `Updated testimonial: ${name}`);
+  return ok(res, { id: req.params.id });
+}));
+
+router.delete('/testimonials/:id', ah(async (req, res) => {
+  await db('testimonials').where({ id: req.params.id }).delete();
+  await logActivity(req, 'delete', 'testimonial', req.params.id, null);
+  return ok(res, null, 204);
+}));
+
+// ─── INQUIRIES ────────────────────────────────────────────────────────────────
+router.get('/inquiries', ah(async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || 1));
+  const limit  = Math.min(50, parseInt(req.query.limit || 20));
+  const offset = (page - 1) * limit;
+  const status = req.query.status;
+
+  let qb = db('inquiries');
+  if (status) qb = qb.where({ status });
+
+  const [{ total }] = await qb.clone().count('id as total');
+  const rows = await qb.orderBy('created_at', 'desc').limit(limit).offset(offset);
+
+  return ok(res, rows, 200, {
+    pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
+  });
+}));
+
+router.get('/inquiries/stats', ah(async (_req, res) => {
+  const [total, newCount, read, replied] = await Promise.all([
+    db('inquiries').count('id as c').first(),
+    db('inquiries').where({ status:'new' }).count('id as c').first(),
+    db('inquiries').where({ status:'read' }).count('id as c').first(),
+    db('inquiries').where({ status:'replied' }).count('id as c').first(),
+  ]);
+  return ok(res, { total: Number(total.c), new: Number(newCount.c), read: Number(read.c), replied: Number(replied.c) });
+}));
+
+router.get('/inquiries/:id', ah(async (req, res) => {
+  const row = await db('inquiries').where({ id: req.params.id }).first();
+  if (!row) return fail(res, 'Not found', 404);
+  // auto-mark as read
+  if (row.status === 'new') await db('inquiries').where({ id: req.params.id }).update({ status: 'read', updated_at: new Date() });
+  return ok(res, row);
+}));
+
+router.patch('/inquiries/:id', ah(async (req, res) => {
+  const { status, admin_note } = req.body;
+  const updates = { updated_at: new Date() };
+  if (status)     updates.status     = status;
+  if (admin_note !== undefined) updates.admin_note = admin_note;
+  if (status === 'replied') updates.replied_at = new Date();
+  await db('inquiries').where({ id: req.params.id }).update(updates);
+  return ok(res, { id: req.params.id });
+}));
+
+router.delete('/inquiries/:id', ah(async (req, res) => {
+  await db('inquiries').where({ id: req.params.id }).delete();
+  return ok(res, null, 204);
+}));
+
+// ─── TEAM MEMBERS ─────────────────────────────────────────────────────────────
+router.get('/team', ah(async (_req, res) => {
+  const rows = await db('team_members').orderBy('sort_order').orderBy('name');
+  return ok(res, rows);
+}));
+
+router.post('/team', ah(async (req, res) => {
+  const { name, role, bio, avatar, linkedin, twitter, is_active } = req.body;
+  if (!name?.trim() || !role?.trim()) return fail(res, 'Name and role required', 422);
+  const maxOrder = await db('team_members').max('sort_order as m').first();
+  const [id] = await db('team_members').insert({
+    name: name.trim(), role: role.trim(), bio, avatar, linkedin, twitter,
+    is_active: is_active !== false,
+    sort_order: (maxOrder?.m || 0) + 1,
+  });
+  await logActivity(req, 'create', 'team_member', id, `Added team member: ${name.trim()}`);
+  return ok(res, { id }, 201);
+}));
+
+router.put('/team/:id', ah(async (req, res) => {
+  const { name, role, bio, avatar, linkedin, twitter, is_active } = req.body;
+  await db('team_members').where({ id: req.params.id })
+    .update({ name, role, bio, avatar, linkedin, twitter, is_active: !!is_active, updated_at: new Date() });
+  await logActivity(req, 'update', 'team_member', req.params.id, `Updated: ${name}`);
+  return ok(res, { id: req.params.id });
+}));
+
+router.delete('/team/:id', ah(async (req, res) => {
+  await db('team_members').where({ id: req.params.id }).delete();
+  await logActivity(req, 'delete', 'team_member', req.params.id, null);
+  return ok(res, null, 204);
+}));
+
+// ─── ACTIVITY LOGS ────────────────────────────────────────────────────────────
+router.get('/activity', ah(async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || 1));
+  const limit  = Math.min(100, parseInt(req.query.limit || 30));
+  const offset = (page - 1) * limit;
+  const entity = req.query.entity;
+
+  let qb = db('activity_logs');
+  if (entity) qb = qb.where({ entity });
+
+  const [{ total }] = await qb.clone().count('id as total');
+  const rows = await qb.orderBy('created_at', 'desc').limit(limit).offset(offset);
+  return ok(res, rows, 200, {
+    pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
+  });
+}));
+
+// ─── ADMIN PROFILE ────────────────────────────────────────────────────────────
+router.get('/profile', ah(async (req, res) => {
+  const admin = await db('users').where({ id: req.user.id })
+    .select('id','name','email','phone','role','plan','created_at').first();
+  if (!admin) return fail(res, 'Not found', 404);
+  return ok(res, admin);
+}));
+
+router.put('/profile', ah(async (req, res) => {
+  const { name, phone } = req.body;
+  if (!name?.trim()) return fail(res, 'Name required', 422);
+  await db('users').where({ id: req.user.id }).update({ name: name.trim(), phone: phone || null, updated_at: new Date() });
+  await logActivity(req, 'update', 'profile', req.user.id, 'Updated own profile');
+  return ok(res, { name: name.trim() });
+}));
+
+router.put('/profile/password', ah(async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) return fail(res, 'Both current and new password required', 422);
+  if (new_password.length < 8) return fail(res, 'New password must be at least 8 characters', 422);
+  const admin = await db('users').where({ id: req.user.id }).select('password').first();
+  const match = await bcrypt.compare(current_password, admin.password);
+  if (!match) return fail(res, 'Current password is incorrect', 401);
+  const hash = await bcrypt.hash(new_password, 12);
+  await db('users').where({ id: req.user.id }).update({ password: hash, updated_at: new Date() });
+  await logActivity(req, 'update', 'profile', req.user.id, 'Changed password');
+  return ok(res, { message: 'Password changed successfully' });
 }));
 
 module.exports = router;
