@@ -6,17 +6,17 @@ This runbook deploys Jyotish Stack AI on a 16 GB Hostinger VPS with:
 - Node.js 24 LTS
 - MySQL listening on localhost only
 - phpMyAdmin listening on localhost only, reached through a PuTTY SSH tunnel
-- Apache reverse proxy for `https://jyotishstackai.com`
+- Apache reverse proxy for `https://jyotishstack.com`
 - PM2 process management
 
-This production setup serves the full `ui-main` app on `jyotishstackai.com`. The `ui-ai-com` package is currently a lighter AI-branded landing surface and should not replace the full app until it has feature parity.
+This production setup serves the full `ui-main` app on `jyotishstack.com`. The `ui-ai-com` package is currently a lighter AI-branded landing surface and should not replace the full app until it has feature parity.
 
 Do not expose MySQL port `3306`, phpMyAdmin, or Node ports `3000` and `5000` to the public internet.
 
 ## 1. Hostinger panel setup
 
 1. In Hostinger VPS firewall, allow only TCP `22`, `80`, and `443`.
-2. In Hostinger DNS for `jyotishstackai.com`, set:
+2. In Hostinger DNS for `jyotishstack.com`, set:
    - `A` record `@` to the VPS public IP.
    - `A` record `www` to the VPS public IP.
 3. Wait for DNS propagation before running Certbot. It can take several hours and sometimes up to 24 hours.
@@ -141,8 +141,8 @@ nano server/.env
 
 Fill:
 
-- `APP_URL=https://jyotishstackai.com`
-- `ALLOWED_ORIGINS=https://jyotishstackai.com,https://www.jyotishstackai.com`
+- `APP_URL=https://jyotishstack.com`
+- `ALLOWED_ORIGINS=https://jyotishstack.com,https://www.jyotishstack.com`
 - `JWT_SECRET` and `JWT_REFRESH_SECRET` from the two `openssl` outputs
 - `DB_USER=jyotish_app`
 - `DB_PASSWORD` with the MySQL password from step 5
@@ -198,7 +198,7 @@ Do not run the seed command on every deploy unless you intentionally want to ref
 Run this only after DNS points to the VPS:
 
 ```bash
-sudo certbot --apache -d jyotishstackai.com -d www.jyotishstackai.com --redirect
+sudo certbot --apache -d jyotishstack.com -d www.jyotishstack.com --redirect
 sudo systemctl reload apache2
 ```
 
@@ -225,8 +225,8 @@ Login with the MySQL user `jyotish_app`. The phpMyAdmin Apache site is bound to 
 pm2 status
 curl -I http://127.0.0.1:3000
 curl http://127.0.0.1:5000/health
-curl -I https://jyotishstackai.com
-curl https://jyotishstackai.com/api/settings/public
+curl -I https://jyotishstack.com
+curl https://jyotishstack.com/api/settings/public
 sudo ufw status
 sudo ss -ltnp
 ```
