@@ -14,10 +14,12 @@
 
 set -euo pipefail
 
-# Exported so the Node process behind `pm2 reload ecosystem.config.js` inherits them
+# Exported so the Node process behind `pm2 reload ecosystem.config.js` reads them at
+# config-eval time (cwd/instances). NOTE: we deliberately do NOT export NODE_ENV=production
+# globally — that makes `npm install` skip devDependencies and breaks `next build`
+# (Cannot find module 'tailwindcss'). NODE_ENV is set inline only where it's actually needed.
 export APP_DIR="${APP_DIR:-/var/www/jyotish-stack}"
 export BRANCH="${BRANCH:-main}"
-export NODE_ENV=production
 export API_INSTANCES="${API_INSTANCES:-1}"
 export UI_INSTANCES="${UI_INSTANCES:-1}"
 
@@ -42,14 +44,14 @@ git fetch origin "$BRANCH"
 git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
 
-log "Installing workspace dependencies..."
-npm install
+log "Installing workspace dependencies (incl. build tools needed by next build)..."
+npm install --include=dev
 
 log "Running database migrations (from server/ so server/.env is loaded)..."
-( cd "$APP_DIR/server" && npm run migrate )
+( cd "$APP_DIR/server" && NODE_ENV=production npm run migrate )
 
 log "Building public Next.js app (ui-main)..."
-npm run build:main
+NODE_ENV=production npm run build:main
 
 log "Starting or reloading PM2 processes..."
 if ! pm2 reload ecosystem.config.js --env production --update-env; then
