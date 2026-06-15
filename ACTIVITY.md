@@ -2,7 +2,55 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-15 (Session 48)
+> Last updated: 2026-06-16 (Session 49)
+
+---
+
+## Session 49 - 2026-06-16 | Claude VPS Deployment Handoff Update
+
+### What was done
+
+- Updated the repo handoff for Claude with the current Hostinger VPS deployment state and next recovery commands.
+- Captured the live VPS facts from the deployment session:
+  - Production domain is `jyotishstack.com`, served from the full `ui-main` app through Apache.
+  - VPS user is `deploy`; package/service commands require `sudo`.
+  - UFW is intentionally not used; firewall permissions are managed manually.
+  - Node.js was verified after restoring stdout with `exec 1>/dev/tty`: Node `v24.16.0`, npm `11.13.0`, PM2 `7.0.1`.
+  - Apache is active; `ProxyTimeout` must stay at `VirtualHost` level, not inside `<Location>`.
+  - Repo clone exists at `/var/www/jyotish-stack`.
+- Added the critical dependency-install warning for Claude: do not use `npm ci`; this repo ignores `package-lock.json`, so use `npm install`.
+- Added recovery instruction for partial PM2 state: `pm2 delete jyotish-api jyotish-ui-main || true` before restarting after a failed install/build attempt.
+- Updated `CLAUDE_SESSION_PROMPT.md` with a latest VPS handoff section and changed the GitHub branch note to `main`.
+
+### Claude next-step summary
+
+```bash
+cd /var/www/jyotish-stack
+git pull --ff-only origin main
+pm2 delete jyotish-api jyotish-ui-main || true
+npm install
+cd server
+NODE_ENV=production npm run migrate
+NODE_ENV=production npm run seed
+cd ..
+NODE_ENV=production npm run build:main
+pm2 startOrReload ecosystem.config.js --env production --update-env
+pm2 save
+pm2 status
+```
+
+### Warnings for Claude
+
+- Do not paste secrets into docs or chat. `server/.env` owns JWT and DB secrets.
+- Use `sudo mysql`, not `mysql -u root -p`, because Ubuntu MySQL root uses `auth_socket`.
+- If phpMyAdmin says `ERROR: Conf phpmyadmin does not exist!`, that is OK; it means no public phpMyAdmin Apache config exists.
+- If `knex`, `next`, or PM2 says a script is missing, dependencies were not installed; rerun `npm install`.
+- Run Certbot only after DNS points to the VPS:
+  `sudo certbot --apache -d jyotishstack.com -d www.jyotishstack.com --redirect`
+
+### Git/worktree note
+
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 

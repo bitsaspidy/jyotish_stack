@@ -5,6 +5,57 @@ Read this entire prompt before doing anything. This is your complete project mem
 
 ---
 
+## Latest VPS Deployment Handoff - 2026-06-16
+
+Read `MEMORY.md` and `ACTIVITY.md` first. The current live task is finishing Hostinger VPS deployment for `https://jyotishstack.com`.
+
+Current known VPS state:
+- Server user: `deploy`
+- Repo path: `/var/www/jyotish-stack`
+- GitHub branch: `main`
+- Node verified: `v24.16.0`
+- npm verified: `11.13.0`
+- PM2 verified: `7.0.1`
+- Apache is installed and active.
+- MySQL is installed; Ubuntu root access is via `sudo mysql`, not `mysql -u root -p`.
+- UFW is not used. Manual firewall should expose only TCP `22`, `80`, `443`.
+- Keep MySQL `3306`, Next.js `3000`, Express `5000`, and phpMyAdmin `8081` private.
+- phpMyAdmin must remain localhost-only via `apache/phpmyadmin-local.conf` and PuTTY tunnel.
+
+Critical deployment rules:
+- Do not use `npm ci`; this repo ignores `package-lock.json`. Use `npm install`.
+- If `knex`, `next`, or PM2 cannot find scripts, dependencies did not install.
+- If PM2 has a partial failed state, run `pm2 delete jyotish-api jyotish-ui-main || true`.
+- `ProxyTimeout 120` belongs at Apache `VirtualHost` level, not inside `<Location>`.
+- Do not paste secrets into docs/chat. Use the VPS `server/.env` for JWT, DB, SMTP, Razorpay, Anthropic keys.
+
+Next recovery commands:
+
+```bash
+cd /var/www/jyotish-stack
+git pull --ff-only origin main
+pm2 delete jyotish-api jyotish-ui-main || true
+npm install
+cd server
+NODE_ENV=production npm run migrate
+NODE_ENV=production npm run seed
+cd ..
+NODE_ENV=production npm run build:main
+pm2 startOrReload ecosystem.config.js --env production --update-env
+pm2 save
+pm2 status
+curl http://127.0.0.1:5000/health
+curl -I http://127.0.0.1:3000
+```
+
+Run Certbot only after DNS points to the VPS:
+
+```bash
+sudo certbot --apache -d jyotishstack.com -d www.jyotishstack.com --redirect
+```
+
+---
+
 ## 📁 Project Location
 Monorepo: `E:\2026\satsai-projects\jyotish-stack`
 Memory files: `C:\Users\Asus Vivobook\.claude\projects\E--2026-satsai-projects-jyotish-stack\memory\`
@@ -16,7 +67,7 @@ Memory files: `C:\Users\Asus Vivobook\.claude\projects\E--2026-satsai-projects-j
 - **Frontend:** Next.js 14 App Router with `src/` directory → port 3000
 - **DB:** MySQL | host=localhost | user=root | password=bitsaspidy | db=jyotish_stack_ai_db
 - **Payments:** Razorpay | **Email:** Nodemailer SMTP | **PDFs:** PDFKit
-- **GitHub:** github.com/bitsaspidy/jyotish_stack | branch: codex/yogas-doshas-hindi-ui
+- **GitHub:** github.com/bitsaspidy/jyotish_stack | branch: main
 
 ---
 
@@ -39,7 +90,7 @@ npm run seed           # Run all 15 seed files
 npm run dev:server     # API on :5000
 npm run dev:main       # ui-main on :3000
 npm run test:server    # 14 server tests (Node built-in runner)
-npm run build:main     # Production build (29/29 pages)
+npm run build:main     # Production build (38/38 pages)
 ```
 
 ---
@@ -341,13 +392,13 @@ jyotish_basics, planet_naisargika_maitri *(9×9 friendship matrix)*
    * New logic goes into focused helper files in `helpers/`
 5. After every session: update ACTIVITY.md (project root) + all memory files
 6. Tests must pass: `npm run test:server` → 14/14 before committing
-7. Build must pass: `npm run build:main` → 29/29 pages before committing
+7. Build must pass: `npm run build:main` -> 38/38 pages before committing
 8. MySQL only (not SQLite/Postgres) | Next.js 14 App Router (not Vite/Pages)
 9. DATE columns return as strings via `typeCast` in `knexfile.js`
 10. Whole-sign house system | Lahiri ayanamsa throughout
 11. Communication: short direct instructions — owner trusts agent to know patterns
 12. No pdftoppm on this machine — PDFs are read directly via Claude's Read tool
-13. Push to GitHub after each session: branch `codex/yogas-doshas-hindi-ui`
+13. Push to GitHub after each session: branch `main`
 14. SVG text rotation is unreliable — use CSS `conic-gradient` for circular meters instead
 15. **Never SELECT `calculated_data` in ORDER BY queries** — fetch blob by PK separately (see MySQL fix above)
 16. **All Express async route handlers must use `ah()` wrapper** — prevents Node.js v24 process crash on unhandled promise rejection

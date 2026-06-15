@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-15 (Session 48)
+> Last updated: 2026-06-16 (Session 49)
 
 ---
 
@@ -846,6 +846,53 @@ Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly a
 - Missing dependency errors such as `knex: not found`, `next: not found`, and PM2 `Script not found: .../node_modules/next/dist/bin/next` are downstream symptoms of dependency install failure.
 - As `deploy`, system package/service commands need `sudo`.
 - Ubuntu MySQL root access uses `sudo mysql`, not `mysql -u root -p`.
+
+---
+
+## 32. Claude VPS Deployment Handoff (Session 49)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-16
+
+### Current VPS state to tell Claude
+- Hostinger VPS is being configured for `jyotishstack.com`.
+- Use the `deploy` user; package and service commands need `sudo`.
+- UFW is intentionally not used. Manual firewall should expose only TCP `22`, `80`, and `443`.
+- Do not expose MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081`.
+- Node.js was verified after restoring stdout with `exec 1>/dev/tty`: Node `v24.16.0`, npm `11.13.0`, PM2 `7.0.1`.
+- Apache is installed, modules are enabled, and the service is active. `ProxyTimeout 120` belongs at `VirtualHost` level.
+- Repo clone exists at `/var/www/jyotish-stack`.
+- Latest deployment instructions require `npm install`, not `npm ci`, because `package-lock.json` is ignored.
+
+### Exact next recovery path
+```bash
+cd /var/www/jyotish-stack
+git pull --ff-only origin main
+pm2 delete jyotish-api jyotish-ui-main || true
+npm install
+cd server
+NODE_ENV=production npm run migrate
+NODE_ENV=production npm run seed
+cd ..
+NODE_ENV=production npm run build:main
+pm2 startOrReload ecosystem.config.js --env production --update-env
+pm2 save
+pm2 status
+```
+
+### Deployment pitfalls already seen
+- `node -v` showed blank output because stdout was redirected; `exec 1>/dev/tty` fixed it.
+- `mysql -u root -p` fails on Ubuntu auth_socket installs; use `sudo mysql`.
+- `ERROR: Conf phpmyadmin does not exist!` after `a2disconf phpmyadmin` is acceptable.
+- `ProxyTimeout not allowed in <Location> context` is fixed in repo; re-copy `apache/jyotish.conf` if needed.
+- `npm ci` fails because no lockfile is committed; use `npm install`.
+- `knex: not found`, `next: not found`, and PM2 missing Next script mean dependencies did not install.
+- Do not run Certbot until DNS for `jyotishstack.com` and `www.jyotishstack.com` points to the VPS.
+
+### Security reminders
+- Do not paste real JWT secrets, DB password, SMTP, Razorpay, or Anthropic keys into chat or docs.
+- `server/.env` on the VPS is the only place for secrets.
+- phpMyAdmin must remain localhost-only through `apache/phpmyadmin-local.conf` and PuTTY tunnel.
 
 ---
 
