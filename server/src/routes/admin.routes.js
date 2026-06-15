@@ -487,19 +487,23 @@ router.get('/blog', ah(async (req, res) => {
   const status = req.query.status;
   const q      = req.query.q?.trim();
 
+  // Base query holds only joins + filters — NO .select(), so the cloned count query
+  // stays a pure aggregate (mixing selected columns with count() breaks only_full_group_by).
   let qb = db('blog_posts as bp')
-    .leftJoin('blog_categories as bc', 'bp.category_id', 'bc.id')
-    .select('bp.id','bp.title','bp.slug','bp.excerpt','bp.cover_image','bp.status',
-            'bp.author','bp.view_count','bp.published_at','bp.created_at',
-            'bc.name as category_name','bc.color as category_color');
+    .leftJoin('blog_categories as bc', 'bp.category_id', 'bc.id');
 
   if (status) qb = qb.where('bp.status', status);
   if (q)      qb = qb.where('bp.title', 'like', `%${q}%`);
 
   const [{ total }] = await qb.clone().count('bp.id as total');
-  const posts = await qb.orderBy('bp.created_at', 'desc').limit(limit).offset(offset);
+  const posts = await qb
+    .select('bp.id','bp.title','bp.slug','bp.excerpt','bp.cover_image','bp.status',
+            'bp.author','bp.view_count','bp.published_at','bp.created_at',
+            'bc.name as category_name','bc.color as category_color')
+    .orderBy('bp.created_at', 'desc').limit(limit).offset(offset);
 
-  return ok(res, posts, 200, {
+  return ok(res, {
+    data: posts,
     pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
   });
 }));
@@ -525,7 +529,7 @@ router.get('/blog/:id', ah(async (req, res) => {
     .select('bp.*', 'bc.name as category_name', 'bc.color as category_color')
     .first();
   if (!post) return fail(res, 'Post not found', 404);
-  return ok(res, post);
+  return ok(res, { data: post });
 }));
 
 router.put('/blog/:id', ah(async (req, res) => {
@@ -553,7 +557,7 @@ router.delete('/blog/:id', ah(async (req, res) => {
 // ─── TESTIMONIALS ─────────────────────────────────────────────────────────────
 router.get('/testimonials', ah(async (_req, res) => {
   const rows = await db('testimonials').orderBy('sort_order').orderBy('created_at', 'desc');
-  return ok(res, rows);
+  return ok(res, { data: rows });
 }));
 
 router.post('/testimonials', ah(async (req, res) => {
@@ -596,7 +600,8 @@ router.get('/inquiries', ah(async (req, res) => {
   const [{ total }] = await qb.clone().count('id as total');
   const rows = await qb.orderBy('created_at', 'desc').limit(limit).offset(offset);
 
-  return ok(res, rows, 200, {
+  return ok(res, {
+    data: rows,
     pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
   });
 }));
@@ -608,7 +613,7 @@ router.get('/inquiries/stats', ah(async (_req, res) => {
     db('inquiries').where({ status:'read' }).count('id as c').first(),
     db('inquiries').where({ status:'replied' }).count('id as c').first(),
   ]);
-  return ok(res, { total: Number(total.c), new: Number(newCount.c), read: Number(read.c), replied: Number(replied.c) });
+  return ok(res, { data: { total: Number(total.c), new: Number(newCount.c), read: Number(read.c), replied: Number(replied.c) } });
 }));
 
 router.get('/inquiries/:id', ah(async (req, res) => {
@@ -616,7 +621,7 @@ router.get('/inquiries/:id', ah(async (req, res) => {
   if (!row) return fail(res, 'Not found', 404);
   // auto-mark as read
   if (row.status === 'new') await db('inquiries').where({ id: req.params.id }).update({ status: 'read', updated_at: new Date() });
-  return ok(res, row);
+  return ok(res, { data: row });
 }));
 
 router.patch('/inquiries/:id', ah(async (req, res) => {
@@ -637,7 +642,7 @@ router.delete('/inquiries/:id', ah(async (req, res) => {
 // ─── TEAM MEMBERS ─────────────────────────────────────────────────────────────
 router.get('/team', ah(async (_req, res) => {
   const rows = await db('team_members').orderBy('sort_order').orderBy('name');
-  return ok(res, rows);
+  return ok(res, { data: rows });
 }));
 
 router.post('/team', ah(async (req, res) => {
@@ -679,7 +684,8 @@ router.get('/activity', ah(async (req, res) => {
 
   const [{ total }] = await qb.clone().count('id as total');
   const rows = await qb.orderBy('created_at', 'desc').limit(limit).offset(offset);
-  return ok(res, rows, 200, {
+  return ok(res, {
+    data: rows,
     pagination: { page, limit, total: Number(total), total_pages: Math.ceil(Number(total) / limit) },
   });
 }));
@@ -689,7 +695,7 @@ router.get('/profile', ah(async (req, res) => {
   const admin = await db('users').where({ id: req.user.id })
     .select('id','name','email','phone','role','plan','created_at').first();
   if (!admin) return fail(res, 'Not found', 404);
-  return ok(res, admin);
+  return ok(res, { data: admin });
 }));
 
 router.put('/profile', ah(async (req, res) => {
