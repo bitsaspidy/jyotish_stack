@@ -33,12 +33,13 @@ const FEATURES = [
 
 const PLANS = [
   {
-    en:'Basic', hi:'आधारभूत', price:'₹0', pe:'/month', ph:'/माह', hot:false,
-    cta_en:'Get Started', cta_hi:'निःशुल्क शुरू करें',
+    en:'Basic', hi:'आधारभूत', price:'₹200', pe:'/month', ph:'/माह', hot:false,
+    cta_en:'Get Started', cta_hi:'अभी शुरू करें',
     feats:[
       { en:'1 Kundli profile',    hi:'1 कुंडली प्रोफ़ाइल' },
       { en:'Daily prediction',    hi:'दैनिक भविष्यवाणी' },
       { en:'Basic matchmaking',   hi:'बेसिक विवाह मिलान' },
+      { en:'No PDF download',     hi:'PDF डाउनलोड शामिल नहीं' },
     ],
   },
   {
@@ -46,6 +47,7 @@ const PLANS = [
     cta_en:'Get Premium', cta_hi:'प्रीमियम लें',
     feats:[
       { en:'5 Kundli profiles',      hi:'5 कुंडली प्रोफ़ाइल' },
+      { en:'PDF download',           hi:'PDF डाउनलोड' },
       { en:'All prediction types',   hi:'सभी भविष्यवाणी प्रकार' },
       { en:'Advanced matchmaking',   hi:'उन्नत विवाह मिलान' },
       { en:'Dasha analysis',         hi:'दशा विश्लेषण' },
@@ -56,7 +58,8 @@ const PLANS = [
     en:'Yearly', hi:'वार्षिक', price:'₹3,999', pe:'/year', ph:'/वर्ष', hot:false,
     cta_en:'Get Yearly', cta_hi:'वार्षिक योजना लें',
     feats:[
-      { en:'Unlimited profiles',        hi:'असीमित प्रोफ़ाइल' },
+      { en:'Up to 50 Kundli profiles',  hi:'50 तक कुंडली प्रोफ़ाइल' },
+      { en:'PDF download',              hi:'PDF डाउनलोड' },
       { en:'Every feature included',    hi:'सभी सुविधाएं शामिल' },
       { en:'Priority support',          hi:'प्राथमिकता सहायता' },
       { en:'Muhurta calculator',        hi:'मुहूर्त कैलकुलेटर' },

@@ -20,6 +20,9 @@ const { computeKundliStrength }               = require('../services/helpers/kun
 
 router.use(authenticate);
 
+// Max Kundli profiles a user may create, by plan tier
+const PLAN_PROFILE_LIMITS = { basic: 1, premium: 5, yearly: 50 };
+
 // ── Helper: run calculation and persist ──────────────────────────────────────
 async function calcAndSave(profile) {
   try {
@@ -302,6 +305,14 @@ router.post('/', async (req, res) => {
       || latitude == null || longitude == null || timezone_offset == null || !gender)
     return fail(res, 'All birth details are required', 400);
 
+  if (req.user.role !== 'admin') {
+    const limit = PLAN_PROFILE_LIMITS[req.user.plan] || PLAN_PROFILE_LIMITS.basic;
+    const { count } = await db('kundli_profiles').where({ user_id: req.user.id }).count('id as count').first();
+    if (Number(count) >= limit) {
+      return fail(res, `Your plan allows up to ${limit} Kundli profile${limit > 1 ? 's' : ''}. Please upgrade to add more.`, 403);
+    }
+  }
+
   const [id] = await db('kundli_profiles').insert({
     uuid: uuidv4(), user_id: req.user.id,
     name, date_of_birth, time_of_birth, place_of_birth,
@@ -478,8 +489,8 @@ router.get('/reference/varga', async (req, res) => {
 
 // GET /api/kundli/:id/report.pdf  (premium / admin only)
 router.get('/:id/report.pdf', async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.plan !== 'premium') {
-    return fail(res, 'PDF export requires a Premium plan. Please upgrade to download reports.', 403);
+  if (req.user.role !== 'admin' && req.user.plan === 'basic') {
+    return fail(res, 'PDF export requires a Premium or Yearly plan. Please upgrade to download reports.', 403);
   }
   try {
     const profile = await db('kundli_profiles')

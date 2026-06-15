@@ -6,6 +6,10 @@ const { createOrder, verifySignature, getKeys } = require('../services/razorpay.
 const { sendEmail } = require('../services/email.service');
 const { ok, fail } = require('../utils/response');
 
+// Maps a subscription_plans.name to the users.plan tier used for feature gating
+const PLAN_TIER_MAP = { basic: 'basic', premium: 'premium', yearly: 'yearly' };
+const planTierFor = (planName) => PLAN_TIER_MAP[String(planName || '').toLowerCase()] || 'basic';
+
 // GET /api/subscriptions/plans — public
 router.get('/plans', async (_req, res) => {
   const plans = await db('subscription_plans').where({ is_active: true }).select();
@@ -25,6 +29,7 @@ router.post('/order', authenticate, async (req, res) => {
     const [id] = await db('user_subscriptions').insert({
       uuid: uuidv4(), user_id: req.user.id, plan_id: plan.id, status: 'active', amount_paid: 0, starts_at, expires_at,
     });
+    await db('users').where({ id: req.user.id }).update({ plan: planTierFor(plan.name) });
     return ok(res, { subscription_id: id, free: true }, 'Free plan activated');
   }
 
@@ -62,6 +67,8 @@ router.post('/verify', authenticate, async (req, res) => {
   await db('user_subscriptions').where({ id: sub.id }).update({
     status: 'active', razorpay_payment_id: payment_id, razorpay_signature: signature, starts_at, expires_at,
   });
+
+  await db('users').where({ id: req.user.id }).update({ plan: planTierFor(plan.name) });
 
   sendEmail({
     to: req.user.email, template: 'subscription_confirm',

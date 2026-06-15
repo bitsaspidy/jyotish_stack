@@ -36,7 +36,7 @@ jyotish-stack/
 │   └── src/
 │       ├── config/                # Knex DB connection + typecasts
 │       ├── middleware/            # Auth JWT, maintenance mode guard
-│       ├── migrations/            # 22 Knex migrations (001–022)
+│       ├── migrations/            # 23 Knex migrations (001–023)
 │       ├── routes/                # auth, kundli, admin, users, subscriptions, public
 │       ├── seeds/                 # 18 seed files — reference data + defaults
 │       └── services/
@@ -151,7 +151,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 ### 4. Run Migrations & Seeds
 
 ```bash
-npm run migrate   # Creates all 28 tables across 22 migrations
+npm run migrate   # Creates all 28 tables across 23 migrations
 npm run seed      # Seeds defaults, plans, all Vedic reference data
 ```
 
@@ -230,7 +230,7 @@ Built on Meeus *Astronomical Algorithms* (2nd Ed.) with Lahiri (Chitra-paksha) a
 
 ## Database Schema
 
-28 tables across 22 migrations:
+28 tables across 23 migrations:
 
 | Category | Tables |
 |----------|--------|
@@ -256,7 +256,7 @@ Built on Meeus *Astronomical Algorithms* (2nd Ed.) with Lahiri (Chitra-paksha) a
 
 - **Home** — bilingual landing: hero, features, pricing, testimonials (live from DB), team (live from DB), contact form (submits to inquiries table)
 - **Blog** (`/blog`) — article listing with category pills, search, pagination; article detail at `/blog/[slug]` with HTML content rendering
-- **Pricing** — 3-tier plans (Basic ₹0 · Premium ₹499/mo · Yearly ₹3,999/yr) with bilingual features
+- **Pricing** — 3-tier plans (Basic ₹200/mo (no PDF) · Premium ₹499/mo (PDF) · Yearly ₹3,999/yr (PDF, up to 50 profiles)) with bilingual features
 - Register / Login / Email Verification / Forgot Password / Reset Password
 
 ### Authenticated User
@@ -392,7 +392,20 @@ PATCH  /api/admin/inquiries/:id              Update status + admin note
 2. Keys are stored in `app_settings` table; `razorpay.service.js` reads from DB with `process.env` as fallback
 3. DB value takes priority; singleton instance is reset (`resetInstance()`) whenever keys are updated
 4. User selects a plan → `POST /api/subscriptions/order` → Razorpay checkout opens
-5. On payment success → `POST /api/subscriptions/verify` validates HMAC signature → plan activated
+5. On payment success → `POST /api/subscriptions/verify` validates HMAC signature → `users.plan` is updated to match the purchased tier → plan activated
+
+### Plan Tiers & Feature Gating
+
+| Plan | Price | Billing | Kundli Profiles | PDF Export |
+|------|-------|---------|------------------|------------|
+| Basic | ₹200 | Monthly | 1 | ❌ |
+| Premium | ₹499 | Monthly | 5 | ✅ |
+| Yearly | ₹3,999 | Annual | 50 | ✅ |
+
+- `users.plan` enum: `'basic' \| 'premium' \| 'yearly'` (migration 023)
+- Profile limit enforced server-side in `POST /api/kundli` (`PLAN_PROFILE_LIMITS` in `kundli.routes.js`)
+- PDF export blocked for `plan === 'basic'` in `GET /api/kundli/:id/report.pdf` (admins always bypass)
+- Admin role always has full access regardless of `plan` value
 
 ---
 
@@ -482,6 +495,7 @@ Astronomical algorithms: Meeus *Astronomical Algorithms* (2nd Ed.).
 - **Admin audit:** Every create/update/delete action in admin routes calls `logActivity()` — a non-fatal fire-and-forget that writes to `activity_logs`
 - **Settings upsert:** Admin settings PATCH uses `onConflict('key').merge()` — new keys are created on first save without needing a seed re-run
 - **Contact rate limit:** `POST /api/public/contact` is limited to 5 requests per IP per hour via `express-rate-limit`
+- **Hindi date formatting:** Raw `YYYY-MM-DD` strings from the backend (e.g. `meta.date` in Today's Prediction) are localized client-side with `toLocaleDateString('hi-IN', { dateStyle: 'medium' })` rather than shown verbatim — keeps dates fully translated alongside surrounding Hindi text
 
 ---
 
@@ -500,6 +514,7 @@ Astronomical algorithms: Meeus *Astronomical Algorithms* (2nd Ed.).
 - [x] Contact form wired to inquiries table
 - [x] Production deployment config (Apache, PM2, deploy.sh)
 - [x] SMTP production configuration documented
+- [x] Three-tier paid pricing (Basic ₹200 no-PDF · Premium ₹499 PDF · Yearly ₹3,999 up to 50 profiles)
 - [ ] Swiss Ephemeris integration for production-grade accuracy verification
 - [ ] Matchmaking view: display Mahendra + Stree Deergha fields
 - [ ] Admin users page: plan management column (set user plan)

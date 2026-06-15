@@ -127,13 +127,13 @@ export default function KundliDetail({ uuid }) {
     fetchKundli();
   }, [fetchKundli]);
 
-  const isPremium = user?.plan === 'premium' || user?.role === 'admin';
+  const isPremium = user?.plan === 'premium' || user?.plan === 'yearly' || user?.role === 'admin';
 
   const handlePdf = async () => {
     if (!isPremium) {
       toast.error(t(lang,
-        '🔒 PDF export requires Premium plan. Please upgrade to download reports.',
-        '🔒 PDF डाउनलोड के लिए Premium plan चाहिए। कृपया अपग्रेड करें।'
+        '🔒 PDF export requires Premium or Yearly plan. Please upgrade to download reports.',
+        '🔒 PDF डाउनलोड के लिए Premium या Yearly plan चाहिए। कृपया अपग्रेड करें।'
       ));
       return;
     }
@@ -233,7 +233,7 @@ export default function KundliDetail({ uuid }) {
               color: isPremium ? '#D4AF37' : '#94A3B8',
               border: isPremium ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(148,163,184,0.25)',
             }}>
-              {isPremium ? (user?.role === 'admin' ? '👑 Admin' : '⭐ Premium') : '🔒 Basic'}
+              {user?.role === 'admin' ? '👑 Admin' : user?.plan === 'yearly' ? '🌟 Yearly' : isPremium ? '⭐ Premium' : '🔒 Basic'}
             </span>
             <button onClick={handlePdf}
               className="btn-outline-gold text-xs px-4 py-2"

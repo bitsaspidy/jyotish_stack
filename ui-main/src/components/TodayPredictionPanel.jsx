@@ -41,6 +41,12 @@ export default function TodayPredictionPanel({ uuid, lang = 'en', admin = false 
   const [showHist, setShowHist] = useState(false);
   const T = (en, hi) => (lang === 'hi' ? hi : en);
   const pick = (o) => (o ? (lang === 'hi' ? (o.hi || o.en) : o.en) : null);
+  const formatDate = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (Number.isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { dateStyle: 'medium' });
+  };
 
   useEffect(() => {
     if (!uuid) return;
@@ -92,7 +98,7 @@ export default function TodayPredictionPanel({ uuid, lang = 'en', admin = false 
         gap:10, flexWrap:'wrap', marginBottom:12 }}>
         <div>
           <p style={{ color:GOLD, fontSize:10, textTransform:'uppercase', letterSpacing:'0.18em', marginBottom:4 }}>
-            🔮 {T('Today for You', 'आज आपके लिए')} · {meta.date || ''}
+            🔮 {T('Today for You', 'आज आपके लिए')} · {formatDate(meta.date)}
           </p>
           <h3 className="font-devanagari" style={{ color:'rgba(245,240,232,0.95)', fontSize:15, fontWeight:700, lineHeight:1.4 }}>
             {title}
