@@ -68,18 +68,18 @@ Do not open MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081` p
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-apt install -y nodejs
+sudo apt install -y nodejs
 node -v
 npm -v
-npm install -g pm2
+sudo npm install -g pm2
 ```
 
 ## 5. Install and lock down MySQL
 
 ```bash
-apt install -y mysql-server
-systemctl enable --now mysql
-mysql_secure_installation
+sudo apt install -y mysql-server
+sudo systemctl enable --now mysql
+sudo mysql_secure_installation
 ```
 
 Confirm MySQL binds to localhost:
@@ -97,8 +97,8 @@ bind-address = 127.0.0.1
 Restart and create the app database:
 
 ```bash
-systemctl restart mysql
-mysql -u root -p
+sudo systemctl restart mysql
+sudo mysql
 ```
 
 ```sql
@@ -112,11 +112,11 @@ EXIT;
 ## 6. Install Apache, PHP, phpMyAdmin, and Certbot
 
 ```bash
-apt install -y apache2 php libapache2-mod-php php-mysql php-mbstring php-zip php-gd php-json php-curl php-bcmath php-xml phpmyadmin certbot python3-certbot-apache
-phpenmod mbstring
-a2enmod proxy proxy_http proxy_wstunnel rewrite ssl headers
-a2disconf phpmyadmin || true
-systemctl enable --now apache2
+sudo apt install -y apache2 php libapache2-mod-php php-mysql php-mbstring php-zip php-gd php-json php-curl php-bcmath php-xml phpmyadmin certbot python3-certbot-apache
+sudo phpenmod mbstring
+sudo a2enmod proxy proxy_http proxy_wstunnel rewrite ssl headers
+sudo a2disconf phpmyadmin || true
+sudo systemctl enable --now apache2
 ```
 
 If the phpMyAdmin installer asks which web server to configure, leave Apache unchecked. We enable phpMyAdmin only through the localhost-only vhost in this repo.
@@ -124,9 +124,8 @@ If the phpMyAdmin installer asks which web server to configure, leave Apache unc
 ## 7. Pull the app from GitHub
 
 ```bash
-mkdir -p /var/www
-chown deploy:deploy /var/www
-su - deploy
+sudo mkdir -p /var/www
+sudo chown deploy:deploy /var/www
 cd /var/www
 git clone https://github.com/bitsaspidy/jyotish_stack.git jyotish-stack
 cd /var/www/jyotish-stack
@@ -177,7 +176,7 @@ Expected bind address: `127.0.0.1:8081`.
 
 ```bash
 cd /var/www/jyotish-stack
-npm ci
+npm install
 cd /var/www/jyotish-stack/server
 NODE_ENV=production npm run migrate
 NODE_ENV=production npm run seed

@@ -20,7 +20,7 @@ git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
 
 echo "Installing workspace dependencies..."
-npm ci
+npm install
 
 echo "Running database migrations..."
 (cd "$APP_DIR/server" && NODE_ENV=production npm run migrate)

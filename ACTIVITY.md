@@ -2,7 +2,30 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-15 (Session 47)
+> Last updated: 2026-06-15 (Session 48)
+
+---
+
+## Session 48 - 2026-06-15 | VPS Dependency Install Correction
+
+### What was done
+
+- Fixed `deploy.sh` to use `npm install` instead of `npm ci` because this repo intentionally ignores `package-lock.json`; the VPS clone does not have a lockfile.
+- Updated `docs/HOSTINGER_VPS_DEPLOYMENT.md` to use `npm install` for the same reason.
+- Added missing `sudo` prefixes to Node.js, PM2, MySQL, Apache, PHP, phpMyAdmin, Certbot, and service setup commands intended to be run as the `deploy` user.
+- Updated MySQL root access instructions to use `sudo mysql` because Ubuntu MySQL uses `auth_socket` for root by default.
+
+### Verification
+
+```bash
+node --check ecosystem.config.js
+node --check server/knexfile.js
+git diff --check
+```
+
+### Git/worktree note
+
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 

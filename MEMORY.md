@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-15 (Session 47)
+> Last updated: 2026-06-15 (Session 48)
 
 ---
 
@@ -832,6 +832,20 @@ Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly a
 - Keep `ProxyTimeout 120` at `VirtualHost` level in `apache/jyotish.conf`.
 - Production VPS was manually repaired with the same change after Apache logged `ProxyTimeout not allowed in <Location> context`.
 - Apache log filenames should use `jyotishstack_error.log` and `jyotishstack_access.log`.
+
+---
+
+## 31. VPS Dependency Install Correction (Session 48)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-15
+
+### Deployment note
+- `package-lock.json` is ignored by this repo, so production must use `npm install`, not `npm ci`.
+- If `npm ci` fails on the VPS with "can only install with an existing package-lock.json", run `npm install` from `/var/www/jyotish-stack`.
+- Missing dependency errors such as `knex: not found`, `next: not found`, and PM2 `Script not found: .../node_modules/next/dist/bin/next` are downstream symptoms of dependency install failure.
+- As `deploy`, system package/service commands need `sudo`.
+- Ubuntu MySQL root access uses `sudo mysql`, not `mysql -u root -p`.
 
 ---
 
