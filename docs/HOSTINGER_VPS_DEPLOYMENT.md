@@ -18,8 +18,10 @@ Do not expose MySQL port `3306`, phpMyAdmin, or Node ports `3000` and `5000` to 
 1. In Hostinger VPS firewall, allow only TCP `22`, `80`, and `443`.
 2. In Hostinger DNS for `jyotishstack.com`, set:
    - `A` record `@` to the VPS public IP.
-   - `A` record `www` to the VPS public IP.
-3. Wait for DNS propagation before running Certbot. It can take several hours and sometimes up to 24 hours.
+   - Preferred: `A` record `www` to the VPS public IP.
+   - If Hostinger will not accept `www` as an A record, find the existing `www` record. If it is a CNAME, either delete it and add the A record above, or set/edit it as `CNAME` `www` to `jyotishstack.com`.
+3. Remove old/conflicting `A`, `AAAA`, or `CNAME` records for `@` and `www` that point to website builder, parking, CDN, or old hosting.
+4. Wait for DNS propagation before running Certbot. It can take several hours and sometimes up to 24 hours.
 
 ## 2. First PuTTY login
 
@@ -49,11 +51,6 @@ chown -R deploy:deploy /home/deploy/.ssh
 chmod 700 /home/deploy/.ssh
 chmod 600 /home/deploy/.ssh/authorized_keys
 
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw enable
-ufw status
 ```
 
 Open a second PuTTY session and confirm the `deploy` user can log in before disabling root login.

@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-15 (Session 44)
+> Last updated: 2026-06-15 (Session 45)
 
 ---
 
@@ -792,6 +792,19 @@ npm.cmd run build:main    # compiled successfully; 31/31 pages generated
 
 ### Git/worktree note
 Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly asks to commit generated reference artifacts.
+
+---
+
+## 28. Hostinger DNS www Record Fallback (Session 45)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-15
+
+### DNS note
+- For `jyotishstack.com`, root `@` should be an A record pointing to the VPS public IP.
+- `www` can be either an A record pointing to the VPS public IP or a CNAME pointing to `jyotishstack.com`.
+- If Hostinger refuses a `www` A record, check for an existing `www` CNAME. Delete it before adding the A record, or edit/keep it as `CNAME www -> jyotishstack.com`.
+- Remove old/conflicting `@` or `www` A, AAAA, or CNAME records that point to website builder, parking, CDN, or old hosting before waiting for propagation.
 
 ---
 

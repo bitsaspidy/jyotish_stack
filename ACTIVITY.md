@@ -2,7 +2,21 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-15 (Session 44)
+> Last updated: 2026-06-15 (Session 45)
+
+---
+
+## Session 45 - 2026-06-15 | DNS www Record Fallback
+
+### What was done
+
+- Updated `docs/HOSTINGER_VPS_DEPLOYMENT.md` to handle Hostinger rejecting a `www` A record when an existing `www` CNAME already exists.
+- Documented the safe fallback: keep root `@` as an A record to the VPS IP, then use either `www` A record to the VPS IP or `www` CNAME to `jyotishstack.com`.
+- Added an explicit reminder to remove conflicting old `@`/`www` A, AAAA, or CNAME records from website builder, parking, CDN, or old hosting.
+
+### Git/worktree note
+
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 
