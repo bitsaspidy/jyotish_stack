@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-15 (Session 46)
+> Last updated: 2026-06-15 (Session 47)
 
 ---
 
@@ -819,6 +819,19 @@ Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly a
 - Public inbound access should be limited to TCP `22`, `80`, and `443`.
 - Do not expose MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081` publicly.
 - Apache site commands use `jyotishstack.conf` and `sudo a2ensite jyotishstack`.
+
+---
+
+## 30. Apache ProxyTimeout Context Fix (Session 47)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-15
+
+### Apache note
+- Apache rejects `ProxyTimeout` inside a `<Location>` block.
+- Keep `ProxyTimeout 120` at `VirtualHost` level in `apache/jyotish.conf`.
+- Production VPS was manually repaired with the same change after Apache logged `ProxyTimeout not allowed in <Location> context`.
+- Apache log filenames should use `jyotishstack_error.log` and `jyotishstack_access.log`.
 
 ---
 

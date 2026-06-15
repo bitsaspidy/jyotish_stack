@@ -2,7 +2,29 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-15 (Session 46)
+> Last updated: 2026-06-15 (Session 47)
+
+---
+
+## Session 47 - 2026-06-15 | Apache ProxyTimeout Context Fix
+
+### What was done
+
+- Fixed `apache/jyotish.conf` after production Apache reported `ProxyTimeout not allowed in <Location> context`.
+- Moved `ProxyTimeout 120` to the `VirtualHost` level so `apache2ctl configtest` can pass.
+- Renamed Apache log filenames from the old `jyotishstackai_*` names to `jyotishstack_*`.
+
+### Verification
+
+```bash
+node --check ecosystem.config.js
+node --check server/knexfile.js
+git diff --check
+```
+
+### Git/worktree note
+
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 
