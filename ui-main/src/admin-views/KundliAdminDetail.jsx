@@ -41,7 +41,7 @@ import {
 } from '../lib/astroI18n';
 
 // ─── Admin Guide — collapsible panel ─────────────────────────────────────────
-function AdminGuide({ title, children, defaultOpen = false }) {
+function AdminGuide({ title, children, defaultOpen = false, lang = 'en' }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div style={{ background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:10, marginBottom:20, overflow:'hidden' }}>
@@ -49,7 +49,9 @@ function AdminGuide({ title, children, defaultOpen = false }) {
         style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:16 }}>📚</span>
-          <span style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:13, fontWeight:700 }}>Astrologer's Guide</span>
+          <span style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:13, fontWeight:700 }}>
+            {lang === 'hi' ? 'ज्योतिषी मार्गदर्शिका' : "Astrologer's Guide"}
+          </span>
           <span style={{ color:'rgba(212,175,55,0.55)', fontSize:11 }}>— {title}</span>
         </div>
         <span style={{ color:'rgba(212,175,55,0.6)', fontSize:14, transition:'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>▾</span>
@@ -602,6 +604,9 @@ export default function KundliAdminDetail({ kundliUuid }) {
   const [activeTab,    setActiveTab]    = useState('kundli');
   const [chartStyle,   setChartStyle]   = useState('north');
 
+  // Astrologer's Guide translation helper — picks Hindi when the admin toggles to हि
+  const G = (en, hi) => (lang === 'hi' ? hi : en);
+
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('kundli_chart_style') : null;
     if (saved === 'south' || saved === 'north') setChartStyle(saved);
@@ -757,27 +762,53 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
       {activeTab === 'kundli' && (
         <div>
-          <AdminGuide title="Birth Chart Interpretation">
-            <GLine label="What this shows" text="The D1 (Lagna/Rashi) chart is the foundational birth chart. It maps the sky at the exact moment of birth. Each of the 12 houses governs a life domain; planets in those houses color the results." />
-            <GLine label="Ascendant (Lagna)" text="The rising sign at birth — defines the person's physical body, personality, and the lens through which all chart results manifest. Most important point in the chart." color="#A78BFA" />
-            <GLine label="Navamsha (D9)" text="The 9th divisional chart. Reveals marriage, dharma, and the deeper soul purpose. After 35 years, the D9 becomes as important as D1 for predicting outcomes." color="#60A5FA" />
-            <GSection title="Dasha Timeline" items={[
-              "Vimshottari Dasha runs on a 120-year cycle based on Moon's nakshatra at birth.",
-              "Mahadasha (major period) sets the overarching theme; Antardasha (sub-period) activates specific planets.",
-              "A planet in a good house, with good dignity, in its own Dasha = powerful results.",
-              "Pratyantardasha and Sookshmadasha are useful for pinpointing event windows within days/weeks.",
+          <AdminGuide lang={lang} title={G('Birth Chart Interpretation', 'जन्म कुंडली व्याख्या')}>
+            <GLine label={G('What this shows', 'यह क्या दर्शाता है')} text={G(
+              "The D1 (Lagna/Rashi) chart is the foundational birth chart. It maps the sky at the exact moment of birth. Each of the 12 houses governs a life domain; planets in those houses color the results.",
+              "D1 (लग्न/राशि) कुंडली मूल जन्म कुंडली है। यह जन्म के ठीक क्षण के आकाश का मानचित्र है। 12 भावों में से प्रत्येक एक जीवन क्षेत्र का स्वामी होता है; उन भावों में स्थित ग्रह फलों को प्रभावित करते हैं।"
+            )} />
+            <GLine label={G('Ascendant (Lagna)', 'लग्न')} text={G(
+              "The rising sign at birth — defines the person's physical body, personality, and the lens through which all chart results manifest. Most important point in the chart.",
+              "जन्म के समय उदित होती राशि — व्यक्ति के शरीर, व्यक्तित्व, और उस दृष्टिकोण को परिभाषित करती है जिससे कुंडली के सभी फल प्रकट होते हैं। कुंडली का सबसे महत्वपूर्ण बिंदु।"
+            )} color="#A78BFA" />
+            <GLine label={G('Navamsha (D9)', 'नवांश (D9)')} text={G(
+              "The 9th divisional chart. Reveals marriage, dharma, and the deeper soul purpose. After 35 years, the D9 becomes as important as D1 for predicting outcomes.",
+              "9वीं विभागीय कुंडली। विवाह, धर्म, और आत्मा के गहरे उद्देश्य को प्रकट करती है। 35 वर्ष के बाद, फल कथन के लिए D9, D1 जितनी ही महत्वपूर्ण हो जाती है।"
+            )} color="#60A5FA" />
+            <GSection title={G('Dasha Timeline', 'दशा समयरेखा')} items={[
+              G("Vimshottari Dasha runs on a 120-year cycle based on Moon's nakshatra at birth.",
+                "विंशोत्तरी दशा जन्म के समय चंद्रमा के नक्षत्र के आधार पर 120-वर्ष के चक्र पर चलती है।"),
+              G("Mahadasha (major period) sets the overarching theme; Antardasha (sub-period) activates specific planets.",
+                "महादशा (मुख्य काल) समग्र विषय तय करती है; अंतर्दशा (उप-काल) विशिष्ट ग्रहों को सक्रिय करती है।"),
+              G("A planet in a good house, with good dignity, in its own Dasha = powerful results.",
+                "शुभ भाव में, अच्छी अवस्था वाला ग्रह, अपनी दशा में = शक्तिशाली फल।"),
+              G("Pratyantardasha and Sookshmadasha are useful for pinpointing event windows within days/weeks.",
+                "प्रत्यंतर्दशा और सूक्ष्मदशा दिनों/सप्ताहों के भीतर घटनाओं का सटीक समय निर्धारित करने में उपयोगी हैं।"),
             ]} />
-            <GSection title="Reading Planet Dignity" items={[
-              "Exalted (Uccha): Planet at its strongest. Powerful, benefic results.",
-              "Own Sign (Swa): Second-strongest. Planet acts reliably in its own domain.",
-              "Moolatrikona: Near own sign in strength. Generally positive.",
-              "Friendly Sign: Moderately strong. Good results with some variation.",
-              "Neutral Sign: Average strength. Results are mixed.",
-              "Enemy Sign: Weakened. May give delayed or troubled results.",
-              "Debilitated (Neecha): Weakest placement. BUT check for Neecha Bhanga — cancellation of debility by specific combinations can make such planets very powerful.",
+            <GSection title={G('Reading Planet Dignity', 'ग्रह अवस्था पढ़ना')} items={[
+              G("Exalted (Uccha): Planet at its strongest. Powerful, benefic results.",
+                "उच्च: ग्रह अपनी सबसे प्रबल अवस्था में। शक्तिशाली, शुभ फल।"),
+              G("Own Sign (Swa): Second-strongest. Planet acts reliably in its own domain.",
+                "स्वगृह: दूसरी सबसे प्रबल अवस्था। ग्रह अपने क्षेत्र में विश्वसनीय रूप से फल देता है।"),
+              G("Moolatrikona: Near own sign in strength. Generally positive.",
+                "मूलत्रिकोण: स्वगृह के निकट बल वाला। सामान्यतः सकारात्मक।"),
+              G("Friendly Sign: Moderately strong. Good results with some variation.",
+                "मित्र राशि: मध्यम बल। कुछ भिन्नता के साथ अच्छे फल।"),
+              G("Neutral Sign: Average strength. Results are mixed.",
+                "सम राशि: औसत बल। फल मिश्रित होते हैं।"),
+              G("Enemy Sign: Weakened. May give delayed or troubled results.",
+                "शत्रु राशि: कमजोर। विलंबित या कष्टप्रद फल दे सकता है।"),
+              G("Debilitated (Neecha): Weakest placement. BUT check for Neecha Bhanga — cancellation of debility by specific combinations can make such planets very powerful.",
+                "नीच: सबसे कमजोर स्थिति। परंतु नीच भंग की जाँच करें — विशिष्ट योगों द्वारा नीचता का रद्द होना ऐसे ग्रहों को अत्यंत शक्तिशाली बना सकता है।"),
             ]} />
-            <GLine label="Combust (Asta)" text="Planets within BPHS prescribed orb of the Sun lose strength and independence. Their significations are overshadowed by solar themes (ego, authority)." color="#F59E0B" />
-            <GLine label="Retrograde (Vakri)" text="Retrograde planets are internalized — their energy turns inward. Often indicates delayed but ultimately stronger results in that planet's period. Check natal house position carefully." color="#F97316" />
+            <GLine label={G('Combust (Asta)', 'अस्त')} text={G(
+              "Planets within BPHS prescribed orb of the Sun lose strength and independence. Their significations are overshadowed by solar themes (ego, authority).",
+              "सूर्य की BPHS-निर्धारित सीमा के भीतर के ग्रह बल और स्वतंत्रता खो देते हैं। उनके कारकत्व सूर्य के विषयों (अहंकार, अधिकार) से ढक जाते हैं।"
+            )} color="#F59E0B" />
+            <GLine label={G('Retrograde (Vakri)', 'वक्री')} text={G(
+              "Retrograde planets are internalized — their energy turns inward. Often indicates delayed but ultimately stronger results in that planet's period. Check natal house position carefully.",
+              "वक्री ग्रह अंतर्मुखी होते हैं — उनकी ऊर्जा भीतर की ओर मुड़ती है। प्रायः उस ग्रह की दशा में विलंबित परंतु अंततः प्रबल फल दर्शाते हैं। जन्म कुंडली में भाव स्थिति की सावधानी से जाँच करें।"
+            )} color="#F97316" />
           </AdminGuide>
 
           <div style={{ display:'grid', gridTemplateColumns:'2fr 3fr', gap:24 }}>
