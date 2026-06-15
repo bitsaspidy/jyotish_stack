@@ -15,7 +15,8 @@ Do not expose MySQL port `3306`, phpMyAdmin, or Node ports `3000` and `5000` to 
 
 ## 1. Hostinger panel setup
 
-1. In Hostinger VPS firewall, allow only TCP `22`, `80`, and `443`.
+1. In Hostinger VPS firewall or your manual firewall rules, allow only TCP `22`, `80`, and `443`.
+   Do not use UFW for this deployment if you are managing permissions manually.
 2. In Hostinger DNS for `jyotishstack.com`, set:
    - `A` record `@` to the VPS public IP.
    - Preferred: `A` record `www` to the VPS public IP.
@@ -37,7 +38,7 @@ Login as `root` for the first setup only.
 
 ```bash
 apt update && apt upgrade -y
-apt install -y ufw fail2ban curl wget git unzip ca-certificates gnupg lsb-release openssl
+apt install -y fail2ban curl wget git unzip ca-certificates gnupg lsb-release openssl
 
 adduser deploy
 usermod -aG sudo deploy
@@ -54,6 +55,14 @@ chmod 600 /home/deploy/.ssh/authorized_keys
 ```
 
 Open a second PuTTY session and confirm the `deploy` user can log in before disabling root login.
+
+Firewall permissions are managed manually for this server. Keep inbound public access limited to SSH, HTTP, and HTTPS:
+
+- TCP `22` for SSH/PuTTY
+- TCP `80` for HTTP/Certbot
+- TCP `443` for HTTPS
+
+Do not open MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081` publicly.
 
 ## 4. Install Node.js 24 LTS and PM2
 
@@ -148,9 +157,9 @@ Fill:
 ## 9. Enable Apache sites
 
 ```bash
-sudo cp apache/jyotish.conf /etc/apache2/sites-available/jyotishstackai.conf
+sudo cp apache/jyotish.conf /etc/apache2/sites-available/jyotishstack.conf
 sudo cp apache/phpmyadmin-local.conf /etc/apache2/sites-available/phpmyadmin-local.conf
-sudo a2ensite jyotishstackai
+sudo a2ensite jyotishstack
 sudo a2ensite phpmyadmin-local
 sudo apache2ctl configtest
 sudo systemctl reload apache2
@@ -224,11 +233,10 @@ curl -I http://127.0.0.1:3000
 curl http://127.0.0.1:5000/health
 curl -I https://jyotishstack.com
 curl https://jyotishstack.com/api/settings/public
-sudo ufw status
 sudo ss -ltnp
 ```
 
-Public listeners should be only SSH, HTTP, and HTTPS. MySQL, phpMyAdmin, API, and Next.js should be local-only.
+Public listeners should be only SSH, HTTP, and HTTPS. MySQL, phpMyAdmin, API, and Next.js should be local-only. Confirm your manual firewall rules also expose only TCP `22`, `80`, and `443`.
 
 ## 14. After the deploy user is verified
 

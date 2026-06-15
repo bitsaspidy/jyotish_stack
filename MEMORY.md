@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-15 (Session 45)
+> Last updated: 2026-06-15 (Session 46)
 
 ---
 
@@ -805,6 +805,20 @@ Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly a
 - `www` can be either an A record pointing to the VPS public IP or a CNAME pointing to `jyotishstack.com`.
 - If Hostinger refuses a `www` A record, check for an existing `www` CNAME. Delete it before adding the A record, or edit/keep it as `CNAME www -> jyotishstack.com`.
 - Remove old/conflicting `@` or `www` A, AAAA, or CNAME records that point to website builder, parking, CDN, or old hosting before waiting for propagation.
+
+---
+
+## 29. Manual Firewall Deployment Path (Session 46)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-15
+
+### Firewall note
+- The Hostinger VPS deployment runbook does not use UFW after Session 46.
+- Firewall permissions are managed manually by the owner.
+- Public inbound access should be limited to TCP `22`, `80`, and `443`.
+- Do not expose MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081` publicly.
+- Apache site commands use `jyotishstack.conf` and `sudo a2ensite jyotishstack`.
 
 ---
 

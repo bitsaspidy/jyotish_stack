@@ -2,7 +2,22 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-15 (Session 45)
+> Last updated: 2026-06-15 (Session 46)
+
+---
+
+## Session 46 - 2026-06-15 | Manual Firewall Deployment Path
+
+### What was done
+
+- Updated `docs/HOSTINGER_VPS_DEPLOYMENT.md` to avoid UFW because firewall permissions will be managed manually.
+- Removed `ufw` from the base package install command and removed `sudo ufw status` from verification.
+- Added explicit manual firewall guidance: expose only TCP `22`, `80`, and `443`; keep MySQL `3306`, Next.js `3000`, Express `5000`, and phpMyAdmin `8081` private.
+- Corrected the Apache site filename and enable command from the old `jyotishstackai` name to `jyotishstack`.
+
+### Git/worktree note
+
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 
