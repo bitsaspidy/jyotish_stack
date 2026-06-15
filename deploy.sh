@@ -1,50 +1,43 @@
-#!/bin/bash
-# deploy.sh — Full deployment script for Jyotish Stack AI
-# Usage: bash deploy.sh
-# Run from /var/www/jyotish-stack on the production server.
+#!/usr/bin/env bash
+# Full deployment script for Jyotish Stack AI.
+# Run on the production server as the deploy user:
+#   APP_DIR=/var/www/jyotish-stack bash deploy.sh
 
-set -e
-APP_DIR="/var/www/jyotish-stack"
+set -euo pipefail
 
-echo "════════════════════════════════════════════"
-echo "  Jyotish Stack AI — Deploy $(date '+%Y-%m-%d %H:%M')"
-echo "════════════════════════════════════════════"
+APP_DIR="${APP_DIR:-/var/www/jyotish-stack}"
+BRANCH="${BRANCH:-main}"
 
-# 1. Pull latest code
-echo "▶ Pulling latest from git…"
-git pull origin main
+echo "Jyotish Stack AI deploy: $(date '+%Y-%m-%d %H:%M:%S')"
+echo "App dir: ${APP_DIR}"
+echo "Branch:  ${BRANCH}"
 
-# 2. Install server dependencies
-echo "▶ Installing server dependencies…"
-cd "$APP_DIR/server"
-npm install --omit=dev
-
-# 3. Run DB migrations
-echo "▶ Running database migrations…"
-NODE_ENV=production node -e "require('./src/db/knex').migrate.latest().then(() => { console.log('Migrations done'); process.exit(0); }).catch(e => { console.error(e); process.exit(1); })"
-
-# 4. Install UI dependencies
-echo "▶ Installing UI dependencies…"
-cd "$APP_DIR/ui-main"
-npm install
-
-# 5. Build Next.js
-echo "▶ Building Next.js…"
-NODE_ENV=production npm run build
-
-# 6. Reload PM2 processes (zero-downtime)
-echo "▶ Reloading PM2…"
 cd "$APP_DIR"
-pm2 reload ecosystem.config.js --env production --update-env
 
-# 7. Save PM2 process list (so it survives server reboot)
+echo "Pulling latest code..."
+git fetch origin "$BRANCH"
+git checkout "$BRANCH"
+git pull --ff-only origin "$BRANCH"
+
+echo "Installing workspace dependencies..."
+npm ci
+
+echo "Running database migrations..."
+(cd "$APP_DIR/server" && NODE_ENV=production npm run migrate)
+
+echo "Building public Next.js app..."
+NODE_ENV=production npm run build:main
+
+echo "Starting or reloading PM2 processes..."
+if ! pm2 reload ecosystem.config.js --env production --update-env; then
+  pm2 start ecosystem.config.js --env production --update-env
+fi
+
 pm2 save
 
-# 8. Reload Apache
-echo "▶ Reloading Apache…"
+echo "Reloading Apache..."
 sudo apache2ctl configtest && sudo systemctl reload apache2
 
-echo ""
-echo "✅ Deployment complete."
-echo "   Server: http://localhost:5000/api/health"
-echo "   UI:     http://localhost:3000"
+echo "Deployment complete."
+echo "API: http://127.0.0.1:5000/health"
+echo "UI:  http://127.0.0.1:3000"

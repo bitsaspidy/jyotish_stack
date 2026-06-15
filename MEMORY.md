@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for any AI agent working on this project.
 > Always read this file first before making any changes.
-> Last updated: 2026-06-12 (Session 42)
+> Last updated: 2026-06-15 (Session 43)
 
 ---
 
@@ -788,6 +788,41 @@ node --check server/src/services/pdf/kundli-report.js
 git diff --check
 npm.cmd run test:server   # 14/14 passed
 npm.cmd run build:main    # compiled successfully; 31/31 pages generated
+```
+
+### Git/worktree note
+Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly asks to commit generated reference artifacts.
+
+---
+
+## 27. Hostinger VPS Production Deployment Kit (Session 43)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-15
+
+### Deployment target
+- Launch target is `jyotishstackai.com` on a 16 GB Hostinger VPS.
+- The production runbook serves the full `ui-main` app on port 3000 through Apache. `ui-ai-com` is still a lightweight landing surface and should not replace `ui-main` for launch until it has feature parity.
+- Express API stays on localhost port 5000 behind Apache `/api/`.
+- MySQL stays bound to `127.0.0.1:3306`.
+- phpMyAdmin stays bound to `127.0.0.1:8081` and is accessed only through a PuTTY SSH tunnel.
+
+### Files added/updated
+- `docs/HOSTINGER_VPS_DEPLOYMENT.md`: step-by-step Hostinger VPS runbook covering firewall, DNS, PuTTY, Node.js 24 LTS, MySQL, Apache, phpMyAdmin, GitHub clone/pull, env setup, migrations, PM2, Certbot, validation, hardening, scaling, and backups.
+- `apache/phpmyadmin-local.conf`: localhost-only Apache vhost for phpMyAdmin.
+- `apache/jyotish.conf`: HTTP vhost for `jyotishstackai.com`; Certbot should be run after DNS propagation to create HTTPS and redirects.
+- `ecosystem.config.js`: PM2 production process config for `jyotish-api` and `jyotish-ui-main`, with optional `API_INSTANCES` and `UI_INSTANCES` scaling.
+- `deploy.sh`: repeatable production pull/build/migrate/reload script.
+- `.env.production.example`: production template aligned with app env names.
+- `server/knexfile.js`: production DB SSL is opt-in via `DB_SSL=true`, so local VPS MySQL works without forced TLS.
+
+### Verification
+```bash
+node --check ecosystem.config.js
+node --check server/knexfile.js
+git diff --check
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 38/38 pages generated
 ```
 
 ### Git/worktree note

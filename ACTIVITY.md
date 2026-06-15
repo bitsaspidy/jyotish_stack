@@ -2,7 +2,40 @@
 
 > Chronological record of every task completed on this project.
 > Safe to share with any AI agent as full context.
-> Last updated: 2026-06-12 (Session 42)
+> Last updated: 2026-06-15 (Session 43)
+
+---
+
+## Session 43 - 2026-06-15 | Hostinger VPS Production Deployment Kit
+
+### What was done
+
+**Deployment runbook:**
+- Added `docs/HOSTINGER_VPS_DEPLOYMENT.md` with step-by-step Hostinger VPS setup for Ubuntu 24.04, Node.js 24 LTS, MySQL, Apache, PM2, Certbot, GitHub pull, DNS, backups, and scaling.
+- Documented that `jyotishstackai.com` will serve the full `ui-main` app for launch, while `ui-ai-com` remains a lighter AI-branded landing package until it reaches feature parity.
+- Added secure phpMyAdmin access through a PuTTY SSH tunnel only, with Apache listening on `127.0.0.1:8081`.
+
+**Production config:**
+- Updated `ecosystem.config.js` so PM2 runs the API from `server/` and the full `ui-main` Next app from `ui-main/`, with optional `API_INSTANCES` and `UI_INSTANCES` scaling.
+- Rebuilt `deploy.sh` around `git pull --ff-only`, `npm ci`, server migrations, `build:main`, PM2 start/reload, and Apache reload.
+- Updated `.env.production.example` for the real production env variables used by the app: `APP_URL`, `ALLOWED_ORIGINS`, `JWT_REFRESH_SECRET`, and localhost MySQL.
+- Updated `apache/jyotish.conf` for `jyotishstackai.com` and added `apache/phpmyadmin-local.conf` for local-only phpMyAdmin.
+- Updated `server/knexfile.js` so production MySQL SSL is opt-in via `DB_SSL=true`, instead of forcing SSL for a local VPS MySQL socket.
+
+### Verification
+
+```bash
+node --check ecosystem.config.js
+node --check server/knexfile.js
+git diff --check
+npm.cmd run test:server   # 14/14 passed
+npm.cmd run build:main    # compiled successfully; 38/38 pages generated
+```
+
+### Notes
+
+- `bash -n deploy.sh` could not run locally because Windows Subsystem for Linux has no installed distro in this machine.
+- `pdf-map.txt` and `test-report.pdf` remain local generated/reference artifacts and should not be committed.
 
 ---
 

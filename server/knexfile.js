@@ -13,6 +13,10 @@ const BASE = {
   typeCast,
 };
 
+const dbSsl = process.env.DB_SSL === 'true'
+  ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
+  : undefined;
+
 module.exports = {
   development: {
     client: 'mysql2',
@@ -36,7 +40,7 @@ module.exports = {
       user:     process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME,
-      ssl:      { rejectUnauthorized: false },
+      ssl:      dbSsl,
       ...BASE,
     },
     pool: { min: 2, max: 10 },
