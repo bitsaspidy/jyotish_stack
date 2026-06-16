@@ -3,6 +3,9 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
+const { sendEmail, departmentInbox, DEPARTMENTS, DEPT_LABELS } = require('../services/email.service');
+
+const VALID_DEPARTMENTS = ['sales', 'team', 'account', 'general'];
 
 // ─── Blog ─────────────────────────────────────────────────────────────────────
 
@@ -119,18 +122,44 @@ router.post('/contact', contactLimiter, async (req, res) => {
       return fail(res, 'Message must be at least 10 characters', 400);
     }
 
+    const department = VALID_DEPARTMENTS.includes(req.body.department) ? req.body.department : 'general';
     const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
 
-    await db('inquiries').insert({
+    const cleaned = {
       name:    name.trim(),
       email:   email.trim().toLowerCase(),
       phone:   phone?.trim()   || null,
       subject: subject?.trim() || 'General Inquiry',
       message: message.trim(),
+    };
+
+    await db('inquiries').insert({
+      ...cleaned,
+      department,
       status:  'new',
       source:  'website',
       ip_address: ip || null,
     });
+
+    // Route email to the right mailbox (sales@ / team@ / account@). Non-fatal — the
+    // inquiry is already stored, so a mail failure must not fail the request.
+    const inbox = departmentInbox(department);                  // 'sales' | 'team' | 'account'
+    const label = DEPT_LABELS[department] || 'Support';
+    const inboxAddress = DEPARTMENTS[inbox]?.address;
+
+    if (inboxAddress) {
+      // 1) Notify the internal department inbox, with Reply-To set to the customer
+      sendEmail({
+        to: inboxAddress, template: 'contact_notify', from: inbox,
+        replyTo: cleaned.email,
+        data: { ...cleaned, departmentLabel: label },
+      }).catch(() => {});
+      // 2) Acknowledge the customer, sent from that department mailbox
+      sendEmail({
+        to: cleaned.email, template: 'contact_ack', from: inbox,
+        data: { name: cleaned.name, message: cleaned.message, departmentLabel: label },
+      }).catch(() => {});
+    }
 
     return ok(res, {}, 'Message sent! We\'ll get back to you soon.');
   } catch (e) {

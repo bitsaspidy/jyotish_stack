@@ -21,6 +21,23 @@ function StatusBadge({ status }) {
   );
 }
 
+const DEPT_STYLE = {
+  sales:   { label:'Sales',   color:'#22C55E' },
+  team:    { label:'Support', color:'#60A5FA' },
+  account: { label:'Account', color:'#D4AF37' },
+  general: { label:'General', color:'#9CA3AF' },
+};
+function DeptBadge({ department }) {
+  if (!department) return null;
+  const d = DEPT_STYLE[department] || DEPT_STYLE.general;
+  return (
+    <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:700,
+      background:`${d.color}1A`, color:d.color, border:`1px solid ${d.color}40` }}>
+      {d.label}
+    </span>
+  );
+}
+
 function Btn({ children, onClick, color = GOLD, outline = false, small = false, disabled = false }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
@@ -210,10 +227,11 @@ export default function AdminInquiries() {
                 transition:'border-color 0.15s',
               }}>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4 }}>
+                <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:4, flexWrap:'wrap' }}>
                   <span style={{ color:IVORY, fontWeight:600, fontSize:13 }}>{inq.name}</span>
                   <span style={{ color:DIM, fontSize:12 }}>{inq.email}</span>
                   <StatusBadge status={inq.status} />
+                  <DeptBadge department={inq.department} />
                 </div>
                 <p style={{ color:DIM, fontSize:12, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                   {inq.subject ? <strong style={{ color:IVORY }}>{inq.subject} — </strong> : null}

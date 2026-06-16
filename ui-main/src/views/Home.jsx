@@ -200,9 +200,16 @@ function TeamSection({ lang }) {
 // ─── Contact Section ──────────────────────────────────────────────────────────
 function ContactSection({ lang }) {
   const hi = lang === 'hi';
-  const [form, setForm]     = useState({ name:'', email:'', subject:'', message:'' });
+  const [form, setForm]     = useState({ name:'', email:'', department:'general', subject:'', message:'' });
   const [status, setStatus] = useState('idle'); // idle | sending | done | error
   const [errMsg, setErrMsg] = useState('');
+
+  const DEPARTMENTS = [
+    { value:'general', en:'General Inquiry',   hi:'सामान्य पूछताछ' },
+    { value:'sales',   en:'Sales',             hi:'बिक्री' },
+    { value:'team',    en:'Support',           hi:'सहायता' },
+    { value:'account', en:'Account & Billing', hi:'खाता एवं भुगतान' },
+  ];
 
   const submit = async (e) => {
     e.preventDefault();
@@ -215,7 +222,7 @@ function ContactSection({ lang }) {
       const d = await r.json();
       if (!d.success) throw new Error(d.message || 'Failed');
       setStatus('done');
-      setForm({ name:'', email:'', subject:'', message:'' });
+      setForm({ name:'', email:'', department:'general', subject:'', message:'' });
     } catch (e) {
       setErrMsg(e.message);
       setStatus('error');
@@ -276,12 +283,28 @@ function ContactSection({ lang }) {
                     required placeholder="you@example.com" style={inp} />
                 </div>
               </div>
-              <div>
-                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                  {hi ? 'विषय' : 'Subject'}
-                </label>
-                <input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))}
-                  placeholder={hi ? 'विषय लिखें' : 'Subject'} style={inp} />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <div>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                    {hi ? 'विषय श्रेणी' : 'Topic'}
+                  </label>
+                  <select value={form.department}
+                    onChange={e => setForm(f=>({...f,department:e.target.value}))}
+                    style={{ ...inp, appearance:'auto', cursor:'pointer' }}>
+                    {DEPARTMENTS.map(d => (
+                      <option key={d.value} value={d.value} style={{ background:'#0B0D1A', color:IVORY }}>
+                        {hi ? d.hi : d.en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
+                    {hi ? 'विषय' : 'Subject'}
+                  </label>
+                  <input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))}
+                    placeholder={hi ? 'विषय लिखें' : 'Subject'} style={inp} />
+                </div>
               </div>
               <div>
                 <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
