@@ -10,6 +10,7 @@ const STATUS_STYLE = {
   retried:  { bg:'rgba(148,163,184,0.12)', color:'#94A3B8', border:'rgba(148,163,184,0.25)' },
   retrying: { bg:'rgba(96,165,250,0.12)',  color:'#60A5FA', border:'rgba(96,165,250,0.25)'  },
 };
+const STATUS_LABEL = { retried:'resent' }; // DB value 'retried' shows as "resent"
 
 const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8' };
 
@@ -63,7 +64,7 @@ export default function EmailLogs() {
     setRetrying(r => ({ ...r, [id]: true }));
     try {
       await adminApi.post(`/admin/email-logs/${id}/retry`);
-      toast.success('Retry sent!');
+      toast.success('Email re-sent!');
       load(page, filter);
       // refresh stats
       setStats(s => ({ ...s, failed: Math.max(0, s.failed - 1) }));
@@ -88,7 +89,7 @@ export default function EmailLogs() {
           { key:'sent',     label:'Sent',    count: stats.sent,    color:'#34D399' },
           { key:'failed',   label:'Failed',  count: stats.failed,  color:'#F87171' },
           { key:'queued',   label:'Queued',  count: stats.queued,  color:'#FBBF24' },
-          { key:'retried',  label:'Retried', count: stats.retried, color:'#94A3B8' },
+          { key:'retried',  label:'Resent',  count: stats.retried, color:'#94A3B8' },
         ].map(({ key, label, count, color }) => (
           <button key={key} onClick={() => { setFilter(key); setPage(1); }} style={{
             padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6,
@@ -142,7 +143,7 @@ export default function EmailLogs() {
                     </td>
                     <td style={{ padding:'10px 14px' }}>
                       <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:ss.bg, color:ss.color, border:`1px solid ${ss.border}` }}>
-                        {l.status}
+                        {STATUS_LABEL[l.status] || l.status}
                       </span>
                       {l.error_message && (
                         <p style={{ color:'#F87171', fontSize:10, marginTop:3, maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={l.error_message}>
@@ -155,13 +156,13 @@ export default function EmailLogs() {
                     </td>
                     <td style={{ padding:'10px 14px' }}>
                       {canRetry && (
-                        <button onClick={() => retry(l.id)} disabled={retrying[l.id]} style={{
-                          padding:'4px 12px', borderRadius:5, border:'1px solid rgba(239,68,68,0.35)',
-                          background:'rgba(239,68,68,0.08)', color:'#F87171', fontSize:11, fontWeight:700,
+                        <button onClick={() => retry(l.id)} disabled={retrying[l.id]} title="Send this email again" style={{
+                          padding:'4px 12px', borderRadius:5, border:'1px solid rgba(212,175,55,0.4)',
+                          background:'rgba(212,175,55,0.1)', color:'#D4AF37', fontSize:11, fontWeight:700,
                           cursor: retrying[l.id] ? 'not-allowed' : 'pointer', whiteSpace:'nowrap',
                           opacity: retrying[l.id] ? 0.6 : 1,
                         }}>
-                          {retrying[l.id] ? '⏳' : '↻ Retry'}
+                          {retrying[l.id] ? '⏳' : '✉️ Send again'}
                         </button>
                       )}
                     </td>

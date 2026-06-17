@@ -116,6 +116,22 @@ router.patch('/users/:id/role', ah(async (req, res) => {
   return ok(res, { role }, 'Role updated');
 }));
 
+// Correct a user's email address (e.g. dots stripped by old normalizeEmail).
+// Lowercases but PRESERVES dots — does not re-normalize.
+router.patch('/users/:id/email', ah(async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail(res, 'A valid email is required', 400);
+
+  const user = await db('users').where({ id: req.params.id }).first();
+  if (!user) return fail(res, 'User not found', 404);
+
+  const taken = await db('users').where({ email }).whereNot({ id: req.params.id }).first();
+  if (taken) return fail(res, 'That email is already used by another account', 409);
+
+  await db('users').where({ id: req.params.id }).update({ email });
+  return ok(res, { email }, 'Email updated');
+}));
+
 router.post('/users', ah(async (req, res) => {
   const { name, email, password, role = 'user', phone } = req.body;
   if (!name || !email || !password) return fail(res, 'name, email, password required', 400);
@@ -442,11 +458,11 @@ router.get('/email-logs/:id', ah(async (req, res) => {
   return ok(res, { log });
 }));
 
-// Retry a failed email
+// Send a failed/queued email again (re-sends the stored copy immediately)
 router.post('/email-logs/:id/retry', ah(async (req, res) => {
   const { retryEmail } = require('../services/email.service');
   const result = await retryEmail(Number(req.params.id));
-  return ok(res, result, 'Retry sent successfully');
+  return ok(res, result, 'Email re-sent successfully');
 }));
 
 // ─── EMAIL MANAGER (IMAP INBOX) ──────────────────────────────────────────────

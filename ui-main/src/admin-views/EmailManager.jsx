@@ -16,6 +16,7 @@ const red    = '#F87171';
 const green  = '#34D399';
 
 const STATUS_COLOR = { sent: green, failed: red, queued:'#FBBF24', retried:'#94A3B8', retrying:'#60A5FA' };
+const STATUS_LABEL = { retried:'resent' }; // DB value 'retried' shows as "resent"
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 function Badge({ dept }) {
@@ -31,7 +32,7 @@ function StatusBadge({ status }) {
   const c = STATUS_COLOR[status] || '#94A3B8';
   return (
     <span style={{ fontSize:9, padding:'1px 7px', borderRadius:8, background:`${c}18`, color:c, border:`1px solid ${c}33`, fontWeight:700, textTransform:'uppercase' }}>
-      {status}
+      {STATUS_LABEL[status] || status}
     </span>
   );
 }
@@ -365,10 +366,10 @@ export default function EmailManager() {
     setRetrying(r => ({ ...r, [logId]: true }));
     try {
       await adminApi.post(`/admin/email-logs/${logId}/retry`);
-      toast.success('Retry sent!');
+      toast.success('Email re-sent!');
       loadEmails();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'Retry failed');
+      toast.error(err?.response?.data?.message || 'Could not send again');
     } finally {
       setRetrying(r => ({ ...r, [logId]: false }));
     }
@@ -398,7 +399,7 @@ export default function EmailManager() {
     { key:'inbox',   label:'📥 Inbox'  },
     { key:'sent',    label:'📤 Sent'   },
     { key:'failed',  label:'❌ Failed' },
-    { key:'retried', label:'🔄 Retried'},
+    { key:'retried', label:'🔄 Resent' },
   ];
 
   return (
@@ -502,18 +503,19 @@ export default function EmailManager() {
                   selected={selectedId === id}
                   onClick={() => selectEmail(email)}
                 />
-                {/* Retry button for failed emails in list */}
+                {/* Send-again button for failed/queued emails in list */}
                 {(email.status === 'failed' || email.status === 'queued') && (
                   <button
                     onClick={e => retry(email.id, e)}
                     disabled={retrying[email.id]}
+                    title="Send this email again"
                     style={{
                       position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
-                      padding:'3px 9px', borderRadius:5, border:`1px solid ${red}44`, background:`${red}0a`,
-                      color:red, fontSize:10, fontWeight:700, cursor:'pointer', zIndex:2,
+                      padding:'3px 9px', borderRadius:5, border:`1px solid ${gold}55`, background:`${gold}12`,
+                      color:gold, fontSize:10, fontWeight:700, cursor:'pointer', zIndex:2, whiteSpace:'nowrap',
                     }}
                   >
-                    {retrying[email.id] ? '…' : '↻ Retry'}
+                    {retrying[email.id] ? '…' : '✉️ Send again'}
                   </button>
                 )}
               </div>

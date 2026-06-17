@@ -90,6 +90,25 @@ function CreateUserModal({ onClose, onCreated }) {
 function UserDetail({ user, onClose, onUpdated }) {
   const [roleLoading, setRoleLoading] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [email, setEmail]           = useState(user.email);
+  const [editingEmail, setEditEmail] = useState(false);
+  const [emailInput, setEmailInput] = useState(user.email);
+  const [savingEmail, setSavingEmail] = useState(false);
+
+  const saveEmail = async () => {
+    const next = emailInput.trim().toLowerCase();
+    if (next === email) { setEditEmail(false); return; }
+    setSavingEmail(true);
+    try {
+      const { data } = await adminApi.patch(`/admin/users/${user.id}/email`, { email: next });
+      setEmail(data.email || next);
+      toast.success('Email updated');
+      setEditEmail(false);
+      onUpdated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update email');
+    } finally { setSavingEmail(false); }
+  };
 
   const changeRole = async (newRole) => {
     setRoleLoading(true);
@@ -141,9 +160,42 @@ function UserDetail({ user, onClose, onUpdated }) {
             </div>
           </div>
 
+          {/* Email — editable */}
+          <div style={{ marginBottom:12 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3 }}>
+              <p style={{ color:'rgba(245,240,232,0.38)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em' }}>Email</p>
+              {!editingEmail && (
+                <button onClick={() => { setEmailInput(email); setEditEmail(true); }}
+                  style={{ background:'none', border:'none', color:'#D4AF37', fontSize:11, fontWeight:600, cursor:'pointer', padding:0 }}>
+                  ✏️ Edit
+                </button>
+              )}
+            </div>
+            {editingEmail ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                <input
+                  type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} autoFocus
+                  onKeyDown={e => { if (e.key === 'Enter') saveEmail(); if (e.key === 'Escape') setEditEmail(false); }}
+                  style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.3)', borderRadius:6, color:'#F5F0E8', padding:'8px 11px', fontSize:13, outline:'none' }} />
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={saveEmail} disabled={savingEmail}
+                    style={{ padding:'6px 16px', borderRadius:6, border:'none', background:'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)', color:'#0B0D1A', fontWeight:700, fontSize:12, cursor: savingEmail ? 'not-allowed' : 'pointer', opacity: savingEmail ? 0.7 : 1 }}>
+                    {savingEmail ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditEmail(false)} disabled={savingEmail}
+                    style={{ padding:'6px 14px', borderRadius:6, border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(245,240,232,0.55)', fontSize:12, cursor:'pointer' }}>
+                    Cancel
+                  </button>
+                </div>
+                <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10 }}>Dots are preserved (e.g. first.last@gmail.com). Lowercased on save.</p>
+              </div>
+            ) : (
+              <p style={{ color:'#F5F0E8', fontSize:13, wordBreak:'break-all' }}>{email}</p>
+            )}
+          </div>
+
           {/* Details */}
           {[
-            ['Email',    user.email],
             ['Phone',    user.phone || '—'],
             ['Language', user.preferred_language?.toUpperCase() || '—'],
             ['Verified', user.email_verified ? '✓ Yes' : '✗ No'],
