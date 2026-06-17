@@ -274,6 +274,12 @@ const retryEmail = async (logId) => {
   const fromAddr = log.from_address || cfg.from;
   const html = log.html_body || '';
 
+  // Old logs (sent before the html_body column existed) have no stored body to
+  // resend — fail loudly instead of silently delivering a blank email.
+  if (!html.trim()) {
+    throw new Error('No stored email body for this entry — only emails sent after the latest update can be retried.');
+  }
+
   const [newLogId] = await db('email_logs').insert({
     to_email:     log.to_email,
     subject:      log.subject,

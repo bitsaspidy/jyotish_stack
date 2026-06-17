@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import adminApi from '../lib/adminApi';
 import toast from 'react-hot-toast';
+import RichTextEditor from '../admin-components/RichTextEditor';
 
 // ─── Colour palette ───────────────────────────────────────────────────────────
 const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8', all:'#D4AF37' };
@@ -63,7 +64,7 @@ function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
         from_dept: form.from_dept,
         to:        form.to,
         subject:   form.subject,
-        body:      form.body.replace(/\n/g, '<br/>'),
+        body:      form.body, // already HTML from the rich editor
         reply_to:  form.cc || undefined,
       });
       toast.success('Email sent!');
@@ -115,12 +116,7 @@ function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
           </div>
 
           {/* Body */}
-          <textarea
-            value={form.body}
-            onChange={e => set('body', e.target.value)}
-            placeholder="Write your message here…"
-            style={{ flex:1, background:'transparent', border:'none', color:ivory, fontSize:13, outline:'none', resize:'none', lineHeight:1.7, minHeight:140 }}
-          />
+          <RichTextEditor value={form.body} onChange={(html) => set('body', html)} minHeight={170} placeholder="Write your message…" />
 
           {/* Signature preview */}
           {sig?.is_active && sig?.signature_html && (

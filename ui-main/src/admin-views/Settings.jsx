@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import adminApi from '../lib/adminApi';
 import toast from 'react-hot-toast';
+import RichTextEditor from '../admin-components/RichTextEditor';
 
 function Toggle({ checked, onChange, disabled }) {
   return (
@@ -125,17 +126,16 @@ function EmailSignatureTab() {
             {/* Signature editor */}
             <div style={{ marginBottom:16 }}>
               <label style={{ display:'block', color:'rgba(245,240,232,0.5)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
-                Signature HTML
+                Signature
               </label>
               <p style={{ color:'rgba(245,240,232,0.28)', fontSize:11, marginBottom:8 }}>
-                Supports HTML. Use inline styles for email clients. Example: <code style={{ color:'rgba(212,175,55,0.7)', background:'rgba(212,175,55,0.08)', padding:'1px 5px', borderRadius:3 }}>&lt;b&gt;Name&lt;/b&gt; • Title</code>
+                Format with the toolbar, or switch to <code style={{ color:'rgba(212,175,55,0.7)', background:'rgba(212,175,55,0.08)', padding:'1px 5px', borderRadius:3 }}>&lt;/&gt; HTML</code> for raw source. The website logo is added automatically above this (toggle below).
               </p>
-              <textarea
+              <RichTextEditor
                 value={sig.signature_html || ''}
-                onChange={e => setSig(dept, 'signature_html', e.target.value)}
-                rows={6}
-                placeholder={`<b>${d.label} Team</b> — Jyotish Stack AI\n<br/>📧 ${d.email}\n<br/>🌐 jyotishstack.com`}
-                style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'10px 12px', fontSize:12, outline:'none', resize:'vertical', fontFamily:'monospace', lineHeight:1.6 }}
+                onChange={(html) => setSig(dept, 'signature_html', html)}
+                minHeight={160}
+                placeholder={`${d.label} Team — Jyotish Stack AI`}
               />
             </div>
 

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import adminApi from '../lib/adminApi';
 import toast from 'react-hot-toast';
+import RichTextEditor from '../admin-components/RichTextEditor';
 
 const TEMPLATES = [
   { id:'blank',        label:'Blank', body:'<p>Your message here...</p>' },
@@ -115,10 +116,9 @@ export default function EmailBlast() {
                 {/* Body */}
                 <div>
                   <label style={{ display:'block', color:'rgba(245,240,232,0.45)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
-                    HTML Body <span style={{ color:'rgba(245,240,232,0.25)', textTransform:'none', fontWeight:400 }}>{'— use {{name}} for personalization'}</span>
+                    Email Body <span style={{ color:'rgba(245,240,232,0.25)', textTransform:'none', fontWeight:400 }}>{'— use {{name}} for personalization · toggle </> HTML for raw source'}</span>
                   </label>
-                  <textarea value={body} onChange={e => setBody(e.target.value)} rows={14}
-                    style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'9px 12px', fontSize:12, outline:'none', resize:'vertical', fontFamily:'monospace', lineHeight:1.65 }} />
+                  <RichTextEditor value={body} onChange={setBody} minHeight={280} placeholder="Compose your email…" />
                 </div>
 
                 <div style={{ display:'flex', gap:10, justifyContent:'flex-end' }}>
