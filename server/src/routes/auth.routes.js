@@ -11,7 +11,7 @@ const { ok, fail } = require('../utils/response');
 // POST /api/auth/register
 router.post('/register', [
   body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().normalizeEmail({ gmail_remove_dots: false }),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -44,7 +44,7 @@ router.post('/register', [
 
 // POST /api/auth/login
 router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().normalizeEmail({ gmail_remove_dots: false }),
   body('password').notEmpty(),
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -101,7 +101,7 @@ router.get('/verify-email', async (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], async (req, res) => {
+router.post('/forgot-password', [body('email').isEmail().normalizeEmail({ gmail_remove_dots: false })], async (req, res) => {
   const { email } = req.body;
   const user = await db('users').where({ email }).first();
   if (!user) return ok(res, {}, 'If that email exists, a reset link has been sent'); // Don't reveal

@@ -6,7 +6,7 @@ const { ok, fail } = require('../utils/response');
 
 // POST /api/newsletter/subscribe
 router.post('/subscribe', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().normalizeEmail({ gmail_remove_dots: false }),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return fail(res, 'Valid email required', 400);
