@@ -7,6 +7,7 @@ This runbook deploys Jyotish Stack AI on a 16 GB Hostinger VPS with:
 - MySQL listening on localhost only
 - phpMyAdmin listening on localhost only, reached through a PuTTY SSH tunnel
 - Apache reverse proxy for `https://jyotishstack.com`
+- Self-hosted domain mail with Postfix, Dovecot, and OpenDKIM
 - PM2 process management
 
 This production setup serves the full `ui-main` app on `jyotishstack.com`. The `ui-ai-com` package is currently a lighter AI-branded landing surface and should not replace the full app until it has feature parity.
@@ -15,14 +16,17 @@ Do not expose MySQL port `3306`, phpMyAdmin, or Node ports `3000` and `5000` to 
 
 ## 1. Hostinger panel setup
 
-1. In Hostinger VPS firewall or your manual firewall rules, allow only TCP `22`, `80`, and `443`.
+1. In Hostinger VPS firewall or your manual firewall rules, allow TCP `22`, `25`, `80`, `443`, `587`, and `993`.
    Do not use UFW for this deployment if you are managing permissions manually.
 2. In Hostinger DNS for `jyotishstack.com`, set:
    - `A` record `@` to the VPS public IP.
    - Preferred: `A` record `www` to the VPS public IP.
    - If Hostinger will not accept `www` as an A record, find the existing `www` record. If it is a CNAME, either delete it and add the A record above, or set/edit it as `CNAME` `www` to `jyotishstack.com`.
-3. Remove old/conflicting `A`, `AAAA`, or `CNAME` records for `@` and `www` that point to website builder, parking, CDN, or old hosting.
-4. Wait for DNS propagation before running Certbot. It can take several hours and sometimes up to 24 hours.
+   - `A` record `mail` to the VPS public IP.
+   - `MX` record `@` priority `10` to `mail.jyotishstack.com`.
+3. Remove old/conflicting `A`, `AAAA`, `CNAME`, or `MX` records for `@`, `www`, and `mail` that point to website builder, parking, CDN, old hosting, or Hostinger Email.
+4. Set reverse DNS/PTR for the VPS public IP to `mail.jyotishstack.com`.
+5. Wait for DNS propagation before running Certbot. It can take several hours and sometimes up to 24 hours.
 
 ## 2. First PuTTY login
 
@@ -56,11 +60,14 @@ chmod 600 /home/deploy/.ssh/authorized_keys
 
 Open a second PuTTY session and confirm the `deploy` user can log in before disabling root login.
 
-Firewall permissions are managed manually for this server. Keep inbound public access limited to SSH, HTTP, and HTTPS:
+Firewall permissions are managed manually for this server. Keep inbound public access limited to SSH, web, and mail:
 
 - TCP `22` for SSH/PuTTY
+- TCP `25` for SMTP server-to-server mail
 - TCP `80` for HTTP/Certbot
 - TCP `443` for HTTPS
+- TCP `587` for authenticated SMTP submission
+- TCP `993` for IMAPS
 
 Do not open MySQL `3306`, Next.js `3000`, Express `5000`, or phpMyAdmin `8081` publicly.
 
@@ -151,7 +158,8 @@ Fill:
 - `JWT_SECRET` and `JWT_REFRESH_SECRET` from the two `openssl` outputs
 - `DB_USER=jyotish_app`
 - `DB_PASSWORD` with the MySQL password from step 5
-- SMTP, Razorpay, and Anthropic credentials when ready
+- SMTP mailbox passwords from `/root/jyotish-mailbox-passwords.txt`
+- Razorpay and Anthropic credentials when ready
 
 ## 9. Enable Apache sites
 
@@ -172,7 +180,26 @@ sudo ss -ltnp | grep 8081
 
 Expected bind address: `127.0.0.1:8081`.
 
-## 10. Build, migrate, seed, and start
+## 10. Set up self-hosted SMTP
+
+Run this after `mail.jyotishstack.com` points to the VPS. This creates `sales@jyotishstack.com`, `team@jyotishstack.com`, and `account@jyotishstack.com`.
+
+```bash
+cd /var/www/jyotish-stack
+sudo bash scripts/setup-self-hosted-smtp.sh jyotishstack.com
+sudo cat /root/jyotish-mailbox-passwords.txt
+sudo cat /root/jyotish-mail-dns-records.txt
+```
+
+Copy the generated mailbox passwords into `server/.env`. Then copy the DKIM TXT record from:
+
+```bash
+sudo cat /etc/opendkim/keys/jyotishstack.com/mail.txt
+```
+
+Full mail setup details are in `docs/SELF_HOSTED_SMTP.md`.
+
+## 11. Build, migrate, seed, and start
 
 ```bash
 cd /var/www/jyotish-stack
@@ -196,9 +223,15 @@ cd /var/www/jyotish-stack
 bash deploy.sh
 ```
 
+If you intentionally need to refresh production seed data during a deploy:
+
+```bash
+RUN_SEED=1 bash deploy.sh
+```
+
 Do not run the seed command on every deploy unless you intentionally want to refresh seed data.
 
-## 11. Issue HTTPS certificate
+## 12. Issue HTTPS certificate
 
 Run this only after DNS points to the VPS:
 
@@ -207,7 +240,7 @@ sudo certbot --apache -d jyotishstack.com -d www.jyotishstack.com --redirect
 sudo systemctl reload apache2
 ```
 
-## 12. Access phpMyAdmin through PuTTY only
+## 13. Access phpMyAdmin through PuTTY only
 
 In PuTTY:
 
@@ -224,7 +257,7 @@ http://127.0.0.1:8080/phpmyadmin
 
 Login with the MySQL user `jyotish_app`. The phpMyAdmin Apache site is bound to `127.0.0.1`, so it is not public.
 
-## 13. Verify production
+## 14. Verify production
 
 ```bash
 pm2 status
@@ -235,9 +268,9 @@ curl https://jyotishstack.com/api/settings/public
 sudo ss -ltnp
 ```
 
-Public listeners should be only SSH, HTTP, and HTTPS. MySQL, phpMyAdmin, API, and Next.js should be local-only. Confirm your manual firewall rules also expose only TCP `22`, `80`, and `443`.
+Public listeners should be only SSH, HTTP, HTTPS, SMTP, SMTP submission, and IMAPS. MySQL, phpMyAdmin, API, and Next.js should be local-only. Confirm your manual firewall rules expose only TCP `22`, `25`, `80`, `443`, `587`, and `993`.
 
-## 14. After the deploy user is verified
+## 15. After the deploy user is verified
 
 Only after key-based `deploy` login works in a second PuTTY session:
 
@@ -259,7 +292,7 @@ sudo sshd -t
 sudo systemctl reload ssh
 ```
 
-## 15. Scaling on the 16 GB VPS
+## 16. Scaling on the 16 GB VPS
 
 Start with one API and one UI process. For higher traffic, increase PM2 workers:
 
@@ -275,7 +308,7 @@ For thousands of concurrent users, add monitoring first, then consider:
 - Adding a CDN in front of static assets.
 - Splitting API and UI onto separate VPS instances behind a load balancer.
 
-## 16. Backup minimum
+## 17. Backup minimum
 
 Create a daily database backup directory:
 

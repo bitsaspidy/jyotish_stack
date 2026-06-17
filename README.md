@@ -66,6 +66,7 @@ jyotish-stack/
 ├── ui-ai-in/                      # jyotishstackai.in — Hybrid Hindi+AI — port 3003
 │
 ├── apache/jyotish.conf            # Apache virtual host config (mod_proxy)
+├── scripts/setup-self-hosted-smtp.sh # Postfix/Dovecot/OpenDKIM domain mail setup
 ├── ecosystem.config.js            # PM2 process manager config
 ├── deploy.sh                      # One-command deployment script
 ├── .env.production.example        # Production environment template (SMTP, Razorpay, AI)
@@ -126,12 +127,14 @@ DB_NAME=jyotish_stack_ai_db
 JWT_SECRET=your_jwt_secret
 JWT_REFRESH_SECRET=your_refresh_secret
 
-# SMTP (for emails)
-SMTP_HOST=smtp.gmail.com
+# SMTP (for emails) - production uses self-hosted mail.jyotishstack.com
+SMTP_HOST=mail.jyotishstack.com
 SMTP_PORT=587
-SMTP_USER=your@email.com
-SMTP_PASS=your_app_password
-SMTP_FROM=Jyotish Stack AI <noreply@jyotishstack.com>
+SMTP_SECURE=false
+SMTP_REQUIRE_TLS=true
+SMTP_USER=account@jyotishstack.com
+SMTP_PASS=account_mailbox_password
+SMTP_FROM=Jyotish Stack <account@jyotishstack.com>
 
 # Razorpay — optional fallback (keys can be set via admin Settings panel instead)
 RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
@@ -435,11 +438,17 @@ cp .env.production.example server/.env
 bash deploy.sh
 ```
 
-`deploy.sh` performs: `git pull` → `npm install` → DB migrations → Next.js build → `pm2 reload` → `apache2 reload`.
+`deploy.sh` performs: `git pull` → `npm install` → DB migrations → optional seeds with `RUN_SEED=1` → Next.js build → `pm2 startOrReload` → `apache2 reload`.
 
-### SMTP options
+### Self-hosted SMTP
 
-See `.env.production.example` for setup instructions for **Gmail App Password**, **Brevo** (free tier), or **SendGrid**.
+Production mail is self-hosted on the VPS with Postfix, Dovecot, and OpenDKIM. The setup script creates `sales@jyotishstack.com`, `team@jyotishstack.com`, and `account@jyotishstack.com`:
+
+```bash
+sudo bash scripts/setup-self-hosted-smtp.sh jyotishstack.com
+```
+
+See `.env.production.example` and `docs/SELF_HOSTED_SMTP.md` for DNS, PTR, SPF, DKIM, DMARC, firewall, and validation steps.
 
 ---
 

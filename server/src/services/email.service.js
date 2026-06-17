@@ -5,12 +5,25 @@ const db = require('../config/db');
 // Each department is a real mailbox on the domain. We authenticate per-mailbox so
 // the "From" address always matches an authenticated account (best deliverability).
 // If a department's own creds are not set, it falls back to the default SMTP_* account.
-const SHARED = {
-  host:   process.env.SMTP_HOST,
-  port:   Number(process.env.SMTP_PORT) || 587,
-  secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true'
-                                  : Number(process.env.SMTP_PORT) === 465,
+const boolEnv = (value, fallback = false) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
 };
+
+const buildSharedConfig = (env = process.env) => {
+  const port = Number(env.SMTP_PORT) || 587;
+  return {
+    host: env.SMTP_HOST,
+    port,
+    secure: env.SMTP_SECURE ? boolEnv(env.SMTP_SECURE) : port === 465,
+    requireTLS: boolEnv(env.SMTP_REQUIRE_TLS, false),
+    tls: {
+      rejectUnauthorized: boolEnv(env.SMTP_TLS_REJECT_UNAUTHORIZED, true),
+      servername: env.SMTP_TLS_SERVERNAME || env.SMTP_HOST,
+    },
+  };
+};
+const SHARED = buildSharedConfig();
 
 const DEFAULT_ACCOUNT = {
   user: process.env.SMTP_USER,
@@ -62,6 +75,7 @@ const getTransport = (deptKey) => {
     const { user, pass } = DEPARTMENTS[dept];
     _transports[dept] = nodemailer.createTransport({
       host: SHARED.host, port: SHARED.port, secure: SHARED.secure,
+      requireTLS: SHARED.requireTLS, tls: SHARED.tls,
       auth: user ? { user, pass } : undefined,
     });
   }
@@ -208,4 +222,6 @@ module.exports = {
   departmentInbox,   // 'sales'|'team'|'account'|'general' -> mailbox key
   DEPARTMENTS,
   DEPT_LABELS,
+  buildSharedConfig,
+  boolEnv,
 };

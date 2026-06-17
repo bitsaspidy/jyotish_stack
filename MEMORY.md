@@ -795,6 +795,58 @@ Keep `pdf-map.txt` and `test-report.pdf` untracked unless the owner explicitly a
 
 ---
 
+## 33. Deployment Script Check (Session 50)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-16
+
+### Updated
+- `deploy.sh` now uses `pm2 startOrReload ecosystem.config.js --env production --update-env`, matching the Hostinger runbook and handling first start plus reload in one command.
+- `RUN_SEED=1` is now the explicit opt-in path for running production seeds during deployment. Normal `bash deploy.sh` runs migrations only and skips seeds.
+- `deploy.sh` now checks required commands before starting deployment: `git`, `npm`, `pm2`, `curl`, `sudo`, `apache2ctl`, and `systemctl`.
+- `README.md` and `docs/HOSTINGER_VPS_DEPLOYMENT.md` now document the optional seed behavior.
+
+### Verification
+```bash
+"C:\Program Files\Git\usr\bin\bash.exe" -n deploy.sh
+git diff --check
+node --check ecosystem.config.js
+node --check server/knexfile.js
+npm.cmd run test:server
+```
+
+---
+
+## 34. Self-Hosted SMTP Setup (Session 51)
+
+**Agent:** Alex / Codex
+**Date:** 2026-06-17
+
+### Decision
+- Do not use Hostinger Email, Gmail, Brevo, or SendGrid for production SMTP.
+- Host the domain mail server on the Jyotish Stack VPS using Postfix, Dovecot, and OpenDKIM.
+- The project domain in repo/DNS is `jyotishstack.com`; `jyotisstack.com` without `h` did not resolve during local DNS check. If the no-`h` domain is intentional, pass it explicitly to the mail setup script and update `server/.env`.
+
+### Mailboxes
+- `sales@jyotishstack.com` for sales inquiries.
+- `team@jyotishstack.com` for support/general inquiries, newsletters, and admin custom email.
+- `account@jyotishstack.com` for auth emails, password resets, account/billing, and subscription receipts.
+
+### Files Updated
+- `scripts/setup-self-hosted-smtp.sh` sets up Postfix, Dovecot, OpenDKIM, Let's Encrypt mail cert, virtual mailboxes, aliases, and root-only generated mailbox passwords.
+- `.env.production.example` now points SMTP to `mail.jyotishstack.com:587` with STARTTLS required and no third-party SMTP defaults.
+- `docs/SELF_HOSTED_SMTP.md` documents DNS, PTR, firewall, mailbox passwords, app env, and validation.
+- `docs/HOSTINGER_VPS_DEPLOYMENT.md` now includes mail DNS/firewall requirements and the self-hosted SMTP setup step.
+- `server/src/services/email.service.js` supports explicit SMTP TLS env flags.
+- `server/tests/email-config.test.js` covers SMTP env parsing and department inbox routing.
+
+### DNS/Firewall Required
+- DNS: `A mail -> VPS IP`, `MX @ -> mail.jyotishstack.com`, SPF TXT, DKIM TXT from `/etc/opendkim/keys/jyotishstack.com/mail.txt`, DMARC TXT.
+- PTR/reverse DNS: VPS public IP must resolve back to `mail.jyotishstack.com`.
+- Firewall: allow TCP `22`, `25`, `80`, `443`, `587`, and `993`; keep `3306`, `3000`, `5000`, and `8081` private.
+
+---
+
 ## 28. Hostinger DNS www Record Fallback (Session 45)
 
 **Agent:** Alex / Codex

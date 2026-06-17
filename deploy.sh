@@ -8,6 +8,7 @@
 #   BRANCH         git branch to deploy       (default: main)
 #   API_INSTANCES  PM2 cluster size for API   (default: 1, read by ecosystem.config.js)
 #   UI_INSTANCES   PM2 cluster size for UI    (default: 1, read by ecosystem.config.js)
+#   RUN_SEED       run production seeds       (default: 0; set to 1 only when intentional)
 #
 # NOTE: migrations run from server/ so dotenv loads server/.env. The knexfile
 # production block has no fallback defaults — server/.env MUST exist on the box.
@@ -22,11 +23,22 @@ export APP_DIR="${APP_DIR:-/var/www/jyotish-stack}"
 export BRANCH="${BRANCH:-main}"
 export API_INSTANCES="${API_INSTANCES:-1}"
 export UI_INSTANCES="${UI_INSTANCES:-1}"
+export RUN_SEED="${RUN_SEED:-0}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+require_cmd() {
+  if ! command -v "$1" >/dev/null 2>&1; then
+    echo "ERROR: Required command '$1' was not found on PATH." >&2
+    exit 1
+  fi
+}
 
 log "Jyotish Stack AI deploy starting"
-log "App dir: ${APP_DIR} | Branch: ${BRANCH} | API x${API_INSTANCES} | UI x${UI_INSTANCES}"
+log "App dir: ${APP_DIR} | Branch: ${BRANCH} | API x${API_INSTANCES} | UI x${UI_INSTANCES} | RUN_SEED=${RUN_SEED}"
+
+for cmd in git npm pm2 curl sudo apache2ctl systemctl; do
+  require_cmd "$cmd"
+done
 
 if [ ! -d "$APP_DIR/.git" ]; then
   echo "ERROR: ${APP_DIR} is not a git checkout. Clone the repo there first." >&2
@@ -50,13 +62,18 @@ npm install --include=dev
 log "Running database migrations (from server/ so server/.env is loaded)..."
 ( cd "$APP_DIR/server" && NODE_ENV=production npm run migrate )
 
+if [ "$RUN_SEED" = "1" ]; then
+  log "Running database seeds because RUN_SEED=1..."
+  ( cd "$APP_DIR/server" && NODE_ENV=production npm run seed )
+else
+  log "Skipping database seeds. Set RUN_SEED=1 only when you intentionally want to refresh seed data."
+fi
+
 log "Building public Next.js app (ui-main)..."
 NODE_ENV=production npm run build:main
 
 log "Starting or reloading PM2 processes..."
-if ! pm2 reload ecosystem.config.js --env production --update-env; then
-  pm2 start ecosystem.config.js --env production --update-env
-fi
+pm2 startOrReload ecosystem.config.js --env production --update-env
 pm2 save
 
 log "Reloading Apache..."
