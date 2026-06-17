@@ -434,6 +434,14 @@ router.get('/email-logs', ah(async (req, res) => {
   return ok(res, { logs, pagination: { page, limit, total: Number(total.count) } });
 }));
 
+// Single log detail — includes html_body (excluded from the list query for perf,
+// same large-column rationale as the kundli calculated_data sort-buffer fix)
+router.get('/email-logs/:id', ah(async (req, res) => {
+  const log = await db('email_logs').where({ id: Number(req.params.id) }).first();
+  if (!log) return fail(res, 'Email log not found', 404);
+  return ok(res, { log });
+}));
+
 // Retry a failed email
 router.post('/email-logs/:id/retry', ah(async (req, res) => {
   const { retryEmail } = require('../services/email.service');

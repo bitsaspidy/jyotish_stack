@@ -175,7 +175,8 @@ function EmailDetail({ email, folder, onReply, onClose }) {
     </div>
   );
 
-  const isLogEmail = !!email.html_body; // came from email_logs
+  const isLogEmail = !!email._isLog;                      // came from email_logs (Sent/Failed/Retried)
+  const bodyHtml   = email.html || email.html_body || ''; // inbox html OR stored log html
 
   return (
     <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, overflow:'hidden' }}>
@@ -207,17 +208,23 @@ function EmailDetail({ email, folder, onReply, onClose }) {
 
       {/* Body */}
       <div style={{ flex:1, overflow:'auto' }}>
-        {(email.html || email.html_body) ? (
+        {bodyHtml ? (
           <iframe
             ref={iframeRef}
             sandbox="allow-same-origin"
             style={{ width:'100%', height:'100%', border:'none', background:'#fff' }}
-            srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;font-size:14px;color:#222;padding:16px;margin:0;word-break:break-word;}a{color:#1a56db;}img{max-width:100%;height:auto;}</style></head><body>${email.html || email.html_body}</body></html>`}
+            srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;font-size:14px;color:#222;padding:16px;margin:0;word-break:break-word;}a{color:#1a56db;}img{max-width:100%;height:auto;}</style></head><body>${bodyHtml}</body></html>`}
           />
-        ) : (
+        ) : (email.text || email.content) ? (
           <pre style={{ padding:'20px 22px', color:'rgba(245,240,232,0.7)', fontSize:13, lineHeight:1.7, whiteSpace:'pre-wrap', fontFamily:'inherit', margin:0 }}>
-            {email.text || email.content || '(empty body)'}
+            {email.text || email.content}
           </pre>
+        ) : (
+          <div style={{ padding:'40px 22px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>
+            <p style={{ fontSize:28, marginBottom:10 }}>📄</p>
+            <p>{isLogEmail ? 'No stored copy of this email body.' : '(empty body)'}</p>
+            {isLogEmail && <p style={{ fontSize:11, marginTop:6, color:'rgba(245,240,232,0.22)' }}>Only emails sent after the latest update store a full copy for preview/retry.</p>}
+          </div>
         )}
       </div>
 
@@ -336,8 +343,24 @@ export default function EmailManager() {
       } catch { toast.error('Could not load email'); setDetail(email); }
       finally { setDetailL(false); }
     } else {
-      // email_logs — show html_body directly
-      setDetail({ ...email, html_body: email.html_body });
+      // email_logs — fetch the full row (html_body is excluded from the list query
+      // for performance), then map log columns to the fields EmailDetail expects.
+      setDetailL(true);
+      try {
+        const { data } = await adminApi.get(`/admin/email-logs/${email.id}`);
+        const log = data.log || email;
+        setDetail({
+          ...log,
+          _isLog:    true,
+          from:      log.from_address || log.department || '',
+          to:        log.to_email,
+          date:      log.created_at,
+          html_body: log.html_body || '',
+        });
+      } catch {
+        toast.error('Could not load email');
+        setDetail({ ...email, _isLog:true, from: email.from_address, to: email.to_email, date: email.created_at });
+      } finally { setDetailL(false); }
     }
   };
 
