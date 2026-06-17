@@ -416,13 +416,111 @@ router.post('/kundlis/:uuid/recalculate', ah(async (req, res) => {
 
 // ─── EMAIL LOGS ───────────────────────────────────────────────────────────────
 router.get('/email-logs', ah(async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page) || 1);
-  const offset = (page - 1) * 20;
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = 20;
+  const offset = (page - 1) * limit;
+  const dept   = req.query.dept   || '';
+  const status = req.query.status || '';
+
+  let q = db('email_logs');
+  if (dept)   q = q.where({ department: dept });
+  if (status) q = q.where({ status });
+
   const [total, logs] = await Promise.all([
-    db('email_logs').count('id as count').first(),
-    db('email_logs').orderBy('created_at', 'desc').limit(20).offset(offset),
+    q.clone().clearSelect().count('id as count').first(),
+    q.clone().select('id','to_email','subject','template','status','department','from_address','error_message','created_at')
+      .orderBy('created_at', 'desc').limit(limit).offset(offset),
   ]);
-  return ok(res, { logs, pagination: { page, limit: 20, total: Number(total.count) } });
+  return ok(res, { logs, pagination: { page, limit, total: Number(total.count) } });
+}));
+
+// Retry a failed email
+router.post('/email-logs/:id/retry', ah(async (req, res) => {
+  const { retryEmail } = require('../services/email.service');
+  const result = await retryEmail(Number(req.params.id));
+  return ok(res, result, 'Retry sent successfully');
+}));
+
+// ─── EMAIL MANAGER (IMAP INBOX) ──────────────────────────────────────────────
+router.get('/email-manager/inbox', ah(async (req, res) => {
+  const { fetchMailbox } = require('../services/imap.service');
+  const dept   = req.query.dept   || 'all';
+  const folder = req.query.folder || 'INBOX';
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = 30;
+
+  const depts = dept === 'all' ? ['sales', 'team', 'account'] : [dept];
+  const results = await Promise.allSettled(depts.map(d => fetchMailbox(d, folder)));
+
+  let emails = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      r.value.forEach(e => emails.push({ ...e, dept: depts[i] }));
+    }
+  });
+
+  emails.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const total = emails.length;
+  const offset = (page - 1) * limit;
+  return ok(res, { emails: emails.slice(offset, offset + limit), total, page, limit });
+}));
+
+router.get('/email-manager/inbox/:dept/:uid', ah(async (req, res) => {
+  const { fetchEmail } = require('../services/imap.service');
+  const { dept, uid } = req.params;
+  const folder = req.query.folder || 'INBOX';
+  const email = await fetchEmail(dept, uid, folder);
+  if (!email) return fail(res, 'Email not found', 404);
+  return ok(res, { email });
+}));
+
+// Compose & send from Email Manager
+router.post('/email-manager/compose', ah(async (req, res) => {
+  const { from_dept, to, subject, body, reply_to } = req.body;
+  if (!from_dept || !to || !subject || !body)
+    return fail(res, 'from_dept, to, subject, body are required', 400);
+
+  const { sendEmail } = require('../services/email.service');
+  await sendEmail({
+    to,
+    template:  'custom',
+    data:      { subject, body },
+    from:      from_dept,
+    replyTo:   reply_to || undefined,
+  });
+  return ok(res, {}, 'Email sent successfully');
+}));
+
+// ─── EMAIL SIGNATURES ────────────────────────────────────────────────────────
+router.get('/email-signatures', ah(async (req, res) => {
+  const rows = await db('email_signatures').select('*');
+  const result = {};
+  ['sales', 'team', 'account'].forEach(d => {
+    result[d] = rows.find(r => r.department === d)
+      || { department: d, signature_html: '', include_logo: true, is_active: false };
+  });
+  return ok(res, { signatures: result });
+}));
+
+router.put('/email-signatures/:dept', ah(async (req, res) => {
+  const { dept } = req.params;
+  if (!['sales', 'team', 'account'].includes(dept))
+    return fail(res, 'Invalid department', 400);
+
+  const { signature_html, include_logo, is_active } = req.body;
+  const { invalidateSignatureCache } = require('../services/email.service');
+
+  const existing = await db('email_signatures').where({ department: dept }).first();
+  const payload  = { signature_html, include_logo: !!include_logo, is_active: !!is_active, updated_at: db.fn.now() };
+
+  if (existing) {
+    await db('email_signatures').where({ department: dept }).update(payload);
+  } else {
+    await db('email_signatures').insert({ department: dept, ...payload });
+  }
+
+  invalidateSignatureCache(dept);
+  return ok(res, {}, 'Signature updated');
 }));
 
 // ─── PANCHANG ────────────────────────────────────────────────────────────────

@@ -28,7 +28,158 @@ const TABS = [
   { key:'general',     label:'🌐 General',     icon:'🌐' },
   { key:'maintenance', label:'🚧 Maintenance',  icon:'🚧' },
   { key:'payments',    label:'💳 Payments',     icon:'💳' },
+  { key:'email',       label:'✉️ Email Sig',    icon:'✉️' },
 ];
+
+const DEPT_INFO = {
+  sales:   { label:'Sales',    email:'sales@jyotishstack.com',   color:'#F59E0B' },
+  team:    { label:'Support',  email:'team@jyotishstack.com',    color:'#10B981' },
+  account: { label:'Accounts', email:'account@jyotishstack.com', color:'#818CF8' },
+};
+
+function EmailSignatureTab() {
+  const [deptTab,    setDeptTab]    = useState('sales');
+  const [sigs,       setSigs]       = useState({ sales:{}, team:{}, account:{} });
+  const [saving,     setSaving]     = useState({});
+  const [dirty,      setDirty]      = useState({});
+  const [loaded,     setLoaded]     = useState(false);
+
+  useEffect(() => {
+    adminApi.get('/admin/email-signatures')
+      .then(({ data }) => { setSigs(data.signatures || {}); setLoaded(true); })
+      .catch(() => toast.error('Failed to load signatures'));
+  }, []);
+
+  const setSig = (dept, key, val) => {
+    setSigs(s => ({ ...s, [dept]: { ...s[dept], [key]: val } }));
+    setDirty(d => ({ ...d, [dept]: true }));
+  };
+
+  const save = async (dept) => {
+    setSaving(s => ({ ...s, [dept]: true }));
+    try {
+      await adminApi.put(`/admin/email-signatures/${dept}`, sigs[dept]);
+      toast.success(`${DEPT_INFO[dept].label} signature saved`);
+      setDirty(d => ({ ...d, [dept]: false }));
+    } catch { toast.error('Save failed'); }
+    finally { setSaving(s => ({ ...s, [dept]: false })); }
+  };
+
+  const appUrl = 'https://jyotishstack.com';
+
+  return (
+    <div>
+      {/* Dept selector */}
+      <div style={{ display:'flex', gap:1, marginBottom:20, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:4, width:'fit-content' }}>
+        {Object.entries(DEPT_INFO).map(([k,d]) => (
+          <button key={k} onClick={() => setDeptTab(k)} style={{
+            padding:'7px 18px', borderRadius:6, fontSize:13, fontWeight:600, cursor:'pointer', border:'none', transition:'all 0.15s',
+            background: deptTab===k ? `${d.color}18` : 'transparent',
+            color: deptTab===k ? d.color : 'rgba(245,240,232,0.45)',
+          }}>
+            {d.label}
+          </button>
+        ))}
+      </div>
+
+      {['sales','team','account'].map(dept => {
+        if (dept !== deptTab) return null;
+        const d    = DEPT_INFO[dept];
+        const sig  = sigs[dept] || {};
+        return (
+          <div key={dept} style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px 24px' }}>
+
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:18 }}>
+              <div style={{ width:36, height:36, borderRadius:'50%', background:`${d.color}18`, border:`1px solid ${d.color}44`, display:'flex', alignItems:'center', justifyContent:'center', color:d.color, fontSize:14, fontWeight:700 }}>
+                {d.label[0]}
+              </div>
+              <div>
+                <p style={{ color:'#F5F0E8', fontSize:14, fontWeight:700 }}>{d.label} — Email Signature</p>
+                <p style={{ color:'rgba(245,240,232,0.38)', fontSize:11 }}>{d.email}</p>
+              </div>
+              <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:11, fontWeight:600, color: sig.is_active ? '#34D399' : 'rgba(245,240,232,0.35)' }}>
+                  {sig.is_active ? '● Active' : '○ Inactive'}
+                </span>
+                <button type="button" onClick={() => setSig(dept, 'is_active', !sig.is_active)} style={{
+                  width:44, height:24, borderRadius:12, background: sig.is_active ? '#D4AF37' : 'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', position:'relative', transition:'background 0.2s',
+                }}>
+                  <span style={{ position:'absolute', top:2, width:20, height:20, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 3px rgba(0,0,0,0.3)', transition:'left 0.2s', left: sig.is_active ? 22 : 2 }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Include Logo toggle */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid rgba(255,255,255,0.05)', marginBottom:14 }}>
+              <div>
+                <p style={{ color:'#F5F0E8', fontSize:13, fontWeight:600, marginBottom:2 }}>Include Website Logo</p>
+                <p style={{ color:'rgba(245,240,232,0.38)', fontSize:11 }}>Appends the Jyotish Stack AI logo above the signature</p>
+              </div>
+              <button type="button" onClick={() => setSig(dept, 'include_logo', !sig.include_logo)} style={{
+                width:44, height:24, borderRadius:12, background: sig.include_logo!==false ? '#D4AF37' : 'rgba(255,255,255,0.1)', border:'none', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0,
+              }}>
+                <span style={{ position:'absolute', top:2, width:20, height:20, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 3px rgba(0,0,0,0.3)', transition:'left 0.2s', left: sig.include_logo!==false ? 22 : 2 }} />
+              </button>
+            </div>
+
+            {/* Signature editor */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', color:'rgba(245,240,232,0.5)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
+                Signature HTML
+              </label>
+              <p style={{ color:'rgba(245,240,232,0.28)', fontSize:11, marginBottom:8 }}>
+                Supports HTML. Use inline styles for email clients. Example: <code style={{ color:'rgba(212,175,55,0.7)', background:'rgba(212,175,55,0.08)', padding:'1px 5px', borderRadius:3 }}>&lt;b&gt;Name&lt;/b&gt; • Title</code>
+              </p>
+              <textarea
+                value={sig.signature_html || ''}
+                onChange={e => setSig(dept, 'signature_html', e.target.value)}
+                rows={6}
+                placeholder={`<b>${d.label} Team</b> — Jyotish Stack AI\n<br/>📧 ${d.email}\n<br/>🌐 jyotishstack.com`}
+                style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'10px 12px', fontSize:12, outline:'none', resize:'vertical', fontFamily:'monospace', lineHeight:1.6 }}
+              />
+            </div>
+
+            {/* Live Preview */}
+            {(sig.signature_html || sig.include_logo!==false) && (
+              <div style={{ marginBottom:18 }}>
+                <p style={{ color:'rgba(245,240,232,0.5)', fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:8 }}>Preview (as it appears in emails)</p>
+                <div style={{ background:'#fff', borderRadius:6, padding:'16px 20px', border:'1px solid rgba(255,255,255,0.1)' }}>
+                  <div style={{ fontFamily:'Georgia,serif', background:'#0B0D1A', color:'#F5F0E8', padding:20, maxWidth:420, border:'1px solid #D4AF37', borderRadius:4 }}>
+                    <div style={{ textAlign:'center', color:'#D4AF37', fontWeight:700, fontSize:14, letterSpacing:2, marginBottom:10 }}>🪐 Jyotish Stack AI</div>
+                    <div style={{ color:'rgba(245,240,232,0.6)', fontSize:12, marginBottom:10 }}>[Your email body content here…]</div>
+                    <div style={{ marginTop:16, paddingTop:12, borderTop:'1px solid rgba(212,175,55,0.25)' }}>
+                      {sig.include_logo !== false && (
+                        <div style={{ color:'rgba(212,175,55,0.7)', fontSize:11, marginBottom:8 }}>
+                          🔯 [Logo: <a href={`${appUrl}/logo-icon.svg`} style={{ color:'rgba(212,175,55,0.7)' }}>{appUrl}/logo-icon.svg</a>]
+                        </div>
+                      )}
+                      <div style={{ fontSize:12, color:'#c8c0b0', lineHeight:1.6 }} dangerouslySetInnerHTML={{ __html: sig.signature_html || `<i style="color:rgba(245,240,232,0.35)">(signature text will appear here)</i>` }} />
+                    </div>
+                    <div style={{ borderTop:'1px solid rgba(212,175,55,0.2)', marginTop:14, paddingTop:10, textAlign:'center', fontSize:11, color:'#888' }}>© {new Date().getFullYear()} Jyotish Stack AI • jyotishstack.com</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Save */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ color: dirty[dept] ? '#FBBF24' : 'rgba(245,240,232,0.35)', fontSize:12 }}>
+                {dirty[dept] ? '● Unsaved changes' : '✓ Saved'}
+              </span>
+              <button onClick={() => save(dept)} disabled={saving[dept] || !dirty[dept]} style={{
+                padding:'9px 24px', borderRadius:6, border:'none',
+                background: (saving[dept]||!dirty[dept]) ? 'rgba(212,175,55,0.3)' : 'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)',
+                color:'#0B0D1A', fontWeight:700, fontSize:13, cursor: (saving[dept]||!dirty[dept]) ? 'not-allowed' : 'pointer',
+              }}>
+                {saving[dept] ? '⏳ Saving…' : '💾 Save Signature'}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function Settings() {
   const [settings, setSettings] = useState({});
@@ -223,16 +374,21 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ── Save Bar ──────────────────────────────────────────────────────── */}
-      <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'14px 22px' }}>
-        <span style={{ color: dirty ? '#FBBF24' : 'rgba(245,240,232,0.35)', fontSize:12 }}>
-          {dirty ? '● Unsaved changes' : '✓ All settings saved'}
-        </span>
-        <button onClick={save} disabled={saving || !dirty}
-          style={{ padding:'9px 24px', borderRadius:6, border:'none', background: (saving||!dirty) ? 'rgba(212,175,55,0.3)' : 'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)', color:'#0B0D1A', fontWeight:700, fontSize:13, cursor: (saving||!dirty) ? 'not-allowed' : 'pointer' }}>
-          {saving ? '⏳ Saving…' : '💾 Save Changes'}
-        </button>
-      </div>
+      {/* ── Email Signature Tab ───────────────────────────────────────────── */}
+      {tab === 'email' && <EmailSignatureTab />}
+
+      {/* ── Save Bar (hidden on email tab which has its own save) ────────── */}
+      {tab !== 'email' && (
+        <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'14px 22px' }}>
+          <span style={{ color: dirty ? '#FBBF24' : 'rgba(245,240,232,0.35)', fontSize:12 }}>
+            {dirty ? '● Unsaved changes' : '✓ All settings saved'}
+          </span>
+          <button onClick={save} disabled={saving || !dirty}
+            style={{ padding:'9px 24px', borderRadius:6, border:'none', background: (saving||!dirty) ? 'rgba(212,175,55,0.3)' : 'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)', color:'#0B0D1A', fontWeight:700, fontSize:13, cursor: (saving||!dirty) ? 'not-allowed' : 'pointer' }}>
+            {saving ? '⏳ Saving…' : '💾 Save Changes'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

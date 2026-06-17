@@ -23,6 +23,7 @@ const NAV = [
   {
     section: 'Communication',
     items: [
+      { href:'/admin/email-manager', icon:'◈', emoji:'📬', label:'Email Manager' },
       { href:'/admin/newsletter',    icon:'◈', emoji:'📰', label:'Newsletter' },
       { href:'/admin/email-blast',   icon:'◈', emoji:'📧', label:'Email Blast' },
       { href:'/admin/email-logs',    icon:'◈', emoji:'📋', label:'Email Logs' },

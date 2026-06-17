@@ -1,54 +1,96 @@
 'use client';
 import { useEffect, useState } from 'react';
 import adminApi from '../lib/adminApi';
+import toast from 'react-hot-toast';
 
 const STATUS_STYLE = {
-  sent:    { bg:'rgba(52,211,153,0.12)',  color:'#34D399',  border:'rgba(52,211,153,0.25)'  },
-  failed:  { bg:'rgba(239,68,68,0.12)',   color:'#F87171',  border:'rgba(239,68,68,0.25)'   },
-  pending: { bg:'rgba(245,158,11,0.12)',  color:'#FBBF24',  border:'rgba(245,158,11,0.25)'  },
+  sent:     { bg:'rgba(52,211,153,0.12)',  color:'#34D399', border:'rgba(52,211,153,0.25)'  },
+  failed:   { bg:'rgba(239,68,68,0.12)',   color:'#F87171', border:'rgba(239,68,68,0.25)'   },
+  queued:   { bg:'rgba(245,158,11,0.12)',  color:'#FBBF24', border:'rgba(245,158,11,0.25)'  },
+  retried:  { bg:'rgba(148,163,184,0.12)', color:'#94A3B8', border:'rgba(148,163,184,0.25)' },
+  retrying: { bg:'rgba(96,165,250,0.12)',  color:'#60A5FA', border:'rgba(96,165,250,0.25)'  },
 };
 
-export default function EmailLogs() {
-  const [logs,   setLogs]   = useState([]);
-  const [total,  setTotal]  = useState(0);
-  const [page,   setPage]   = useState(1);
-  const [filter, setFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [stats,  setStats]  = useState({ sent:0, failed:0, pending:0 });
+const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8' };
 
-  useEffect(() => {
+function DeptBadge({ dept }) {
+  if (!dept) return null;
+  const c = DEPT_COLOR[dept] || '#D4AF37';
+  const label = { sales:'Sales', team:'Support', account:'Accounts' }[dept] || dept;
+  return (
+    <span style={{ fontSize:9, padding:'2px 7px', borderRadius:8, background:`${c}15`, color:c, border:`1px solid ${c}30`, fontWeight:700, textTransform:'uppercase' }}>
+      {label}
+    </span>
+  );
+}
+
+export default function EmailLogs() {
+  const [logs,    setLogs]    = useState([]);
+  const [total,   setTotal]   = useState(0);
+  const [page,    setPage]    = useState(1);
+  const [filter,  setFilter]  = useState('');
+  const [loading, setLoading] = useState(true);
+  const [stats,   setStats]   = useState({ sent:0, failed:0, queued:0, retried:0 });
+  const [retrying, setRetrying] = useState({});
+
+  const load = (p = page, f = filter) => {
     setLoading(true);
-    adminApi.get('/admin/email-logs', { params: { page } })
+    adminApi.get('/admin/email-logs', { params: { page: p, status: f || undefined } })
       .then(({ data }) => {
         setLogs(data.logs);
         setTotal(Number(data.pagination.total));
-        // Compute stats from first page
-        const cnt = { sent:0, failed:0, pending:0 };
-        data.logs.forEach(l => { if (cnt[l.status] !== undefined) cnt[l.status]++; });
-        setStats(cnt);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [page]);
+  };
 
-  const filtered = filter ? logs.filter(l => l.status === filter) : logs;
+  // Load stats separately (all statuses)
+  useEffect(() => {
+    Promise.all(['sent','failed','queued','retried'].map(s =>
+      adminApi.get('/admin/email-logs', { params: { status: s, page: 1 } })
+        .then(({ data }) => ({ s, n: Number(data.pagination.total) }))
+        .catch(() => ({ s, n: 0 }))
+    )).then(results => {
+      const cnt = {};
+      results.forEach(({ s, n }) => { cnt[s] = n; });
+      setStats(cnt);
+    });
+  }, []);
+
+  useEffect(() => { load(page, filter); }, [page, filter]);
+
+  const retry = async (id) => {
+    setRetrying(r => ({ ...r, [id]: true }));
+    try {
+      await adminApi.post(`/admin/email-logs/${id}/retry`);
+      toast.success('Retry sent!');
+      load(page, filter);
+      // refresh stats
+      setStats(s => ({ ...s, failed: Math.max(0, s.failed - 1) }));
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Retry failed');
+    } finally {
+      setRetrying(r => ({ ...r, [id]: false }));
+    }
+  };
 
   return (
     <div>
       <div style={{ marginBottom:24 }}>
         <h1 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:22, fontWeight:700, marginBottom:3 }}>Email Logs</h1>
-        <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13 }}>{total} total email records</p>
+        <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13 }}>{total} records matching current filter</p>
       </div>
 
       {/* Stats strip */}
       <div style={{ display:'flex', gap:10, marginBottom:18, flexWrap:'wrap' }}>
         {[
-          { key:'',        label:'All', count:logs.length, color:'rgba(245,240,232,0.5)' },
-          { key:'sent',    label:'Sent',    count:stats.sent,    color:'#34D399' },
-          { key:'failed',  label:'Failed',  count:stats.failed,  color:'#F87171' },
-          { key:'pending', label:'Pending', count:stats.pending, color:'#FBBF24' },
+          { key:'',         label:'All',     count: stats.sent + stats.failed + stats.queued + stats.retried, color:'rgba(245,240,232,0.5)' },
+          { key:'sent',     label:'Sent',    count: stats.sent,    color:'#34D399' },
+          { key:'failed',   label:'Failed',  count: stats.failed,  color:'#F87171' },
+          { key:'queued',   label:'Queued',  count: stats.queued,  color:'#FBBF24' },
+          { key:'retried',  label:'Retried', count: stats.retried, color:'#94A3B8' },
         ].map(({ key, label, count, color }) => (
-          <button key={key} onClick={() => setFilter(key)} style={{
+          <button key={key} onClick={() => { setFilter(key); setPage(1); }} style={{
             padding:'6px 14px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6,
             background: filter===key ? `${color}18` : 'rgba(255,255,255,0.04)',
             border:`1px solid ${filter===key ? color+'44' : 'rgba(255,255,255,0.1)'}`,
@@ -57,7 +99,7 @@ export default function EmailLogs() {
           }}>
             {label}
             <span style={{ background: filter===key ? color+'22' : 'rgba(255,255,255,0.08)', color: filter===key ? color : 'rgba(245,240,232,0.35)', borderRadius:10, padding:'0 6px', fontSize:10, fontWeight:700 }}>
-              {count}
+              {count ?? '…'}
             </span>
           </button>
         ))}
@@ -66,27 +108,28 @@ export default function EmailLogs() {
       {/* Table */}
       <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, overflow:'hidden' }}>
         <div style={{ overflowX:'auto' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:800 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid rgba(212,175,55,0.1)' }}>
-                {['Recipient','Subject','Template','Status','Date & Time'].map(h => (
+                {['Recipient','Subject','Template','Dept','Status','Date & Time','Actions'].map(h => (
                   <th key={h} style={{ padding:'11px 14px', textAlign:'left', color:'rgba(212,175,55,0.6)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', whiteSpace:'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>Loading…</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>No logs {filter ? `with status "${filter}"` : 'yet'}</td></tr>
-              ) : filtered.map(l => {
-                const ss = STATUS_STYLE[l.status] || STATUS_STYLE.pending;
+                <tr><td colSpan={7} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>Loading…</td></tr>
+              ) : logs.length === 0 ? (
+                <tr><td colSpan={7} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>No logs {filter ? `with status "${filter}"` : 'yet'}</td></tr>
+              ) : logs.map(l => {
+                const ss = STATUS_STYLE[l.status] || STATUS_STYLE.queued;
+                const canRetry = l.status === 'failed' || l.status === 'queued';
                 return (
                   <tr key={l.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)' }}
                     onMouseEnter={e => e.currentTarget.style.background='rgba(212,175,55,0.025)'}
                     onMouseLeave={e => e.currentTarget.style.background='transparent'}>
                     <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.8)', fontSize:13 }}>{l.to_email}</td>
-                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.6)', fontSize:13, maxWidth:220, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.6)', fontSize:13, maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {l.subject || '—'}
                     </td>
                     <td style={{ padding:'10px 14px' }}>
@@ -95,12 +138,32 @@ export default function EmailLogs() {
                       </span>
                     </td>
                     <td style={{ padding:'10px 14px' }}>
+                      <DeptBadge dept={l.department} />
+                    </td>
+                    <td style={{ padding:'10px 14px' }}>
                       <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:ss.bg, color:ss.color, border:`1px solid ${ss.border}` }}>
                         {l.status}
                       </span>
+                      {l.error_message && (
+                        <p style={{ color:'#F87171', fontSize:10, marginTop:3, maxWidth:160, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }} title={l.error_message}>
+                          {l.error_message}
+                        </p>
+                      )}
                     </td>
-                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.38)', fontSize:12 }}>
+                    <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.38)', fontSize:12, whiteSpace:'nowrap' }}>
                       {new Date(l.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                    </td>
+                    <td style={{ padding:'10px 14px' }}>
+                      {canRetry && (
+                        <button onClick={() => retry(l.id)} disabled={retrying[l.id]} style={{
+                          padding:'4px 12px', borderRadius:5, border:'1px solid rgba(239,68,68,0.35)',
+                          background:'rgba(239,68,68,0.08)', color:'#F87171', fontSize:11, fontWeight:700,
+                          cursor: retrying[l.id] ? 'not-allowed' : 'pointer', whiteSpace:'nowrap',
+                          opacity: retrying[l.id] ? 0.6 : 1,
+                        }}>
+                          {retrying[l.id] ? '⏳' : '↻ Retry'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

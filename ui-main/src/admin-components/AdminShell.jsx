@@ -13,6 +13,7 @@ const PAGE_TITLES = {
   '/admin/knowledge':     'Jyotish Knowledge Base',
   '/admin/newsletter':    'Newsletter',
   '/admin/email-blast':   'Email Blast',
+  '/admin/email-manager': 'Email Manager',
   '/admin/email-logs':    'Email Logs',
   '/admin/notifications': 'Notifications',
   '/admin/settings':      'App Settings',
