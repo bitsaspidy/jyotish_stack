@@ -1043,12 +1043,12 @@ export default function KundliDetail({ uuid }) {
             <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25 }}
               className="card-royal p-5 mt-6">
               <h2 className="font-serif text-gold text-sm font-semibold mb-1">
-                🪐 {lang==='hi' ? 'भाव कारक ग्रह' : 'Bhav Karak Grahas — Natural Significators'}
+                🏠 {lang==='hi' ? 'हर जीवन क्षेत्र का शासक ग्रह' : 'Planet Rulers of Your Life Areas'}
               </h2>
-              <p className="text-ivory/30 text-[10px] mb-4">
+              <p className="text-ivory/45 text-[11px] mb-4 font-devanagari">
                 {lang==='hi'
-                  ? 'हर भाव का एक कारक ग्रह होता है जो उस भाव के स्वाभाविक फल का प्रतिनिधित्व करता है।'
-                  : 'Each house has natural significator (Karak) planets that govern its themes.'}
+                  ? 'हर भाव (जीवन का हिस्सा) पर एक ग्रह का स्वाभाविक नियंत्रण होता है। जब वह ग्रह मजबूत और अच्छी जगह हो, उस क्षेत्र में अच्छे परिणाम आते हैं।'
+                  : 'Each area of your life has a planet that naturally governs it. When that planet is strong and well-placed, that area of life tends to go well.'}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {Object.values(chart.bhav_karak).map((bk) => (
@@ -1068,31 +1068,33 @@ export default function KundliDetail({ uuid }) {
                     </p>
                     {bk.karaka_positions.map((kp) => {
                       const meta         = PLANET_META[kp.planet] || {};
-                      const qualityColor = kp.placement_quality==='trikona' ? '#22C55E' : kp.placement_quality==='kendra' ? '#60A5FA' : 'rgba(245,240,232,0.35)';
+                      const q            = kp.placement_quality;
+                      const qualityColor = q==='trikona' ? '#22C55E' : q==='kendra' ? '#60A5FA' : 'rgba(245,240,232,0.35)';
+                      const qualityLabel = lang==='hi'
+                        ? (q==='trikona' ? 'शुभ स्थान' : q==='kendra' ? 'मजबूत स्थान' : '')
+                        : (q==='trikona' ? 'Auspicious' : q==='kendra' ? 'Strong position' : '');
                       return (
                         <div key={kp.planet} className="flex items-center justify-between mt-1 border-t border-white/4 pt-1">
                           <span style={{ color:meta.color, fontSize:10 }}>{meta.icon} {planetName(kp.planet, lang)}</span>
                           <span style={{ fontSize:9, color:qualityColor }}>
                             {houseLabel(kp.house, lang)} · {lang==='hi' ? localizeAstroText(kp.rashi_en, lang) : kp.rashi_en}
-                            {kp.placement_quality !== 'other' && (
-                              <span style={{ marginLeft:4, opacity:0.7 }}>
-                                ({lang==='hi' ? localizeAstroText(kp.placement_quality, lang) : kp.placement_quality})
-                              </span>
+                            {qualityLabel && <span style={{ marginLeft:4, opacity:0.7 }}>({qualityLabel})</span>}
+                            {kp.is_in_own_karak_house && (
+                              <span style={{ marginLeft:4, color:'#F59E0B' }} title={lang==='hi' ? 'यह ग्रह उसी भाव में है जिसे यह नियंत्रित करता है — परिणाम मिश्रित हो सकते हैं' : 'This planet sits in the very house it governs — results can be mixed'}>⚠</span>
                             )}
-                            {kp.is_in_own_karak_house && <span style={{ marginLeft:3, color:'#F59E0B' }} title="Karako Bhava Nashaya">⚠</span>}
                           </span>
                         </div>
                       );
                     })}
                     <div className="mt-3 space-y-2 border-t border-white/6 pt-3">
                       <p className="text-emerald-300/78 text-[10px] leading-relaxed font-devanagari">
-                        {t(lang,'Benefit:','लाभ:')} {lang==='hi' ? (bk.benefit_hi||bk.benefit_en) : bk.benefit_en}
+                        ✓ {lang==='hi' ? (bk.benefit_hi||bk.benefit_en) : bk.benefit_en}
                       </p>
                       <p className="text-amber-200/78 text-[10px] leading-relaxed font-devanagari">
-                        {t(lang,'Danger:','सावधानी:')} {lang==='hi' ? (bk.danger_hi||bk.danger_en) : bk.danger_en}
+                        ⚠ {lang==='hi' ? (bk.danger_hi||bk.danger_en) : bk.danger_en}
                       </p>
                       <p className="text-violet-200/78 text-[10px] leading-relaxed font-devanagari">
-                        {t(lang,'Remedy:','उपाय:')} {lang==='hi' ? (bk.remedy_hi||bk.remedy_en) : bk.remedy_en}
+                        🔹 {t(lang,'Remedy:','उपाय:')} {lang==='hi' ? (bk.remedy_hi||bk.remedy_en) : bk.remedy_en}
                       </p>
                     </div>
                   </div>
@@ -1110,18 +1112,18 @@ export default function KundliDetail({ uuid }) {
             <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.28 }}
               className="card-royal p-5 mt-6">
               <h2 className="font-serif text-gold text-sm font-semibold mb-1">
-                👁 {lang==='hi' ? 'ग्रह दृष्टि (Graha Drishti)' : 'Graha Drishti — Planetary Aspects'}
+                👁 {lang==='hi' ? 'ग्रह प्रभाव — आपके भावों पर' : 'How Planets Influence Your Life Areas'}
               </h2>
-              <p className="text-ivory/30 text-[10px] mb-4">
+              <p className="text-ivory/45 text-[11px] mb-4 font-devanagari">
                 {lang==='hi'
-                  ? 'हर ग्रह अपनी स्थिति से 7वें भाव पर दृष्टि डालता है। मंगल, गुरु, शनि, राहु, केतु की विशेष दृष्टियाँ होती हैं।'
-                  : 'Every planet aspects the 7th house. Mars, Jupiter, Saturn, Rahu & Ketu have additional special aspects.'}
+                  ? 'हर ग्रह जहाँ बैठा है वहाँ से दूसरे भावों पर नज़र रखता है। इसे दृष्टि कहते हैं। मंगल, गुरु, शनि जैसे ग्रहों की एक से ज़्यादा जगहों पर नज़र होती है।'
+                  : 'Every planet casts its energy on other areas of your chart. Strong planets uplift those areas; challenging ones bring lessons. Mars, Jupiter, and Saturn influence more areas than others.'}
               </p>
 
               {chart.drishti.by_house_detail && (
                 <div className="mb-5">
-                  <h3 className="text-gold/70 text-[10px] uppercase tracking-widest mb-2">
-                    {lang==='hi' ? 'साधारण भाषा में प्रभाव' : 'Plain-Language Effects'}
+                  <h3 className="text-gold/70 text-[10px] uppercase tracking-widest mb-3">
+                    {lang==='hi' ? 'हर भाव पर असर — आसान भाषा में' : 'What Each Life Area Is Receiving'}
                   </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     {Object.values(chart.drishti.by_house_detail).map((item) => (
@@ -1133,7 +1135,7 @@ export default function KundliDetail({ uuid }) {
 
               {/* By Planet */}
               <h3 className="text-gold/60 text-[10px] uppercase tracking-widest mb-2">
-                {lang==='hi' ? 'ग्रह → जिन भावों पर दृष्टि' : 'Planet → Houses Aspected'}
+                {lang==='hi' ? 'कौन सा ग्रह किस क्षेत्र को प्रभावित कर रहा है' : 'Which Planet Is Influencing Which Area'}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-5">
                 {Object.entries(chart.drishti.by_planet || {}).map(([planet, info]) => {
@@ -1151,7 +1153,7 @@ export default function KundliDetail({ uuid }) {
                         <span className="text-ivory/30 text-[9px]">{houseLabel(info.from_house, lang)}</span>
                         {hasSpecial && (
                           <span style={{ fontSize:8, padding:'1px 5px', borderRadius:8, background:'rgba(212,175,55,0.15)', color:'#D4AF37', marginLeft:'auto' }}>
-                            {t(lang,'Special','विशेष')}
+                            {t(lang,'Multi-house influence','बहु-भाव प्रभाव')}
                           </span>
                         )}
                       </div>
@@ -1162,12 +1164,15 @@ export default function KundliDetail({ uuid }) {
                                          : nature==='karmic'      ? '#A78BFA'
                                          : nature==='restricting' ? '#818CF8'
                                          : '#94A3B8';
+                          const natLabel = lang==='hi'
+                            ? (nature==='auspicious' ? 'शुभ' : nature==='aggressive' ? 'तीव्र' : nature==='karmic' ? 'कर्मिक' : nature==='restricting' ? 'सीमित' : 'सामान्य')
+                            : (nature==='auspicious' ? 'Positive' : nature==='aggressive' ? 'Intense' : nature==='karmic' ? 'Karmic' : nature==='restricting' ? 'Limiting' : 'Neutral');
                           return (
                             <span key={offset} style={{
                               fontSize:9, padding:'2px 7px', borderRadius:10, fontWeight:600,
                               background:`${natColor}18`, color:natColor, border:`1px solid ${natColor}33`,
                             }}>
-                              {houseLabel(house, lang)} ({lang==='hi' ? `${offset}वीं` : `${offset}th`})
+                              {houseLabel(house, lang)} · {natLabel}
                             </span>
                           );
                         })}
@@ -1179,7 +1184,7 @@ export default function KundliDetail({ uuid }) {
 
               {/* By House */}
               <h3 className="text-gold/60 text-[10px] uppercase tracking-widest mb-2">
-                {lang==='hi' ? 'भाव → जिन ग्रहों की दृष्टि पड़ रही है' : 'House → Planets Aspecting It'}
+                {lang==='hi' ? 'कौन से भाव पर कितने ग्रहों का प्रभाव है' : 'Energy Summary — Areas Receiving Planetary Attention'}
               </h3>
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                 {Object.entries(chart.drishti.by_house || {}).map(([house, planets]) => (
