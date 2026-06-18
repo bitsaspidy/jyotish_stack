@@ -1153,7 +1153,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
       {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}
       {activeTab === 'life-guide' && (
-        <GuidanceReport uuid={kundliUuid} admin />
+        <GuidanceReport uuid={kundliUuid} admin name={kundli?.name} />
       )}
 
       {/* ══ TAB: LIFE REPORT ══════════════════════════════════════════════════ */}

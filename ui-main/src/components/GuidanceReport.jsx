@@ -14,6 +14,63 @@ function statusColor(label = '') {
   return { c: '#FBBF24', bg: 'rgba(245,158,11,0.12)', b: 'rgba(245,158,11,0.3)' }; // needs care
 }
 
+// ── Print / Save-as-PDF (browser renders Devanagari correctly; no server font) ──
+const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const statusClass = (label = '') => label.includes('मजबूत') ? 'st-strong' : label.includes('सामान्य') ? 'st-mid' : 'st-care';
+
+function buildPrintHtml(report, daily, name) {
+  const block = (s) => `
+    <div class="section">
+      <div class="sec-head"><h3>${esc(s.heading)}</h3>${s.status ? `<span class="pill ${statusClass(s.status)}">${esc(s.status)}</span>` : ''}</div>
+      ${s.text ? `<p class="lead">${esc(s.text)}</p>` : ''}
+      ${(s.points || []).length ? `<ul>${s.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+      ${(s.advice || []).filter(Boolean).map((a) => `<div class="adv">✓ सलाह: ${esc(a)}</div>`).join('')}
+      ${(s.caution || []).filter(Boolean).map((c) => `<div class="cau">⚠ सावधानी: ${esc(c)}</div>`).join('')}
+    </div>`;
+  const dailyHtml = daily ? `
+    <div class="section daily">
+      <div class="sec-head"><h3>${esc(daily.heading)}</h3></div>
+      ${daily.text ? `<p class="lead">${esc(daily.text)}</p>` : ''}
+      ${(daily.points || []).length ? `<ul>${daily.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+      ${(daily.advice || []).filter(Boolean).map((a) => `<div class="adv">✓ सलाह: ${esc(a)}</div>`).join('')}
+      ${(daily.caution || []).filter(Boolean).map((c) => `<div class="cau">⚠ सावधानी: ${esc(c)}</div>`).join('')}
+    </div>` : '';
+  const today = new Date().toLocaleDateString('hi-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  return `<!doctype html><html lang="hi"><head><meta charset="utf-8">
+<title>जीवन मार्गदर्शन रिपोर्ट${name ? ` - ${esc(name)}` : ''}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{font-family:'Noto Sans Devanagari',system-ui,serif;color:#1f2433;margin:0;line-height:1.75;}
+.wrap{max-width:760px;margin:0 auto;padding:24px;}
+.top{border-bottom:3px solid #b8860b;padding-bottom:14px;margin-bottom:18px;}
+.top h1{color:#b8860b;font-size:23px;margin:0 0 4px;}
+.top .sub{color:#6b7280;font-size:13px;}
+.summary{background:#faf6e9;border:1px solid #e6d79a;border-radius:10px;padding:16px 18px;margin-bottom:18px;}
+.summary p{margin:0 0 6px;font-size:14px;}
+.section{border:1px solid #e3e6ec;border-radius:10px;padding:14px 16px;margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;}
+.section.daily{background:#eef4ff;border-color:#cfe0ff;}
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;}
+.sec-head h3{color:#b8860b;font-size:16px;margin:0;}
+.pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px;white-space:nowrap;}
+.st-strong{background:#dcfce7;color:#15803d;}.st-mid{background:#dbeafe;color:#1d4ed8;}.st-care{background:#fef3c7;color:#b45309;}
+.lead{font-size:14px;margin:0 0 8px;}
+ul{margin:6px 0;padding-left:20px;}li{font-size:13px;margin-bottom:4px;color:#374151;}
+.adv{background:#ecfdf5;border:1px solid #bbf7d0;border-radius:7px;padding:6px 10px;margin-top:6px;font-size:12.5px;color:#15803d;}
+.cau{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:6px 10px;margin-top:6px;font-size:12.5px;color:#b45309;}
+.foot{margin-top:18px;text-align:center;color:#9ca3af;font-size:11px;line-height:1.6;}
+@page{margin:16mm;}
+</style></head><body><div class="wrap">
+<div class="top"><h1>🪔 जीवन मार्गदर्शन रिपोर्ट</h1>
+<div class="sub">${name ? esc(name) + ' · ' : ''}${today} · Jyotish Stack AI</div></div>
+<div class="summary">${(report.summary?.lines || []).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
+${dailyHtml}
+${(report.sections || []).map(block).join('')}
+<div class="foot">यह रिपोर्ट ज्योतिषीय गणना और परंपरागत नियमों पर आधारित मार्गदर्शन है — इसे सकारात्मक दिशा के लिए लें, किसी डर के लिए नहीं।<br/>© ${new Date().getFullYear()} Jyotish Stack AI · jyotishstack.com</div>
+</div></body></html>`;
+}
+
 function StatusPill({ label }) {
   if (!label) return null;
   const s = statusColor(label);
@@ -95,12 +152,24 @@ function DebugPanel({ debug }) {
   );
 }
 
-export default function GuidanceReport({ uuid, admin = false }) {
+export default function GuidanceReport({ uuid, admin = false, name = '' }) {
   const [report, setReport] = useState(null);
   const [daily, setDaily] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
+
+  const handlePrint = () => {
+    if (!report) return;
+    const html = buildPrintHtml(report, daily, name);
+    const w = window.open('', '_blank');
+    if (!w) { alert('कृपया इस साइट के लिए पॉप-अप की अनुमति दें।'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+    let done = false;
+    const go = () => { if (done) return; done = true; try { w.focus(); w.print(); } catch (_) {} };
+    w.onload = () => setTimeout(go, 500);
+    setTimeout(go, 1300); // fallback if onload doesn't fire after document.write
+  };
 
   useEffect(() => {
     if (!uuid) return;
@@ -125,6 +194,16 @@ export default function GuidanceReport({ uuid, admin = false }) {
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
+      {/* Action bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={handlePrint} title="रिपोर्ट को PDF के रूप में सेव या प्रिंट करें" style={{
+          padding: '8px 16px', borderRadius: 8, background: 'rgba(212,175,55,0.12)',
+          border: '1px solid rgba(212,175,55,0.4)', color: GOLD, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>
+          🖨️ PDF / प्रिंट
+        </button>
+      </div>
+
       {/* Summary */}
       <section style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.03))', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 16, padding: '22px 24px', marginBottom: 18 }}>
         <h2 style={{ color: GOLD, fontFamily: 'Georgia,serif', fontSize: 20, fontWeight: 700, marginBottom: 12 }}>🪔 {report.summary?.heading}</h2>
