@@ -4,7 +4,12 @@ const db = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 const { createOrder, verifySignature, getKeys } = require('../services/razorpay.service');
 const { sendEmail } = require('../services/email.service');
+const { createInvoiceForSubscription, getBusinessConfig } = require('../services/invoice.service');
+const { buildInvoicePdf } = require('../services/pdf/invoice');
 const { ok, fail } = require('../utils/response');
+
+const money2 = (n) => Number(n || 0).toFixed(2);
+const safeFile = (s) => String(s || 'invoice').replace(/[^\w.-]+/g, '-');
 
 // Maps a subscription_plans.name to the users.plan tier used for feature gating
 const PLAN_TIER_MAP = { basic: 'basic', premium: 'premium', yearly: 'yearly' };
@@ -70,12 +75,72 @@ router.post('/verify', authenticate, async (req, res) => {
 
   await db('users').where({ id: req.user.id }).update({ plan: planTierFor(plan.name) });
 
-  sendEmail({
-    to: req.user.email, template: 'subscription_confirm',
-    data: { name: req.user.name, planName: plan.name, amount: plan.price, expiresAt: expires_at.toLocaleDateString('en-IN') },
-  }).catch(() => {});
+  // Generate the GST invoice record (non-fatal — never block plan activation)
+  let invoice = null;
+  try {
+    const freshSub = await db('user_subscriptions').where({ id: sub.id }).first();
+    invoice = await createInvoiceForSubscription({
+      subscription: freshSub,
+      plan,
+      user: req.user,
+      customerState: req.body.customer_state || null,
+      customerGstin: req.body.customer_gstin || null,
+    });
+  } catch (e) {
+    console.error('[Invoice] generation failed:', e.message);
+  }
 
-  return ok(res, { expires_at }, 'Subscription activated');
+  // Send the payment-success email with the invoice PDF attached (backgrounded)
+  setImmediate(async () => {
+    try {
+      let attachments;
+      const data = {
+        name: req.user.name,
+        planName: plan.name,
+        expiresAt: expires_at.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        dashboardUrl: `${process.env.APP_URL || 'https://jyotishstack.com'}/dashboard`,
+        invoiceNumber: invoice?.invoice_number || '—',
+        isTax: invoice ? invoice.document_type !== 'bill_of_supply' && Number(invoice.total_tax) > 0 : false,
+        interstate: invoice ? !!invoice.is_interstate : false,
+        gstRate: invoice ? Number(invoice.gst_rate) : 0,
+        taxableValue: money2(invoice?.taxable_value ?? plan.price),
+        cgst: money2(invoice?.cgst), sgst: money2(invoice?.sgst), igst: money2(invoice?.igst),
+        total: money2(invoice?.total_amount ?? plan.price),
+      };
+      if (invoice) {
+        const business = await getBusinessConfig();
+        const pdf = buildInvoicePdf(invoice, business);
+        attachments = [{ filename: `${safeFile(invoice.invoice_number)}.pdf`, content: pdf, contentType: 'application/pdf' }];
+      }
+      await sendEmail({ to: req.user.email, template: 'payment_success', data, attachments });
+    } catch (e) {
+      console.error('[Invoice] email failed:', e.message);
+    }
+  });
+
+  return ok(res, { expires_at, invoice_number: invoice?.invoice_number || null }, 'Subscription activated');
+});
+
+// ─── User invoices ──────────────────────────────────────────────────────────────
+// GET /api/subscriptions/invoices — list the logged-in user's own invoices
+router.get('/invoices', authenticate, async (req, res) => {
+  const invoices = await db('invoices')
+    .where({ user_id: req.user.id })
+    .orderBy('created_at', 'desc')
+    .select('uuid', 'invoice_number', 'plan_name', 'document_type', 'total_amount',
+            'total_tax', 'taxable_value', 'currency', 'status', 'issued_at', 'created_at');
+  return ok(res, { invoices });
+});
+
+// GET /api/subscriptions/invoices/:uuid/invoice.pdf — download own invoice
+router.get('/invoices/:uuid/invoice.pdf', authenticate, async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid, user_id: req.user.id }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+  const business = await getBusinessConfig();
+  const pdf = buildInvoicePdf(invoice, business);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFile(invoice.invoice_number)}.pdf"`);
+  return res.send(pdf);
 });
 
 module.exports = router;

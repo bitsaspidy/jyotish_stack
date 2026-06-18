@@ -547,6 +547,114 @@ router.put('/email-signatures/:dept', ah(async (req, res) => {
   return ok(res, {}, 'Signature updated');
 }));
 
+// ─── SALES / INVOICES ────────────────────────────────────────────────────────
+const { getBusinessConfig, saveBusinessConfig } = require('../services/invoice.service');
+const { buildInvoicePdf } = require('../services/pdf/invoice');
+
+// GET /admin/sales — paginated invoice list + revenue/GST summary
+router.get('/sales', ah(async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page) || 1);
+  const limit  = 20;
+  const offset = (page - 1) * limit;
+  const { search = '', status = '', plan = '', from = '', to = '' } = req.query;
+
+  let q = db('invoices');
+  if (status) q = q.where({ status });
+  if (plan)   q = q.where({ plan_name: plan });
+  if (from)   q = q.where('created_at', '>=', new Date(from));
+  if (to)     { const t = new Date(to); t.setHours(23, 59, 59, 999); q = q.where('created_at', '<=', t); }
+  if (search) {
+    q = q.where((b) => b
+      .where('invoice_number', 'like', `%${search}%`)
+      .orWhere('customer_name', 'like', `%${search}%`)
+      .orWhere('customer_email', 'like', `%${search}%`)
+      .orWhere('razorpay_payment_id', 'like', `%${search}%`));
+  }
+
+  const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+
+  const [total, invoices, paidAgg, monthAgg, statusCounts] = await Promise.all([
+    q.clone().clearSelect().count('id as count').first(),
+    q.clone().select('id', 'uuid', 'invoice_number', 'plan_name', 'document_type',
+      'customer_name', 'customer_email', 'taxable_value', 'cgst', 'sgst', 'igst',
+      'total_tax', 'total_amount', 'is_interstate', 'currency', 'status',
+      'razorpay_payment_id', 'issued_at', 'created_at')
+      .orderBy('created_at', 'desc').limit(limit).offset(offset),
+    db('invoices').where({ status: 'paid' })
+      .sum({ revenue: 'total_amount' }).sum({ tax: 'total_tax' }).sum({ taxable: 'taxable_value' })
+      .count({ count: 'id' }).first(),
+    db('invoices').where({ status: 'paid' }).where('created_at', '>=', monthStart)
+      .sum({ revenue: 'total_amount' }).count({ count: 'id' }).first(),
+    db('invoices').select('status').count('id as count').groupBy('status'),
+  ]);
+
+  const summary = {
+    revenue:  Number(paidAgg.revenue || 0),
+    tax:      Number(paidAgg.tax || 0),
+    taxable:  Number(paidAgg.taxable || 0),
+    paid_count: Number(paidAgg.count || 0),
+    month_revenue: Number(monthAgg.revenue || 0),
+    month_count:   Number(monthAgg.count || 0),
+    status_counts: statusCounts.reduce((m, r) => { m[r.status] = Number(r.count); return m; }, {}),
+  };
+
+  return ok(res, { invoices, summary, pagination: { page, limit, total: Number(total.count) } });
+}));
+
+// GET /admin/sales/:uuid/invoice.pdf — download an invoice
+router.get('/sales/:uuid/invoice.pdf', ah(async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+  const business = await getBusinessConfig();
+  const pdf = buildInvoicePdf(invoice, business);
+  const safe = String(invoice.invoice_number || 'invoice').replace(/[^\w.-]+/g, '-');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safe}.pdf"`);
+  return res.send(pdf);
+}));
+
+// POST /admin/sales/:uuid/resend — re-email the invoice to the customer
+router.post('/sales/:uuid/resend', ah(async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+  if (!invoice.customer_email) return fail(res, 'Invoice has no customer email', 400);
+
+  const business = await getBusinessConfig();
+  const pdf = buildInvoicePdf(invoice, business);
+  const money2 = (n) => Number(n || 0).toFixed(2);
+  const isTax = invoice.document_type !== 'bill_of_supply' && Number(invoice.total_tax) > 0;
+
+  await sendEmail({
+    to: invoice.customer_email,
+    template: 'payment_success',
+    data: {
+      name: invoice.customer_name || 'Customer',
+      planName: invoice.plan_name || 'Subscription',
+      expiresAt: '',
+      dashboardUrl: `${process.env.APP_URL || 'https://jyotishstack.com'}/dashboard`,
+      invoiceNumber: invoice.invoice_number,
+      isTax, interstate: !!invoice.is_interstate, gstRate: Number(invoice.gst_rate),
+      taxableValue: money2(invoice.taxable_value),
+      cgst: money2(invoice.cgst), sgst: money2(invoice.sgst), igst: money2(invoice.igst),
+      total: money2(invoice.total_amount),
+    },
+    attachments: [{ filename: `${String(invoice.invoice_number).replace(/[^\w.-]+/g, '-')}.pdf`, content: pdf, contentType: 'application/pdf' }],
+  });
+  return ok(res, {}, 'Invoice re-sent to customer');
+}));
+
+// GET /admin/sales/business-config — current business/GST settings
+router.get('/sales/business-config', ah(async (_req, res) => {
+  const config = await getBusinessConfig();
+  return ok(res, { config });
+}));
+
+// PUT /admin/sales/business-config — update business/GST settings
+router.put('/sales/business-config', ah(async (req, res) => {
+  const config = await saveBusinessConfig(req.body || {});
+  return ok(res, { config }, 'Business settings saved');
+}));
+
 // ─── PANCHANG ────────────────────────────────────────────────────────────────
 const { calculateDailyPanchang } = require('../services/helpers/panchang');
 

@@ -59,6 +59,7 @@ const TEMPLATE_DEPARTMENT = {
   verify_email:         'account',
   reset_password:       'account',
   subscription_confirm: 'account',
+  payment_success:      'account',
   newsletter:           'team',
   custom:               'team',
   contact_ack:          'team',
@@ -173,6 +174,34 @@ const templates = {
         <p>Thank you for choosing Jyotish Stack AI. For billing questions, reply to this email (account@jyotishstack.com).</p>`, sig),
   }),
 
+  payment_success: (data, sig) => {
+    const taxRows = data.isTax
+      ? (data.interstate
+          ? `<tr><td style="padding:4px 0;color:#bdb6a6;">IGST @ ${data.gstRate}%</td><td style="padding:4px 0;text-align:right;">₹${data.igst}</td></tr>`
+          : `<tr><td style="padding:4px 0;color:#bdb6a6;">CGST @ ${data.gstRate / 2}%</td><td style="padding:4px 0;text-align:right;">₹${data.cgst}</td></tr>
+             <tr><td style="padding:4px 0;color:#bdb6a6;">SGST @ ${data.gstRate / 2}%</td><td style="padding:4px 0;text-align:right;">₹${data.sgst}</td></tr>`)
+      : '';
+    return {
+      subject: `Payment Received — Invoice ${data.invoiceNumber}`,
+      html: BRAND_SHELL(`
+        <h2 style="color:#D4AF37;margin-bottom:4px;">Payment Successful ✓</h2>
+        <p style="font-size:15px;">Namaste ${data.name},</p>
+        <p>Thank you! We've received your payment and your <strong style="color:#D4AF37;">${data.planName}</strong> plan is now active${data.expiresAt ? ` until <strong>${data.expiresAt}</strong>` : ''}.</p>
+        <div style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.25);border-radius:8px;padding:16px 18px;margin:20px 0;">
+          <p style="margin:0 0 10px;color:#D4AF37;font-size:13px;letter-spacing:0.04em;"><strong>${data.isTax ? 'TAX INVOICE' : 'BILL OF SUPPLY'} · ${data.invoiceNumber}</strong></p>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;color:#F5F0E8;">
+            <tr><td style="padding:4px 0;color:#bdb6a6;">Plan</td><td style="padding:4px 0;text-align:right;">${data.planName}</td></tr>
+            <tr><td style="padding:4px 0;color:#bdb6a6;">Taxable Value</td><td style="padding:4px 0;text-align:right;">₹${data.taxableValue}</td></tr>
+            ${taxRows}
+            <tr><td style="padding:8px 0 0;border-top:1px solid rgba(212,175,55,0.25);color:#D4AF37;font-weight:bold;">Total Paid</td><td style="padding:8px 0 0;border-top:1px solid rgba(212,175,55,0.25);text-align:right;color:#D4AF37;font-weight:bold;">₹${data.total}</td></tr>
+          </table>
+        </div>
+        <p style="font-size:13px;color:#bdb6a6;">📎 Your invoice PDF is attached to this email.</p>
+        ${data.dashboardUrl ? `<a href="${data.dashboardUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:11px 26px;text-decoration:none;font-weight:bold;margin:14px 0;border-radius:4px;">Go to Dashboard</a>` : ''}
+        <p style="font-size:12px;color:#888;">For any billing questions, reply to this email (account@jyotishstack.com).</p>`, sig),
+    };
+  },
+
   newsletter: (data, sig) => ({
     subject: data.subject,
     html: `
@@ -229,7 +258,7 @@ const DEPT_LABELS = { sales: 'Sales', team: 'Support', account: 'Accounts', gene
  * Appends the department's active signature automatically.
  * Stores html_body + department + from_address in email_logs for retry support.
  */
-const sendEmail = async ({ to, template, data = {}, from, replyTo }) => {
+const sendEmail = async ({ to, template, data = {}, from, replyTo, attachments }) => {
   const tmpl = templates[template];
   if (!tmpl) throw new Error(`Unknown email template: ${template}`);
 
@@ -252,7 +281,11 @@ const sendEmail = async ({ to, template, data = {}, from, replyTo }) => {
   });
 
   try {
-    await transport.sendMail({ from: cfg.from, to, subject, html, replyTo: replyTo || undefined });
+    await transport.sendMail({
+      from: cfg.from, to, subject, html,
+      replyTo: replyTo || undefined,
+      attachments: Array.isArray(attachments) && attachments.length ? attachments : undefined,
+    });
     await db('email_logs').where({ id: logId }).update({ status: 'sent' });
   } catch (err) {
     await db('email_logs').where({ id: logId }).update({ status: 'failed', error_message: err.message });

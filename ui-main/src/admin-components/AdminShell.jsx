@@ -9,6 +9,7 @@ const PAGE_TITLES = {
   '/admin/dashboard':     'Dashboard',
   '/admin/users':         'User Management',
   '/admin/plans':         'Subscription Plans',
+  '/admin/sales':         'Sales Management',
   '/admin/kundlis':       'Kundli Profiles',
   '/admin/knowledge':     'Jyotish Knowledge Base',
   '/admin/newsletter':    'Newsletter',

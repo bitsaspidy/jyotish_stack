@@ -16,6 +16,7 @@ const NAV = [
     items: [
       { href:'/admin/users',    icon:'◎', emoji:'👥', label:'Users' },
       { href:'/admin/plans',    icon:'◉', emoji:'💳', label:'Plans' },
+      { href:'/admin/sales',    icon:'◈', emoji:'💰', label:'Sales' },
       { href:'/admin/kundlis',  icon:'◈', emoji:'🔯', label:'Kundli Profiles' },
       { href:'/admin/knowledge', icon:'◈', emoji:'📚', label:'Knowledge Base' },
     ],
