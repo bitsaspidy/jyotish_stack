@@ -35,7 +35,8 @@ function composeArea({ areaKey, titleEn, titleHi, score, notesEn = [], notesHi =
     goodPointsHi: sanitizeForUser(notesHi.slice(0, 4)),
     challenges:  blockers.map(b => _blockerToUserEn(b)),
     challengesHi: blockers.map(b => _blockerToUserHi(b)),
-    advice:      _buildAdvice(areaKey, score, lang),
+    advice:      _buildAdvice(areaKey, score, 'en'),
+    adviceHi:    _buildAdvice(areaKey, score, 'hi'),
     remedies,
     technical: isAdmin ? {
       visibleOnlyInAdmin: true,

@@ -105,7 +105,7 @@ export default function JudgementPanel({ judgement, lang = 'hi', admin = false }
                 )}
 
                 {/* Advice (user view only) */}
-                {!admin && (a.advice || []).map((adv, i) => (
+                {!admin && (isHi ? (a.adviceHi || a.advice || []) : (a.advice || [])).map((adv, i) => (
                   <div key={i} style={{ marginTop:7, fontSize:11, color:'#A7F3D0', background:'rgba(52,211,153,0.08)', border:'1px solid rgba(52,211,153,0.2)', borderRadius:6, padding:'5px 8px', lineHeight:1.6 }}>
                     ✓ {adv}
                   </div>

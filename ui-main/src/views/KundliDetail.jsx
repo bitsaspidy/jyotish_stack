@@ -1239,7 +1239,7 @@ export default function KundliDetail({ uuid }) {
 
         {/* ══ TAB: JUDGEMENT SCORE ════════════════════════════════════════ */}
         {activeTab === 'judgement' && (
-          <div className="card-royal p-5 mt-6">
+          <div className="mt-6">
             <JudgementPanel judgement={kundli?.judgement} lang={lang} admin={false} />
             {!kundli?.judgement && (
               <p className="text-ivory/35 text-xs text-center py-8">
