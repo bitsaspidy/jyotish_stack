@@ -1,7 +1,15 @@
 'use strict';
 // Migration 034 — Kundli Judgement Priority Engine rule tables
+// NOTE: drops tables first so a previously-failed partial run is cleaned up safely.
 
 exports.up = async (knex) => {
+  // Drop in reverse-dependency order in case a prior failed run left partial tables
+  await knex.schema.dropTableIfExists('astrology_special_planet_rules');
+  await knex.schema.dropTableIfExists('astrology_house_lord_rules');
+  await knex.schema.dropTableIfExists('astrology_yoga_activation_rules');
+  await knex.schema.dropTableIfExists('astrology_judgement_rules');
+  await knex.schema.dropTableIfExists('astrology_rule_categories');
+
   // 1. Rule categories
   await knex.schema.createTable('astrology_rule_categories', t => {
     t.increments('id');
@@ -68,7 +76,8 @@ exports.up = async (knex) => {
     t.text('caution_hi').nullable();
     t.enum('status', ['active','inactive']).defaultTo('active');
     t.timestamps(true, true);
-    t.unique(['house_number','lord_placed_in_house','strength_condition']);
+    // Explicit short name to stay within MySQL's 64-char identifier limit
+    t.unique(['house_number', 'lord_placed_in_house', 'strength_condition'], { indexName: 'ahl_house_lord_strength_uq' });
   });
 
   // 5. Special planet placement rules (e.g., Rahu in houses)
@@ -85,7 +94,8 @@ exports.up = async (knex) => {
     t.text('caution_hi').nullable();
     t.enum('status', ['active','inactive']).defaultTo('active');
     t.timestamps(true, true);
-    t.unique(['planet','house_number','condition_key']);
+    // Explicit short name to stay within MySQL's 64-char identifier limit
+    t.unique(['planet', 'house_number', 'condition_key'], { indexName: 'aspr_planet_house_cond_uq' });
   });
 };
 
