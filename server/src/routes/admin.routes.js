@@ -405,8 +405,9 @@ router.get('/kundlis/:uuid/guidance', ah(async (req, res) => {
   const chart = await ensureCalculatedChart(profile);
   if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
   const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
-  const report = generateLifeReport(chart, { admin: true });
-  const daily  = generateDailyGuidance(chart, new Date(), { admin: true });
+  const lang = req.query.lang;
+  const report = generateLifeReport(chart, { admin: true, lang });
+  const daily  = generateDailyGuidance(chart, new Date(), { admin: true, lang });
   return ok(res, { report, daily });
 }));
 

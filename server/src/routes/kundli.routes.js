@@ -716,8 +716,9 @@ router.get('/:id/guidance', async (req, res) => {
     const chart = await ensureCalculatedChart(profile);
     if (!chart) return fail(res, 'Unable to calculate chart', 500);
 
-    const report = generateLifeReport(chart);
-    const daily  = generateDailyGuidance(chart, new Date());
+    const lang = req.query.lang;
+    const report = generateLifeReport(chart, { lang });
+    const daily  = generateDailyGuidance(chart, new Date(), { lang });
     return ok(res, { report, daily });
   } catch (e) {
     console.error('[Guidance] Error:', e.message);

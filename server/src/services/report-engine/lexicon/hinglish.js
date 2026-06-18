@@ -1,0 +1,119 @@
+'use strict';
+/**
+ * HUMANIZER — Hinglish (optional, only used when explicitly selected)
+ * Natural Hindi sentence flow with common English words — NOT random technical
+ * English. Authors the prominent dynamic content; anything not overridden falls
+ * back to the Hindi lexicon (pure Hindi, never randomly mixed).
+ */
+const hi = require('./hi');
+
+module.exports = {
+  ...hi,
+  lang: 'hinglish',
+
+  AREA_LABEL: {
+    summary: 'Aapka Summary', personality: 'Aapka Swabhav', family: 'Family aur Ghar',
+    career: 'Career aur Job', money: 'Business aur Paisa', marriage: 'Shaadi aur Life Partner',
+    children: 'Santaan', siblings: 'Bhai-Behen aur Friends', health: 'Health',
+    debt: 'Loan aur Vivaad', property: 'Property, Vehicle aur Comfort', spirituality: 'Bhagya aur Aध्यात्म',
+    dasha: 'Abhi ka Time', daily: "Aaj ki Advice", yogas: 'Kundli ke Special Yog', remedies: 'Simple Upaay',
+  },
+
+  SCORE_LABEL: {
+    5: 'yeh area bahut strong dikhta hai', 4: 'yeh area strong dikhta hai',
+    3: 'yeh area normal hai', 2: 'is area me thoda patience aur dhyan chahiye',
+    1: 'is area me special dhyan aur effort chahiye',
+  },
+
+  PLANET: {
+    Sun: { name: 'Sun', energy: 'confidence, responsibility, leadership aur decisions', focus: 'position, pehchaan, authority aur respect',
+      dasha: { theme: 'Abhi ka time aapko zyada responsible, active aur decision-oriented bana raha hai. Pehchaan, career aur respect se जुड़े matters important ho sakte hain.',
+        good: 'Maan-samman, achhi position aur seniors ka support mil sakta hai.', challenge: 'Authority se ego clash aur thodi thakaan ka dhyan rakhein.',
+        do: 'Honesty aur mehnat se lead karein, subah jaldi uthein.', avoid: 'Ghamand aur jaldbaazi me kisi se takraav.' } },
+    Moon: { name: 'Moon', energy: 'mann, emotions, calm aur relationships', focus: 'mann, maata, ghar aur relationships',
+      dasha: { theme: 'Abhi mann aur emotions se जुड़ा time hai. Relationships, ghar aur mental peace aapke liye zyada matter karenge.',
+        good: 'Popularity, achhe relationships aur mann ki shanti.', challenge: 'Mood swings aur over-thinking pareshan kar sakte hain.',
+        do: 'Mann calm rakhein, family ke saath time bitayein.', avoid: 'Emotions me behkar jaldbaazi ke decisions.' } },
+    Mars: { name: 'Mars', energy: 'energy, courage, hard work aur quick decisions', focus: 'himmat, property, bhai-behen aur competition',
+      dasha: { theme: 'Abhi ka time aapko zyada active, courageous aur result-oriented bana sakta hai. Property, competition aur technical kaam open ho sakte hain.',
+        good: 'Himmat se ruke kaam bante hain; property aur competition me laabh.', challenge: 'Gussa, jaldbaazi ya choti chot ka dhyan rakhein.',
+        do: 'Energy ko sahi direction aur exercise me lagayein.', avoid: 'Gusse aur jaldbaazi me vivaad.' } },
+    Mercury: { name: 'Mercury', energy: 'intelligence, business, communication aur hisaab', focus: 'padhai, business, communication aur accounts',
+      dasha: { theme: 'Abhi thinking, padhai aur baat-cheet se जुड़ा time hai. Business, writing aur contacts me intelligence se laabh ho sakta hai.',
+        good: 'Business, naye contacts aur seekhna achha rehta hai.', challenge: 'Over-thinking aur decision me confusion.',
+        do: 'Plan banakar aur clean accounts ke saath kaam karein.', avoid: 'Jhooth ya jaldbaazi ke deals.' } },
+    Jupiter: { name: 'Jupiter', energy: 'knowledge, luck aur growth', focus: 'knowledge, luck, education aur shubh kaam',
+      dasha: { theme: 'Abhi knowledge, luck aur positivity ka time hai. Education, shaadi, santaan aur dharm-karm active ho sakte hain.',
+        good: 'Luck ka saath, respect aur achhe kaam pure hona.', challenge: 'Zaroorat se zyada optimism aur health ka dhyan.',
+        do: 'Elders aur guru ka respect karein, honest rahein.', avoid: 'Over-confidence me bade promises.' } },
+    Venus: { name: 'Venus', energy: 'love, comfort, art aur beauty', focus: 'relationships, comfort, paisa aur lifestyle',
+      dasha: { theme: 'Abhi comfort, love aur creativity se जुड़ा time hai. Shaadi, relationships aur lifestyle ke matters zyada important ho sakte hain.',
+        good: 'Relationships me sweetness, comfort aur art me laabh.', challenge: 'Zyada indulgence aur relationships me bahaav.',
+        do: 'Relationships aur creative kaam ko value dein.', avoid: 'Overspending aur zyada bhog.' } },
+    Saturn: { name: 'Saturn', energy: 'discipline, hard work, patience aur responsibility', focus: 'mehnat, responsibility, job aur patience',
+      dasha: { theme: 'Abhi hard work, patience aur responsibility ka time hai. Result dheere par pakka milta hai — discipline se success lasting hoti hai.',
+        good: 'Mehnat ka lasting reward aur kaam me stability.', challenge: 'Delay, thakaan ya low mood ka dhyan rakhein.',
+        do: 'Patience rakhein, rules se kaam karein, elders ki help karein.', avoid: 'Shortcut, beimaani aur aalas.' } },
+    Rahu: { name: 'Rahu', energy: 'ambition, change aur naye fields', focus: 'ambition, foreign, technology aur change',
+      dasha: { theme: 'Abhi strong ambition aur change ka time hai. Foreign, technology aur sudden ups-downs saamne aa sakte hain.',
+        good: 'Sudden growth, naye opportunities aur foreign/tech se laabh.', challenge: 'Confusion, dhokha aur jaldbaazi se savdhaan rahein.',
+        do: 'Soch clear rakhein, har bada step check karke lein.', avoid: 'Shortcut, galat sangat aur laalach.' } },
+    Ketu: { name: 'Ketu', energy: 'detachment, spirituality aur inner change', focus: 'spirituality, sadhna aur inner change',
+      dasha: { theme: 'Abhi inward aur spiritual time hai. Moh kam hokar sadhna aur deeper samajh ki taraf rujhaan badh sakta hai.',
+        good: 'Spiritual growth aur faltu moh se freedom.', challenge: 'Thodi confusion, disinterest ya alagaav.',
+        do: 'Meditation, sadhna aur simple life apnayein.', avoid: 'Bade risky decisions.' } },
+  },
+
+  SIGN: {
+    1:  { name: 'Aries',       nature: 'courageous, energetic aur naye kaam jaldi shuru karne wale', manas: 'mann fast aur impatient rehta hai — jaldi excited, jaldi calm' },
+    2:  { name: 'Taurus',      nature: 'steady, patient aur practical',                              manas: 'mann calm aur lasting rehta hai, par change se bachta hai' },
+    3:  { name: 'Gemini',      nature: 'intelligent, talkative aur curious',                         manas: 'mann restless rehta hai aur baat-cheet se light hota hai' },
+    4:  { name: 'Cancer',      nature: 'emotional, caring aur family-loving',                        manas: 'mann soft aur sensitive rehta hai, jaldi affect hota hai' },
+    5:  { name: 'Leo',         nature: 'confident, generous aur natural leader',                     manas: 'mann ko respect aur appreciation chahiye' },
+    6:  { name: 'Virgo',       nature: 'practical, analytical aur hard-working',                     manas: 'mann analyse karta hai, choti baaton ki worry zyada' },
+    7:  { name: 'Libra',       nature: 'balanced, fair aur friendly',                                manas: 'mann harmony chahta hai aur conflict se thakta hai' },
+    8:  { name: 'Scorpio',     nature: 'deep, determined aur private',                               manas: 'mann deep aur intense rehta hai, feelings andar rakhta hai' },
+    9:  { name: 'Sagittarius', nature: 'optimistic, honest aur independent',                         manas: 'mann hopeful aur free rehta hai, faith se peace milti hai' },
+    10: { name: 'Capricorn',   nature: 'disciplined, responsible aur hard-working',                  manas: 'mann serious aur dutiful rehta hai, emotions kam dikhata hai' },
+    11: { name: 'Aquarius',    nature: 'alag soch wale, social aur humane',                          manas: 'mann free aur thoughtful rehta hai' },
+    12: { name: 'Pisces',      nature: 'imaginative, kind aur spiritual',                            manas: 'mann emotional aur dreamy rehta hai, doosron ki feelings sokh leta hai' },
+  },
+
+  PHRASES: {
+    but: ', lekin ',
+    dashaAlso: ' Saath hi is time {focus} se जुड़े matters bhi important ho sakte hain.',
+    dashaGeneric: 'Is phase ki energy aapki life ko aage badha rahi hai.',
+    goodSide: 'Good side: {x}', whatToDo: 'Kya karein: {x}', avoidThese: 'Avoid karein: {x}',
+    sumNature: 'Swabhav se aap {nature} hain aur {manas}.',
+    sumInner: ' Andar se aap {nak} hain.',
+    sumBest: '{area} — yeh area abhi aapke favour me dikhta hai.',
+    sumWeak: 'Wahin {area} — yahan thoda patience aur care rakhna achha rahega.',
+    sumClose: 'Jaldbaazi se bachein — mehnat aur sahi direction se life me achhe results mil sakte hain.',
+    yogasIntro: 'Aapki kundli me kuch achhe yog bante hain, unka simple matlab neeche hai:',
+    yogasNone: 'Aapki kundli me normal yog bante hain; mehnat aur sahi direction se achhe results milte hain.',
+    remediesIntro: 'Yeh upaay simple, safe aur free hain — dar ke liye nahi, balance aur positivity ke liye:',
+    healthDisclaimer: 'Yeh astrological hints hain — koi health problem ho to doctor ki salah zaroor lein.',
+    dailyMood: 'Aaj mann steady rahega.',
+    dailyWork: 'Kaam: {x}', dailyWorkFallback: 'Aaj kaam par focus karne ka din hai.',
+    dailyRel: 'Relationships: aaj apno ke saath baat me narmi rakhein.',
+    dailyHealth: 'Health: time par khaana aur thoda rest zaroori hai.',
+    dailyAdvice: 'Aaj jo bhi karein, calm mann aur patience se karein.',
+    dailyCaution: 'Jaldbaazi aur gusse se bachein.',
+  },
+
+  REMEDIES: {
+    base: [
+      'Surya ko jal chadhayein aur subah jaldi uthne ki habit banayein.',
+      'Roz thodi der meditation ya deep breathing karein — mann calm rehta hai.',
+      'Maa-baap aur elders ka respect karein — yeh sabse effective upaay hai.',
+      'Zaroratmand ko food/ann donate karein.',
+      'Gusse aur jaldbaazi se bachein, sach aur honesty se chalein.',
+    ],
+    money: 'Tuesday/Saturday ko Hanuman Chalisa padhein; bina soche loan ya risky investment se bachein.',
+    health: 'Monday ko white cheez (doodh/chawal) donate karein aur routine regular rakhein.',
+    career: 'Saturday ko hard-working aur elderly logon ki help karein; discipline banaye rakhein.',
+    marriage: 'Life partner ke saath communication badhayein; Friday ko white/fragrant cheez ka daan achha rahega.',
+    children: 'Thursday ko yellow cheez/chane ki daal donate karein aur elders ka aashirwaad lein.',
+    spirituality: 'Thursday ko Gayatri Mantra ka jaap aur thoda seva-kaam mann ko strength dega.',
+  },
+};

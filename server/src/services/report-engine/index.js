@@ -1,89 +1,81 @@
 'use strict';
 /**
- * Human-friendly Life Guidance report engine.
+ * Human-friendly Life Guidance report engine — multi-language.
  *
- * Pipeline:  chart ─▶ buildContext (raw layer)
- *                  ─▶ aggregate (group + score + resolve conflicts)
- *                  ─▶ compose (clean Hindi/Hinglish sections)
- *                  ─▶ report { summary, sections, meta, (debug if admin) }
- *
- * Normal users get only soft Hindi text + a status label per area.
- * Admin mode (`{ admin: true }`) additionally returns the technical breakdown
- * (houses, planets, dignities, dasha lords, rule IDs, hidden 1-5 scores).
+ * generateLifeReport(chart, { lang, admin })
+ *   lang: 'en' | 'hi' | 'hinglish'  (default 'hi'; unknown falls back to 'hi')
+ *   - Output stays fully in the selected language. No runtime translation,
+ *     no mixed languages. Content is authored per language (lexicon/ + templates/).
+ *   - Normal users get soft text + a status label per area.
+ *   - admin:true also returns the technical debug breakdown.
  */
-const L = require('./lexicon');
+const { getLexicon, SUPPORTED } = require('./lexicon');
 const { buildContext } = require('./rules');
 const { aggregate } = require('./aggregator');
 const C = require('./composer');
 
-function buildDebug(ctx, areas) {
+const REPORT_ORDER = [
+  'personality', 'family', 'career', 'money', 'marriage', 'children',
+  'siblings', 'health', 'debt', 'property', 'spirituality', 'dasha', 'yogas', 'remedies',
+];
+
+const normLang = (lang) => (SUPPORTED.includes(lang) ? lang : 'hi');
+
+function buildDebug(ctx, areas, LEX) {
   const planets = {};
   for (const name of Object.keys(ctx.planets)) {
     planets[name] = { sign: ctx.planets[name]?.rashi_num, house: ctx.houseOf(name), dignity: ctx.dignity(name) };
   }
   return {
-    lagna: { num: ctx.lagna, sign: L.SIGN[ctx.lagna]?.en },
+    lagna: { num: ctx.lagna, sign: getLexicon('en').SIGN[ctx.lagna]?.name },
     lagna_lord: { planet: ctx.lagnaLord, house: ctx.lagnaLordHouse },
     moon: { sign: ctx.moonSign, nakshatra: ctx.moonNak },
     dasha: { maha: ctx.dasha, antar: ctx.antar },
     yogas: ctx.yogaNames,
     areas: Object.values(areas).map((a) => ({
-      area: a.area, score: Math.round(a.score * 100) / 100, label: a.label, rule_ids: a.rule_ids,
+      area: a.area, score: Math.round(a.score * 100) / 100, label: a.label, status_key: a.statusKey, rule_ids: a.rule_ids,
     })),
   };
 }
 
-/**
- * Full natal life-guidance report.
- * @param {object} chart - kundli_profiles.calculated_data
- * @param {object} [opts] - { admin: boolean }
- */
 function generateLifeReport(chart, opts = {}) {
+  const lang = normLang(opts.lang);
+  const LEX = getLexicon(lang);
   const ctx = buildContext(chart || {});
-  const areas = aggregate(ctx);
+  const areas = aggregate(ctx, lang);
 
   const sections = [];
-  for (const key of L.REPORT_ORDER) {
-    if (key === 'dasha') sections.push(C.composeDasha(ctx));
-    else if (key === 'yogas') sections.push(C.composeYogas(ctx));
-    else if (key === 'remedies') sections.push(C.composeRemedies(ctx, areas));
-    else sections.push(C.composeArea(key, areas[key]));
+  for (const key of REPORT_ORDER) {
+    if (key === 'dasha') sections.push(C.composeDasha(ctx, LEX));
+    else if (key === 'yogas') sections.push(C.composeYogas(ctx, LEX, lang));
+    else if (key === 'remedies') sections.push(C.composeRemedies(ctx, areas, LEX));
+    else sections.push(C.composeArea(key, areas[key], LEX));
   }
 
   const report = {
-    summary: { heading: L.AREA_LABEL.summary, lines: C.composeSummary(ctx, areas) },
+    lang,
+    summary: { heading: LEX.AREA_LABEL.summary, lines: C.composeSummary(ctx, areas, LEX) },
     sections,
-    meta: {
-      lagna_hi: L.SIGN[ctx.lagna]?.hi,
-      moon_hi: L.SIGN[ctx.moonSign]?.hi || null,
-      moon_nakshatra_hi: ctx.moonNak ? L.NAKSHATRA_HI[ctx.moonNak] : null,
-      dasha_hi: ctx.dasha ? L.PLANET[ctx.dasha]?.hi : null,
-      antar_hi: ctx.antar ? L.PLANET[ctx.antar]?.hi : null,
-      generated_at: new Date().toISOString(),
-    },
+    meta: { generated_at: new Date().toISOString() },
   };
-  if (opts.admin) report.debug = buildDebug(ctx, areas);
+  if (opts.admin) report.debug = buildDebug(ctx, areas, LEX);
   return report;
 }
 
-/**
- * Section 14 — daily guidance, humanized from the existing today-prediction.
- * Kept decoupled: the daily transit pipeline stays in today-prediction.js;
- * this only re-presents its output in clean Hindi.
- */
 function generateDailyGuidance(chart, atDate = new Date(), opts = {}) {
+  const lang = normLang(opts.lang);
+  const LEX = getLexicon(lang);
   const ctx = buildContext(chart || {});
   let prediction = null;
   try {
-    // lazy require to avoid a hard dependency when only the life report is used
     const { generateTodayPrediction } = require('../helpers/today-prediction');
     prediction = generateTodayPrediction(chart, atDate);
   } catch (_) { prediction = null; }
 
-  const daily = C.composeDaily(prediction, ctx);
-  const out = { heading: L.AREA_LABEL.daily, ...daily };
+  const daily = C.composeDaily(prediction, ctx, LEX, lang);
+  const out = { lang, ...daily };
   if (opts.admin) out.debug = { dasha: { maha: ctx.dasha, antar: ctx.antar }, tara: prediction?.meta?.tara?.name || null };
   return out;
 }
 
-module.exports = { generateLifeReport, generateDailyGuidance, buildContext };
+module.exports = { generateLifeReport, generateDailyGuidance, buildContext, SUPPORTED, REPORT_ORDER };
