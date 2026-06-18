@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import adminApi from '../lib/adminApi';
 
 import LifeReportPanel     from '../components/LifeReportPanel';
+import GuidanceReport      from '../components/GuidanceReport';
 import KundliInsightPanel  from '../components/KundliInsightPanel';
 import PlanetImpactPanel   from '../components/PlanetImpactPanel';
 import BhavaLordPanel      from '../components/BhavaLordPanel';
@@ -1148,6 +1149,11 @@ export default function KundliAdminDetail({ kundliUuid }) {
           <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
           <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
         </>
+      )}
+
+      {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}
+      {activeTab === 'life-guide' && (
+        <GuidanceReport uuid={kundliUuid} admin />
       )}
 
       {/* ══ TAB: LIFE REPORT ══════════════════════════════════════════════════ */}

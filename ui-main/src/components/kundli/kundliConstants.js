@@ -60,6 +60,7 @@ export const BHAVA_NATURE = {
 // Main tabs for KundliDetail
 export const MAIN_TABS = [
   { key:'kundli',      en:'Kundli',        hi:'कुंडली',         icon:'🔯' },
+  { key:'life-guide',  en:'Simple Report', hi:'सरल रिपोर्ट',     icon:'🪔' },
   { key:'life-report', en:'Life Report',   hi:'जीवन रिपोर्ट',   icon:'📋' },
   { key:'strength',    en:'Strength',      hi:'ग्रह बल',        icon:'💪' },
   { key:'impact',      en:'Planet Impact', hi:'ग्रह प्रभाव',    icon:'🌌' },

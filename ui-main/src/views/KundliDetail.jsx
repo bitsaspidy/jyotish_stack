@@ -12,6 +12,7 @@ import BhavaLordPanel from '../components/BhavaLordPanel';
 import LifeGuidancePanel from '../components/LifeGuidancePanel';
 import VarshphalPanel from '../components/VarshphalPanel';
 import KundliStrengthPanel from '../components/KundliStrengthPanel';
+import GuidanceReport from '../components/GuidanceReport';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
@@ -1223,6 +1224,11 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: FINAL RESULTS (SYNTHESIS) ══════════════════════════════ */}
         {activeTab === 'results' && (
           <KundliSynthesisPanel kundli={kundli} lang={lang} admin={false} />
+        )}
+
+        {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly) ════════════════════ */}
+        {activeTab === 'life-guide' && (
+          <GuidanceReport uuid={kundli?.uuid || uuid} />
         )}
 
         {/* ══ TAB: AI READING ══════════════════════════════════════════════ */}
