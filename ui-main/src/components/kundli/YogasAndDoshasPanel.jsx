@@ -25,7 +25,7 @@ const ACTIVATION_STYLE = {
   blocked: { bg:'rgba(239,68,68,0.12)',  color:'#EF4444', label:'Blocked', labelHi:'अवरुद्ध' },
 };
 
-export default function YogasAndDoshasPanel({ chart, lang, library, admin = false }) {
+export default function YogasAndDoshasPanel({ chart, lang, library, admin = false, judgement = null }) {
   const [tab, setTab] = useState('yogas');
   const [openRef, setOpenRef] = useState(null);
   const yd = chart?.yogas_doshas;
@@ -39,7 +39,7 @@ export default function YogasAndDoshasPanel({ chart, lang, library, admin = fals
   ];
 
   const hasMajorDosha = yd.doshas.some(d => d.severity === 'strong');
-  const jYogas = chart.judgement?.areas?.find(a => a.areaKey === 'yogas')?.yogas || [];
+  const jYogas = judgement?.areas?.find(a => a.areaKey === 'yogas')?.yogas || [];
   const activationMap = Object.fromEntries(jYogas.map(y => [y.name, y]));
   const yogaDasha    = chart?.reports?.yoga_dasha_report || {};
   const eventTiming  = chart?.reports?.event_timing || {};

@@ -1154,7 +1154,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
       {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}
       {activeTab === 'life-guide' && (
-        <GuidanceReport uuid={kundliUuid} admin name={kundli?.name} judgement={kundli?.judgement} />
+        <GuidanceReport uuid={kundliUuid} admin name={kundli?.name} lang={lang} judgement={kundli?.judgement} />
       )}
 
       {/* ══ TAB: LIFE REPORT ══════════════════════════════════════════════════ */}
@@ -1562,7 +1562,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
             ]} />
             <GLine label="Cancellation of Doshas" text="Most doshas have cancellation conditions (Dosha Bhanga). Always check for cancellations before presenting negative yogas. A cancelled dosha becomes a powerful yoga in many cases." color="#22C55E" />
           </AdminGuide>
-          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} library={kundli?.yoga_dosha_library} admin />}
+          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} library={kundli?.yoga_dosha_library} admin judgement={kundli?.judgement} />}
         </div>
       )}
 

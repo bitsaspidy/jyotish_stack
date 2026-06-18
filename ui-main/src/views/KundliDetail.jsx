@@ -52,6 +52,7 @@ import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
 import AIPredictionPanel    from '../components/AIPredictionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
+import JudgementPanel      from '../components/kundli/JudgementPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
 
@@ -1212,7 +1213,7 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: YOGAS ══════════════════════════════════════════════════ */}
         {activeTab === 'yogas' && (
         <div>
-          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} library={kundli?.yoga_dosha_library} />}
+          {chart?.yogas_doshas && <YogasAndDoshasPanel chart={chart} lang={lang} library={kundli?.yoga_dosha_library} judgement={kundli?.judgement} />}
         </div>
         )}
 
@@ -1233,7 +1234,19 @@ export default function KundliDetail({ uuid }) {
 
         {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly) ════════════════════ */}
         {activeTab === 'life-guide' && (
-          <GuidanceReport uuid={kundli?.uuid || uuid} name={kundli?.name} judgement={kundli?.judgement} />
+          <GuidanceReport uuid={kundli?.uuid || uuid} name={kundli?.name} lang={lang} judgement={kundli?.judgement} />
+        )}
+
+        {/* ══ TAB: JUDGEMENT SCORE ════════════════════════════════════════ */}
+        {activeTab === 'judgement' && (
+          <div className="card-royal p-5 mt-6">
+            <JudgementPanel judgement={kundli?.judgement} lang={lang} admin={false} />
+            {!kundli?.judgement && (
+              <p className="text-ivory/35 text-xs text-center py-8">
+                {lang==='hi' ? 'निर्णय डेटा उपलब्ध नहीं है। कुंडली को पुनः गणना करें।' : 'Judgement data not available. Recalculate the kundli to generate it.'}
+              </p>
+            )}
+          </div>
         )}
 
         {/* ══ TAB: AI READING ══════════════════════════════════════════════ */}
