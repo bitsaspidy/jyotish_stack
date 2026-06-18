@@ -18,6 +18,12 @@ const CATEGORY_ICONS = {
   power:'👑', wealth:'💰', intellect:'🧠', wisdom:'📿', victory:'⚔️',
   karmic:'🔮', vish:'☠️', grahan:'🌑', luminary:'☀️', general:'⚖️',
 };
+const ACTIVATION_STYLE = {
+  full:    { bg:'rgba(34,197,94,0.15)',  color:'#22C55E', label:'Full',    labelHi:'पूर्ण'    },
+  partial: { bg:'rgba(245,158,11,0.14)', color:'#F59E0B', label:'Partial', labelHi:'आंशिक'   },
+  weak:    { bg:'rgba(249,115,22,0.13)', color:'#F97316', label:'Weak',    labelHi:'कमज़ोर'   },
+  blocked: { bg:'rgba(239,68,68,0.12)',  color:'#EF4444', label:'Blocked', labelHi:'अवरुद्ध' },
+};
 
 export default function YogasAndDoshasPanel({ chart, lang, library, admin = false }) {
   const [tab, setTab] = useState('yogas');
@@ -33,6 +39,8 @@ export default function YogasAndDoshasPanel({ chart, lang, library, admin = fals
   ];
 
   const hasMajorDosha = yd.doshas.some(d => d.severity === 'strong');
+  const jYogas = chart.judgement?.areas?.find(a => a.areaKey === 'yogas')?.yogas || [];
+  const activationMap = Object.fromEntries(jYogas.map(y => [y.name, y]));
   const yogaDasha    = chart?.reports?.yoga_dasha_report || {};
   const eventTiming  = chart?.reports?.event_timing || {};
 
@@ -44,6 +52,8 @@ export default function YogasAndDoshasPanel({ chart, lang, library, admin = fals
     const detail = getYogaDoshaDetail(entry, type);
     const name          = lang === 'hi' ? entry.name_hi  : entry.name;
     const secondaryName = lang === 'hi' ? entry.name     : entry.name_hi;
+    const actYoga  = !isDosha ? activationMap[entry.name] : null;
+    const actStyle = actYoga ? (ACTIVATION_STYLE[actYoga.activation] || ACTIVATION_STYLE.partial) : null;
     const statusLabel   = entry.is_cancelled
       ? t(lang, 'Relieved / Cancelled', 'राहत / रद्द')
       : entry.cancellation_status === 'active_with_relief'
@@ -76,6 +86,11 @@ export default function YogasAndDoshasPanel({ chart, lang, library, admin = fals
             <span style={{ background:st.bg, color:st.color, borderRadius:10, padding:'2px 8px', fontSize:9, fontWeight:700, whiteSpace:'nowrap' }}>
               {strengthLabel(isDosha ? entry.severity : entry.strength, lang)}
             </span>
+            {actStyle && (
+              <span style={{ background:actStyle.bg, color:actStyle.color, borderRadius:10, padding:'2px 8px', fontSize:8.5, fontWeight:700, whiteSpace:'nowrap' }}>
+                ⚡ {lang === 'hi' ? actStyle.labelHi : actStyle.label}
+              </span>
+            )}
             <span style={{
               background: entry.is_cancelled ? 'rgba(34,197,94,0.13)' : 'rgba(212,175,55,0.08)',
               color: entry.is_cancelled ? '#22C55E' : '#D4AF37',

@@ -1228,7 +1228,7 @@ export default function KundliDetail({ uuid }) {
 
         {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly) ════════════════════ */}
         {activeTab === 'life-guide' && (
-          <GuidanceReport uuid={kundli?.uuid || uuid} name={kundli?.name} />
+          <GuidanceReport uuid={kundli?.uuid || uuid} name={kundli?.name} judgement={kundli?.judgement} />
         )}
 
         {/* ══ TAB: AI READING ══════════════════════════════════════════════ */}

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
 import adminApi from '../lib/adminApi';
+import JudgementPanel from './kundli/JudgementPanel';
 
 const GOLD = '#D4AF37';
 const IVORY = 'rgba(245,240,232,0.92)';
@@ -157,7 +158,7 @@ function DebugPanel({ debug }) {
   );
 }
 
-export default function GuidanceReport({ uuid, admin = false, name = '', lang = 'hi' }) {
+export default function GuidanceReport({ uuid, admin = false, name = '', lang = 'hi', judgement = null }) {
   const L = normLang(lang);
   const ui = UI[L];
   const [report, setReport] = useState(null);
@@ -206,6 +207,8 @@ export default function GuidanceReport({ uuid, admin = false, name = '', lang = 
           {ui.printBtn}
         </button>
       </div>
+
+      {judgement && <JudgementPanel judgement={judgement} lang={L} admin={admin} />}
 
       <section style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.03))', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 16, padding: '22px 24px', marginBottom: 18 }}>
         <h2 style={{ color: GOLD, fontFamily: 'Georgia,serif', fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{ui.title}</h2>

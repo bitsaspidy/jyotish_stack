@@ -33,6 +33,7 @@ import BasicDetailsPanel    from '../components/kundli/BasicDetailsPanel';
 import PersonalityInsights  from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel    from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
+import JudgementPanel       from '../components/kundli/JudgementPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import VargaChartsPanel     from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard     from '../components/kundli/DrishtiHouseCard';
@@ -1153,7 +1154,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
       {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}
       {activeTab === 'life-guide' && (
-        <GuidanceReport uuid={kundliUuid} admin name={kundli?.name} />
+        <GuidanceReport uuid={kundliUuid} admin name={kundli?.name} judgement={kundli?.judgement} />
       )}
 
       {/* ══ TAB: LIFE REPORT ══════════════════════════════════════════════════ */}
@@ -1591,6 +1592,30 @@ export default function KundliAdminDetail({ kundliUuid }) {
             <GLine label="Key rules" text="Strength score 70+ = strongly positive chart; 50–69 = balanced; 35–49 = mixed; below 35 = challenging. Multiple active Raja Yogas elevate the score significantly." color="#FBBF24" />
           </AdminGuide>
           <KundliSynthesisPanel kundli={kundli} lang={lang} admin={true} />
+        </div>
+      )}
+
+      {/* ══ TAB: JUDGEMENT ═══════════════════════════════════════════════════ */}
+      {activeTab === 'judgement' && (
+        <div>
+          <AdminGuide title="Judgement Priority Engine — 11-Layer Rule Analysis">
+            <GLine label="What this shows" text="The Judgement engine runs 11 layers of pure Vedic rule checks (no AI) across lagna lord, Sun/Moon pillars, yoga activation, house lords, income, marriage, children, Rahu maturity, Navamsha, and Ashtakavarga guard. Each area gets a score 0–100." />
+            <GLine label="Overall score" text="65+ = strong; 48–64 = balanced; 35–47 = needs care; below 35 = challenging. Aggregated with weighted priorities." color="#60A5FA" />
+            <GSection title="Yoga activation levels" items={[
+              'full — yoga fully operates in this chart (all conditions met)',
+              'partial — partially active due to afflictions or weak lord',
+              'weak — low effective strength, results require extra dasha support',
+              'blocked — neutralised by opposing factors (debilitation, dusthana, enemy)',
+            ]} />
+            <GLine label="Admin technical details" text="Each area card shows raw score, number of blockers, and the blocker list (plain Vedic terms). This is only visible in admin mode." color="#A78BFA" />
+          </AdminGuide>
+          {kundli?.judgement ? (
+            <JudgementPanel judgement={kundli.judgement} lang={lang} admin />
+          ) : (
+            <p style={{ color:'rgba(245,240,232,0.38)', padding:'32px 0', textAlign:'center', fontSize:13 }}>
+              Judgement data not available. Recalculate the kundli to generate it.
+            </p>
+          )}
         </div>
       )}
 
