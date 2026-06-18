@@ -9,6 +9,7 @@
 #   API_INSTANCES  PM2 cluster size for API   (default: 1, read by ecosystem.config.js)
 #   UI_INSTANCES   PM2 cluster size for UI    (default: 1, read by ecosystem.config.js)
 #   RUN_SEED       run production seeds       (default: 0; set to 1 only when intentional)
+#   SEED_SPECIFIC  run one specific seed file (e.g. SEED_SPECIFIC=019_judgement_rules.js)
 #
 # NOTE: migrations run from server/ so dotenv loads server/.env. The knexfile
 # production block has no fallback defaults — server/.env MUST exist on the box.
@@ -24,6 +25,7 @@ export BRANCH="${BRANCH:-main}"
 export API_INSTANCES="${API_INSTANCES:-1}"
 export UI_INSTANCES="${UI_INSTANCES:-1}"
 export RUN_SEED="${RUN_SEED:-0}"
+export SEED_SPECIFIC="${SEED_SPECIFIC:-}"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 require_cmd() {
@@ -62,11 +64,14 @@ npm install --include=dev
 log "Running database migrations (from server/ so server/.env is loaded)..."
 ( cd "$APP_DIR/server" && NODE_ENV=production npm run migrate )
 
-if [ "$RUN_SEED" = "1" ]; then
-  log "Running database seeds because RUN_SEED=1..."
+if [ -n "$SEED_SPECIFIC" ]; then
+  log "Running specific seed: ${SEED_SPECIFIC}..."
+  ( cd "$APP_DIR/server" && NODE_ENV=production npx knex seed:run --specific="$SEED_SPECIFIC" )
+elif [ "$RUN_SEED" = "1" ]; then
+  log "Running all database seeds because RUN_SEED=1..."
   ( cd "$APP_DIR/server" && NODE_ENV=production npm run seed )
 else
-  log "Skipping database seeds. Set RUN_SEED=1 only when you intentionally want to refresh seed data."
+  log "Skipping seeds. Use SEED_SPECIFIC=<file> for one seed, or RUN_SEED=1 for all."
 fi
 
 log "Building public Next.js app (ui-main)..."
