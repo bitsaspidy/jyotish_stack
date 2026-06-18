@@ -397,6 +397,19 @@ router.get('/kundlis/:uuid/today', ah(async (req, res) => {
   return ok(res, { prediction });
 }));
 
+// Human-friendly life-guidance report — admin sees the full technical debug
+// (houses, planets, dignities, dasha lords, rule IDs, hidden 1-5 scores).
+router.get('/kundlis/:uuid/guidance', ah(async (req, res) => {
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
+  const report = generateLifeReport(chart, { admin: true });
+  const daily  = generateDailyGuidance(chart, new Date(), { admin: true });
+  return ok(res, { report, daily });
+}));
+
 // Stored prediction history for one kundli (what the user has been shown)
 router.get('/kundlis/:uuid/predictions', ah(async (req, res) => {
   const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();

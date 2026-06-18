@@ -17,6 +17,7 @@ const { generateAIPrediction }        = require('../services/ai-prediction.servi
 const { buildPlacementNarratives }  = require('../services/helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
+const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
 
 router.use(authenticate);
 
@@ -700,6 +701,27 @@ router.get('/:id/strength', async (req, res) => {
   } catch (e) {
     console.error('[Strength] Error:', e.message);
     return fail(res, 'Unable to generate strength report', 500);
+  }
+});
+
+// ── GET /api/kundli/:id/guidance — simple Hindi/Hinglish life-guidance report ──
+// User mode: only soft language + status labels (no houses/tones/dasha tokens).
+router.get('/:id/guidance', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const report = generateLifeReport(chart);
+    const daily  = generateDailyGuidance(chart, new Date());
+    return ok(res, { report, daily });
+  } catch (e) {
+    console.error('[Guidance] Error:', e.message);
+    return fail(res, 'Unable to generate guidance report', 500);
   }
 });
 
