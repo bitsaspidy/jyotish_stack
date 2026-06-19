@@ -14,6 +14,7 @@ const { buildPlacementNarratives } = require('./helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('./helpers/varshphal');
 const { computeKundliStrength } = require('./helpers/kundli-strength');
 const { generateJudgement }     = require('./judgement-engine');
+const { composeLifeReportUserFriendly } = require('./report-engine/life-report-humanizer');
 
 // BPHS house lordship (1=Aries lagna offset)
 const RASHI_LORD = {
@@ -473,6 +474,7 @@ async function buildFullKundliResponse(uuid) {
   profile.asta_vakri         = await fetchAstaVakriAnalysis(chart);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
   profile.judgement = generateJudgement(chart, { date_of_birth: profile.date_of_birth, gender: profile.gender }, { lang: 'hi', admin: true });
+  profile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, profile.judgement, {});
 
   // Attach owning user info
   const owner = await db('users').where({ id: profile.user_id })

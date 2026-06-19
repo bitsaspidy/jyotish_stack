@@ -1170,7 +1170,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
             ]} />
             <GLine label="Admin use" text="Compare life report themes against what the client reports as current issues. Strong alignment = high chart reliability. Use this to build trust with the client." color="#60A5FA" />
           </AdminGuide>
-          {chart?.life_report?.sections && <LifeReportPanel lifeReport={chart.life_report} lang={lang} narratives={kundli?.life_report_narratives} />}
+          {(chart?.life_report?.sections || kundli?.life_report_friendly) && <LifeReportPanel lifeReport={chart?.life_report} lang={lang} narratives={kundli?.life_report_narratives} lifeReportFriendly={kundli?.life_report_friendly} admin={true} />}
         </div>
       )}
 
