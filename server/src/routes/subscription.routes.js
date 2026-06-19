@@ -12,7 +12,7 @@ const money2 = (n) => Number(n || 0).toFixed(2);
 const safeFile = (s) => String(s || 'invoice').replace(/[^\w.-]+/g, '-');
 
 // Maps a subscription_plans.name to the users.plan tier used for feature gating
-const PLAN_TIER_MAP = { basic: 'basic', premium: 'premium', yearly: 'yearly' };
+const PLAN_TIER_MAP = { free: 'free', basic: 'basic', premium: 'premium', yearly: 'yearly' };
 const planTierFor = (planName) => PLAN_TIER_MAP[String(planName || '').toLowerCase()] || 'basic';
 
 // GET /api/subscriptions/plans — public

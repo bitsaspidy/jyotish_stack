@@ -26,7 +26,7 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 router.use(authenticate);
 
 // Max Kundli profiles a user may create, by plan tier
-const PLAN_PROFILE_LIMITS = { basic: 1, premium: 5, yearly: 50 };
+const PLAN_PROFILE_LIMITS = { free: 1, basic: 1, premium: 5, yearly: 50 };
 
 // ── Helper: run calculation and persist ──────────────────────────────────────
 async function calcAndSave(profile) {
@@ -494,8 +494,8 @@ router.get('/reference/varga', async (req, res) => {
 
 // GET /api/kundli/:id/report.pdf  (premium / admin only)
 router.get('/:id/report.pdf', async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.plan === 'basic') {
-    return fail(res, 'PDF export requires a Premium or Yearly plan. Please upgrade to download reports.', 403);
+  if (req.user.role !== 'admin' && (req.user.plan === 'free' || req.user.plan === 'basic')) {
+    return fail(res, 'PDF export requires a Premium or Yearly plan. Please upgrade to download reports.', 403, { upgrade_required: true, required_plan: 'premium' });
   }
   try {
     const profile = await db('kundli_profiles')
@@ -523,6 +523,17 @@ router.get('/:id', async (req, res) => {
     .where({ uuid: req.params.id, user_id: req.user.id })
     .first();
   if (!profile) return fail(res, 'Kundli not found', 404);
+
+  // Free-plan gate: return basic metadata so the paywall UI can show the person's name
+  if (req.user.role !== 'admin' && req.user.plan === 'free') {
+    return fail(res, 'Viewing Kundli analysis requires a Basic or higher plan. Please upgrade to continue.', 403, {
+      upgrade_required: true,
+      required_plan: 'basic',
+      kundli_name: profile.name,
+      date_of_birth: String(profile.date_of_birth).slice(0, 10),
+      place_of_birth: profile.place_of_birth,
+    });
+  }
 
   const chart = await ensureCalculatedChart(profile);
   if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
@@ -574,6 +585,10 @@ router.post('/:id/recalculate', async (req, res) => {
     .where({ uuid: req.params.id, user_id: req.user.id })
     .first();
   if (!profile) return fail(res, 'Kundli not found', 404);
+
+  if (req.user.role !== 'admin' && req.user.plan === 'free') {
+    return fail(res, 'Recalculation requires a Basic or higher plan.', 403, { upgrade_required: true });
+  }
 
   await db('kundli_profiles').where({ id: profile.id }).update({ calculated_data: null });
   const freshProfile = await db('kundli_profiles').where({ id: profile.id }).first();

@@ -225,6 +225,30 @@ export default function KundliManager({ startWithForm = false }) {
           ))}
         </div>
 
+        {/* Upgrade banner for free-plan users */}
+        {user?.plan === 'free' && (
+          <div className="mb-5 rounded-xl border border-gold/30 bg-gradient-to-r from-gold/8 to-gold/4 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl shrink-0">🔒</span>
+              <div>
+                <p className="text-gold font-semibold text-sm font-devanagari">
+                  {t('Unlock Your Kundli Analysis', 'अपनी कुंडली विश्लेषण अनलॉक करें')}
+                </p>
+                <p className="text-ivory/55 text-xs mt-0.5 font-devanagari">
+                  {t(
+                    'You can create a Kundli profile, but viewing the full analysis requires a Basic plan (₹200/month).',
+                    'कुंडली प्रोफाइल बना सकते हैं, लेकिन पूरा विश्लेषण देखने के लिए Basic plan (₹200/माह) चाहिए।'
+                  )}
+                </p>
+              </div>
+            </div>
+            <Link href="/pricing"
+              className="shrink-0 px-5 py-2 rounded-lg bg-gold/20 border border-gold/40 text-gold text-sm font-semibold hover:bg-gold/30 transition-colors text-center font-devanagari">
+              {t('Upgrade Now →', 'अभी अपग्रेड करें →')}
+            </Link>
+          </div>
+        )}
+
         {showForm && (
           <motion.form initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} onSubmit={createKundli} className="card-royal p-5 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

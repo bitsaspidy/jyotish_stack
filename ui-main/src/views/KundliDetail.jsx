@@ -69,6 +69,8 @@ export default function KundliDetail({ uuid }) {
   const [chartEnrichment,     setChartEnrichment]     = useState(null);
   const [error,               setError]               = useState(null);
   const [fetching,            setFetching]            = useState(true);
+  const [upgradeRequired,     setUpgradeRequired]     = useState(false);
+  const [lockedMeta,          setLockedMeta]          = useState(null);
   const [recalcing,           setRecalcing]           = useState(false);
   const [editOpen,            setEditOpen]            = useState(false);
   const [chartStyle,          setChartStyle]          = useState('north');
@@ -98,7 +100,15 @@ export default function KundliDetail({ uuid }) {
         setNakshatraInsight(data.profile.nakshatra_insight || null);
         setChartEnrichment(data.profile.chart_enrichment  || null);
       })
-      .catch(e => setError(e.response?.data?.message || 'Could not load Kundli'))
+      .catch(e => {
+        const errData = e.response?.data;
+        if (e.response?.status === 403 && errData?.data?.upgrade_required) {
+          setUpgradeRequired(true);
+          setLockedMeta(errData.data);
+        } else {
+          setError(errData?.message || 'Could not load Kundli');
+        }
+      })
       .finally(() => setFetching(false));
   }, [user, uuid]);
 
@@ -131,6 +141,7 @@ export default function KundliDetail({ uuid }) {
   }, [fetchKundli]);
 
   const isPremium = user?.plan === 'premium' || user?.plan === 'yearly' || user?.role === 'admin';
+  const isBasicOrAbove = user?.plan !== 'free' || user?.role === 'admin';
 
   const handlePdf = async () => {
     if (!isPremium) {
@@ -183,6 +194,119 @@ export default function KundliDetail({ uuid }) {
       </div>
     );
   }
+
+  if (upgradeRequired) {
+    const name = lockedMeta?.kundli_name || '';
+    const dob  = lockedMeta?.date_of_birth || '';
+    const city = lockedMeta?.place_of_birth || '';
+    const BASIC_FEATURES = lang === 'hi'
+      ? ['पूर्ण जन्म कुंडली विश्लेषण','दशा-अंतर्दशा कालक्रम','जीवन के सभी क्षेत्र: धन, करियर, विवाह','राशिफल एवं ग्रह विश्लेषण','योग एवं दोष विवरण','सरल भाषा में मार्गदर्शन']
+      : ['Full birth chart analysis','Dasha & Antardasha timeline','All life areas: wealth, career, marriage','Horoscope & planet analysis','Yogas & doshas report','Plain-language life guidance'];
+    const PREMIUM_EXTRAS = lang === 'hi'
+      ? ['PDF रिपोर्ट डाउनलोड','5 कुंडली प्रोफाइल']
+      : ['PDF report download','Up to 5 Kundli profiles'];
+    return (
+      <div className="relative min-h-screen pt-20 pb-16 px-4"
+        style={{ background:'radial-gradient(ellipse at top,#181C35 0%,#0B0D1A 60%,#06070F 100%)' }}>
+        <StarField count={40} />
+        <div className="relative z-10 max-w-3xl mx-auto">
+          <div className="flex items-center gap-2 text-xs text-ivory/30 mb-6">
+            <Link href="/dashboard" className="hover:text-gold transition-colors">{t(lang,'Dashboard','डैशबोर्ड')}</Link>
+            <span>/</span>
+            <span className="text-gold/80">{name || t(lang,'Kundli','कुंडली')}</span>
+          </div>
+          <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+            className="card-royal p-8 text-center">
+            <div className="w-20 h-20 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-4xl mx-auto mb-5">🔒</div>
+            <h1 className="font-serif text-gold text-2xl mb-2 font-devanagari">
+              {name
+                ? t(lang, `Unlock ${name}'s Full Chart`, `${name} की पूरी कुंडली अनलॉक करें`)
+                : t(lang, 'Unlock Full Kundli Analysis', 'पूरी कुंडली विश्लेषण अनलॉक करें')
+              }
+            </h1>
+            {(dob || city) && (
+              <p className="text-ivory/45 text-xs mb-6 font-devanagari">
+                {dob} {city ? `· ${city}` : ''}
+              </p>
+            )}
+            <p className="text-ivory/65 text-sm mb-8 max-w-md mx-auto font-devanagari">
+              {t(lang,
+                'Your Kundli has been calculated. Upgrade to a Basic plan to unlock the complete analysis — chart, planets, dashas, yogas, remedies, and more.',
+                'आपकी कुंडली की गणना हो चुकी है। पूरा विश्लेषण — चार्ट, ग्रह, दशा, योग, उपाय — अनलॉक करने के लिए Basic plan लें।'
+              )}
+            </p>
+
+            {/* Plan cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
+              {/* Basic */}
+              <div className="rounded-xl border border-gold/30 bg-gold/5 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-gold font-bold text-base font-devanagari">{t(lang,'Basic Plan','Basic Plan')}</p>
+                    <p className="text-ivory/40 text-[10px] font-devanagari">{t(lang,'1 Kundli profile · 30 days','1 कुंडली · 30 दिन')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-gold text-xl font-bold">₹200</p>
+                    <p className="text-ivory/35 text-[9px]">{t(lang,'per month','प्रति माह')}</p>
+                  </div>
+                </div>
+                <ul className="space-y-1.5 mb-4">
+                  {BASIC_FEATURES.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-[11px] text-ivory/75 font-devanagari">
+                      <span className="text-emerald-400 shrink-0 mt-0.5">✓</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/pricing"
+                  className="block w-full text-center py-2.5 rounded-lg bg-gold/20 border border-gold/40 text-gold text-sm font-semibold hover:bg-gold/30 transition-colors font-devanagari">
+                  {t(lang,'Upgrade to Basic →','Basic लें →')}
+                </Link>
+              </div>
+
+              {/* Premium */}
+              <div className="rounded-xl border border-violet-400/30 bg-violet-500/5 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-violet-300 font-bold text-base font-devanagari">{t(lang,'Premium Plan','Premium Plan')}</p>
+                    <p className="text-ivory/40 text-[10px] font-devanagari">{t(lang,'5 profiles · PDF · 30 days','5 प्रोफाइल · PDF · 30 दिन')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-violet-300 text-xl font-bold">₹499</p>
+                    <p className="text-ivory/35 text-[9px]">{t(lang,'per month','प्रति माह')}</p>
+                  </div>
+                </div>
+                <ul className="space-y-1.5 mb-2">
+                  {BASIC_FEATURES.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-[11px] text-ivory/55 font-devanagari">
+                      <span className="text-emerald-400/60 shrink-0 mt-0.5">✓</span>{f}
+                    </li>
+                  ))}
+                  {PREMIUM_EXTRAS.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-[11px] text-violet-300 font-devanagari">
+                      <span className="text-violet-400 shrink-0 mt-0.5">⭐</span>{f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mb-3" />
+                <Link href="/pricing"
+                  className="block w-full text-center py-2.5 rounded-lg bg-violet-500/20 border border-violet-400/40 text-violet-300 text-sm font-semibold hover:bg-violet-500/30 transition-colors font-devanagari">
+                  {t(lang,'Upgrade to Premium →','Premium लें →')}
+                </Link>
+              </div>
+            </div>
+
+            <p className="text-ivory/30 text-[10px] font-devanagari">
+              {t(lang,'All prices include 18% GST. Cancel anytime. Secure payment via Razorpay.','सभी मूल्यों में 18% GST शामिल है। Razorpay के माध्यम से सुरक्षित भुगतान।')}
+            </p>
+            <Link href="/dashboard" className="block mt-4 text-ivory/30 text-xs hover:text-ivory/60 transition-colors font-devanagari">
+              ← {t(lang,'Back to Dashboard','डैशबोर्ड पर वापस जाएं')}
+            </Link>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   if (!kundli) return null;
 
   // Parse calculated_data
@@ -236,7 +360,7 @@ export default function KundliDetail({ uuid }) {
               color: isPremium ? '#D4AF37' : '#94A3B8',
               border: isPremium ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(148,163,184,0.25)',
             }}>
-              {user?.role === 'admin' ? '👑 Admin' : user?.plan === 'yearly' ? '🌟 Yearly' : isPremium ? '⭐ Premium' : '🔒 Basic'}
+              {user?.role === 'admin' ? '👑 Admin' : user?.plan === 'yearly' ? '🌟 Yearly' : isPremium ? '⭐ Premium' : user?.plan === 'free' ? '🔒 Free' : '✓ Basic'}
             </span>
             <button onClick={handlePdf}
               className="btn-outline-gold text-xs px-4 py-2"
