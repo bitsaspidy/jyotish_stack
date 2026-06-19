@@ -8,6 +8,7 @@ import { SouthIndianChart, NorthIndianChart } from './KundliChart';
 
 export default function VargaChartsPanel({ birthChart, reference, referenceError, chartStyle, lang }) {
   const [selectedSlug, setSelectedSlug] = useState('d9');
+  const [showPlanetDetail, setShowPlanetDetail] = useState(false);
   const vargaCharts    = birthChart?.varga_charts || birthChart?.divisional_charts || {};
   const referenceCharts = Array.isArray(reference?.charts) ? reference.charts : [];
   const fallbackSlugs  = Object.keys(vargaCharts);
@@ -38,6 +39,7 @@ export default function VargaChartsPanel({ birthChart, reference, referenceError
       const preferred = definitions.find((item) => item.slug === 'd9') || definitions[0];
       setSelectedSlug(preferred.slug);
     }
+    setShowPlanetDetail(false);
   }, [definitionSlugs, selectedSlug]);
 
   if (!birthChart || !definitions.length) return null;
@@ -224,7 +226,7 @@ export default function VargaChartsPanel({ birthChart, reference, referenceError
             </div>
           )}
 
-          {/* Planet-by-Planet Deep Analysis */}
+          {/* Planet-by-Planet Deep Analysis — collapsed by default */}
           {reading?.planet_readings?.length > 0 && (() => {
             const IMPACT_COLOR = {
               very_favorable: { badge:'#10B981', bg:'rgba(16,185,129,0.08)', border:'rgba(16,185,129,0.22)', label_en:'Excellent',    label_hi:'उत्कृष्ट'   },
@@ -233,97 +235,115 @@ export default function VargaChartsPanel({ birthChart, reference, referenceError
               challenging:    { badge:'#EF4444', bg:'rgba(239,68,68,0.07)',  border:'rgba(239,68,68,0.2)',   label_en:'Needs Remedy',  label_hi:'उपाय करें'  },
             };
             const PLANET_COLOR = { Sun:'#FBBF24', Moon:'#94A3B8', Mars:'#EF4444', Mercury:'#10B981', Jupiter:'#F97316', Venus:'#F472B6', Saturn:'#818CF8', Rahu:'#A78BFA', Ketu:'#6B7280' };
+            const strongCount  = reading.planet_readings.filter(p=>p.impact==='very_favorable'||p.impact==='favorable').length;
+            const remedyCount  = reading.planet_readings.filter(p=>p.is_challenged).length;
             return (
               <div style={{ marginTop:4 }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-                  <div>
-                    <p style={{ fontSize:10, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                {/* Toggle button */}
+                <button
+                  type="button"
+                  onClick={() => setShowPlanetDetail(v => !v)}
+                  style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+                           padding:'9px 14px', borderRadius:8, background:'rgba(212,175,55,0.05)',
+                           border:'1px solid rgba(212,175,55,0.18)', cursor:'pointer', textAlign:'left' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <p style={{ fontSize:10, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.12em', margin:0 }}>
                       {t(lang,'Planet-by-Planet Analysis','ग्रह-दर-ग्रह विश्लेषण')}
                     </p>
-                    <p style={{ fontSize:10, color:'rgba(245,240,232,0.68)', marginTop:3 }}>
-                      {t(lang,`How each planet performs in the ${selectedDefinition.code} (${t(lang,reading.topic_en,reading.topic_hi)}) chart`,`${selectedDefinition.code} (${t(lang,reading.topic_en,reading.topic_hi)}) में प्रत्येक ग्रह का प्रदर्शन`)}
-                    </p>
-                  </div>
-                  <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-                    {[
-                      { label:t(lang,'Strong','बलवान'), color:'#10B981', count:reading.planet_readings.filter(p=>p.impact==='very_favorable'||p.impact==='favorable').length },
-                      { label:t(lang,'Remedy','उपाय'),  color:'#EF4444', count:reading.planet_readings.filter(p=>p.is_challenged).length },
-                    ].map(({ label, color, count }) => (
-                      <div key={label} style={{ padding:'4px 10px', borderRadius:8, background:`${color}12`, border:`1px solid ${color}28`, textAlign:'center' }}>
-                        <div style={{ fontSize:15, fontWeight:800, color, lineHeight:1 }}>{count}</div>
-                        <div style={{ fontSize:9, color:'rgba(245,240,232,0.6)', marginTop:2 }}>{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {reading.planet_readings.map((pr) => {
-                    const ic = IMPACT_COLOR[pr.impact] || IMPACT_COLOR.neutral;
-                    const pc = PLANET_COLOR[pr.planet] || '#D4AF37';
-                    return (
-                      <div key={pr.planet} style={{ borderRadius:10, border:`1px solid ${ic.border}`, background:ic.bg, overflow:'hidden' }}>
-                        <div style={{ padding:'10px 14px', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-                          <div style={{ display:'flex', alignItems:'center', gap:7, flex:'0 0 auto' }}>
-                            <span style={{ fontSize:18, color:pc }}>{pr.icon}</span>
-                            <div>
-                              <div style={{ fontSize:12, fontWeight:700, color:pc, lineHeight:1.1 }}>{lang==='hi' ? pr.planet_hi : pr.planet}</div>
-                              <div style={{ fontSize:9, color:'rgba(245,240,232,0.65)', marginTop:1 }}>{pr.dignity}</div>
-                            </div>
-                          </div>
-                          <div style={{ flex:1, minWidth:100 }}>
-                            <div style={{ fontSize:10, color:'rgba(245,240,232,0.88)', fontWeight:600 }}>
-                              H{pr.house} — {t(lang, pr.house_domain_en, pr.house_domain_hi)}
-                            </div>
-                            <div style={{ fontSize:9, color:'rgba(245,240,232,0.65)', marginTop:2 }}>{lang==='hi' ? pr.rashi_hi : pr.rashi_en}</div>
-                          </div>
-                          <span style={{ fontSize:9, fontWeight:700, color:ic.badge, background:`${ic.badge}15`, border:`1px solid ${ic.badge}30`, padding:'3px 9px', borderRadius:8, flexShrink:0, textTransform:'uppercase' }}>
-                            {lang==='hi' ? ic.label_hi : ic.label_en}
-                          </span>
-                        </div>
-                        {pr.positives_en?.length > 0 && (
-                          <div style={{ padding:'0 14px 10px', borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:8 }}>
-                            {(lang==='hi' ? pr.positives_hi : pr.positives_en).map((txt, i) => (
-                              <div key={i} style={{ display:'flex', gap:7, marginBottom:5 }}>
-                                <span style={{ color:'#22C55E', flexShrink:0, fontSize:12 }}>◈</span>
-                                <p style={{ fontSize:11, color:'rgba(245,240,232,0.85)', lineHeight:1.7, margin:0 }}>{txt}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {pr.negatives_en?.length > 0 && (
-                          <div style={{ padding:'0 14px 10px' }}>
-                            {(lang==='hi' ? pr.negatives_hi : pr.negatives_en).map((txt, i) => (
-                              <div key={i} style={{ display:'flex', gap:7, marginBottom:5 }}>
-                                <span style={{ color:'#F97316', flexShrink:0, fontSize:12 }}>▸</span>
-                                <p style={{ fontSize:11, color:'rgba(245,240,232,0.80)', lineHeight:1.7, margin:0 }}>{txt}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {pr.remedy && (
-                          <div style={{ margin:'0 14px 12px', padding:'8px 12px', borderRadius:8, background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.2)' }}>
-                            <div style={{ fontSize:9, fontWeight:700, color:'#A78BFA', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>
-                              ✦ {t(lang,'Remedy','उपाय')} — {lang==='hi' ? pr.planet_hi : pr.planet}
-                            </div>
-                            <p style={{ fontSize:10, color:'rgba(245,240,232,0.80)', lineHeight:1.8, margin:0 }}>
-                              {lang==='hi' ? pr.remedy.hi : pr.remedy.en}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {reading.chart_remedy && (
-                  <div style={{ marginTop:12, padding:'10px 14px', borderRadius:10, background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.2)' }}>
-                    <div style={{ fontSize:9, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
-                      🕉 {t(lang,'Overall Chart Remedy','समग्र चार्ट उपाय')}
+                    <div style={{ display:'flex', gap:6 }}>
+                      <span style={{ fontSize:9, padding:'2px 7px', borderRadius:6, background:'rgba(16,185,129,0.12)', border:'1px solid rgba(16,185,129,0.25)', color:'#10B981' }}>
+                        {strongCount} {t(lang,'strong','बलवान')}
+                      </span>
+                      {remedyCount > 0 && (
+                        <span style={{ fontSize:9, padding:'2px 7px', borderRadius:6, background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.22)', color:'#EF4444' }}>
+                          {remedyCount} {t(lang,'remedy','उपाय')}
+                        </span>
+                      )}
                     </div>
-                    <p style={{ fontSize:11, color:'rgba(245,240,232,0.82)', lineHeight:1.8, margin:0 }}>
-                      {lang==='hi' ? reading.chart_remedy.hi : reading.chart_remedy.en}
+                  </div>
+                  <span style={{ fontSize:10, color:'rgba(245,240,232,0.45)', flexShrink:0 }}>
+                    {showPlanetDetail ? t(lang,'Hide ▲','छुपाएं ▲') : t(lang,'View placements ▼','स्थिति देखें ▼')}
+                  </span>
+                </button>
+
+                {/* Expandable planet cards */}
+                {showPlanetDetail && (
+                  <div style={{ marginTop:10 }}>
+                    <p style={{ fontSize:10, color:'rgba(245,240,232,0.55)', marginBottom:10 }}>
+                      {t(lang,
+                        `How each planet performs in the ${selectedDefinition.code} (${t(lang,reading.topic_en,reading.topic_hi)}) chart`,
+                        `${selectedDefinition.code} (${t(lang,reading.topic_en,reading.topic_hi)}) में प्रत्येक ग्रह का प्रदर्शन`
+                      )}
                     </p>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      {reading.planet_readings.map((pr) => {
+                        const ic = IMPACT_COLOR[pr.impact] || IMPACT_COLOR.neutral;
+                        const pc = PLANET_COLOR[pr.planet] || '#D4AF37';
+                        return (
+                          <div key={pr.planet} style={{ borderRadius:10, border:`1px solid ${ic.border}`, background:ic.bg, overflow:'hidden' }}>
+                            <div style={{ padding:'10px 14px', display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+                              <div style={{ display:'flex', alignItems:'center', gap:7, flex:'0 0 auto' }}>
+                                <span style={{ fontSize:18, color:pc }}>{pr.icon}</span>
+                                <div>
+                                  <div style={{ fontSize:12, fontWeight:700, color:pc, lineHeight:1.1 }}>{lang==='hi' ? pr.planet_hi : pr.planet}</div>
+                                  <div style={{ fontSize:9, color:'rgba(245,240,232,0.65)', marginTop:1 }}>{pr.dignity}</div>
+                                </div>
+                              </div>
+                              <div style={{ flex:1, minWidth:100 }}>
+                                <div style={{ fontSize:10, color:'rgba(245,240,232,0.88)', fontWeight:600 }}>
+                                  H{pr.house} — {t(lang, pr.house_domain_en, pr.house_domain_hi)}
+                                </div>
+                                <div style={{ fontSize:9, color:'rgba(245,240,232,0.65)', marginTop:2 }}>{lang==='hi' ? pr.rashi_hi : pr.rashi_en}</div>
+                              </div>
+                              <span style={{ fontSize:9, fontWeight:700, color:ic.badge, background:`${ic.badge}15`, border:`1px solid ${ic.badge}30`, padding:'3px 9px', borderRadius:8, flexShrink:0, textTransform:'uppercase' }}>
+                                {lang==='hi' ? ic.label_hi : ic.label_en}
+                              </span>
+                            </div>
+                            {pr.positives_en?.length > 0 && (
+                              <div style={{ padding:'0 14px 10px', borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:8 }}>
+                                {(lang==='hi' ? pr.positives_hi : pr.positives_en).map((txt, i) => (
+                                  <div key={i} style={{ display:'flex', gap:7, marginBottom:5 }}>
+                                    <span style={{ color:'#22C55E', flexShrink:0, fontSize:12 }}>◈</span>
+                                    <p style={{ fontSize:11, color:'rgba(245,240,232,0.85)', lineHeight:1.7, margin:0 }}>{txt}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {pr.negatives_en?.length > 0 && (
+                              <div style={{ padding:'0 14px 10px' }}>
+                                {(lang==='hi' ? pr.negatives_hi : pr.negatives_en).map((txt, i) => (
+                                  <div key={i} style={{ display:'flex', gap:7, marginBottom:5 }}>
+                                    <span style={{ color:'#F97316', flexShrink:0, fontSize:12 }}>▸</span>
+                                    <p style={{ fontSize:11, color:'rgba(245,240,232,0.80)', lineHeight:1.7, margin:0 }}>{txt}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {pr.remedy && (
+                              <div style={{ margin:'0 14px 12px', padding:'8px 12px', borderRadius:8, background:'rgba(167,139,250,0.07)', border:'1px solid rgba(167,139,250,0.2)' }}>
+                                <div style={{ fontSize:9, fontWeight:700, color:'#A78BFA', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>
+                                  ✦ {t(lang,'Remedy','उपाय')} — {lang==='hi' ? pr.planet_hi : pr.planet}
+                                </div>
+                                <p style={{ fontSize:10, color:'rgba(245,240,232,0.80)', lineHeight:1.8, margin:0 }}>
+                                  {lang==='hi' ? pr.remedy.hi : pr.remedy.en}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {reading.chart_remedy && (
+                      <div style={{ marginTop:12, padding:'10px 14px', borderRadius:10, background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.2)' }}>
+                        <div style={{ fontSize:9, fontWeight:700, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:5 }}>
+                          🕉 {t(lang,'Overall Chart Remedy','समग्र चार्ट उपाय')}
+                        </div>
+                        <p style={{ fontSize:11, color:'rgba(245,240,232,0.82)', lineHeight:1.8, margin:0 }}>
+                          {lang==='hi' ? reading.chart_remedy.hi : reading.chart_remedy.en}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
