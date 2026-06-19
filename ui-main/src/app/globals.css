@@ -135,3 +135,50 @@
   .text-ivory\/70 { color: rgba(245,240,232,0.93) !important; }
   .text-ivory\/75 { color: rgba(245,240,232,0.95) !important; }
 }
+
+/* ── Print styles for Simple Report tab ──────────────────────────────────── */
+@media print {
+  /* Hide everything first */
+  body > * { visibility: hidden; }
+
+  /* Show only the print area and all its children */
+  .simple-report-print-area,
+  .simple-report-print-area * {
+    visibility: visible !important;
+  }
+
+  /* Position print area at top-left */
+  .simple-report-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: white !important;
+    color: #1f2433 !important;
+    padding: 24px;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  .print-hidden,
+  .admin-only,
+  .technical-debug {
+    display: none !important;
+  }
+
+  /* Prevent page breaks inside cards */
+  .print-card,
+  .simple-report-print-area section,
+  .simple-report-print-area [style*="border-radius"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Light-mode overrides for print */
+  .simple-report-print-area h2,
+  .simple-report-print-area h3 { color: #b8860b !important; }
+  .simple-report-print-area p  { color: #1f2433 !important; }
+  .simple-report-print-area [style*="rgba(245,240,232"] { color: #374151 !important; }
+
+  @page { margin: 16mm; }
+}

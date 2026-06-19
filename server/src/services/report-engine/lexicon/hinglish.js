@@ -20,9 +20,11 @@ module.exports = {
   },
 
   SCORE_LABEL: {
-    5: 'yeh area bahut strong dikhta hai', 4: 'yeh area strong dikhta hai',
-    3: 'yeh area normal hai', 2: 'is area me thoda patience aur dhyan chahiye',
-    1: 'is area me special dhyan aur effort chahiye',
+    5: 'yeh area bahut supportive aur strong dikhta hai',
+    4: 'yeh area aapke liye supportive dikhta hai',
+    3: 'yeh area kaafi balanced hai',
+    2: 'is area me thoda zyada dhyan aur patience chahiye',
+    1: 'is area me special dhyan aur dedicated effort chahiye',
   },
 
   PLANET: {
@@ -99,21 +101,39 @@ module.exports = {
     dailyHealth: 'Health: time par khaana aur thoda rest zaroori hai.',
     dailyAdvice: 'Aaj jo bhi karein, calm mann aur patience se karein.',
     dailyCaution: 'Jaldbaazi aur gusse se bachein.',
+    jChallengeNote: 'Overall kundli analysis se pata chalta hai ki is area me poora fal paane ke liye zyada patience, sahi timing aur consistent effort ki zaroorat ho sakti hai.',
+    jCareNote: 'Is area me thoda extra dhyan aur patience dein — sahi time se improvement possible hai.',
+    jBlockedYogaNote: 'Yeh yog kundli me hai, lekin abhi ke dasha-antardasha me poori tarah active nahi ho sakta.',
   },
 
   REMEDIES: {
     base: [
-      'Surya ko jal chadhayein aur subah jaldi uthne ki habit banayein.',
-      'Roz thodi der meditation ya deep breathing karein — mann calm rehta hai.',
       'Maa-baap aur elders ka respect karein — yeh sabse effective upaay hai.',
-      'Zaroratmand ko food/ann donate karein.',
       'Gusse aur jaldbaazi se bachein, sach aur honesty se chalein.',
+      'Kisi bhi shubh din zaroratmand ko food/ann donate karein.',
     ],
+    dasha: {
+      Sun: 'Subah Surya ko jal chadhayein; sunrise se pehle uthein; authority figures ka respect karein; Gayatri Mantra karein.',
+      Moon: 'Monday ko white cheez (doodh, chawal) donate karein; paani ke paas time bitayein; mann calm rakhein.',
+      Mars: 'Tuesday aur Saturday ko Hanuman Chalisa padhein; energy ko physical discipline me lagayein; gusse se bachein.',
+      Mercury: 'Wednesday ko green cheez donate karein; clearly aur honestly bolein; accounts clean rakhein.',
+      Jupiter: 'Teachers aur mentors ka respect karein; Thursday ko yellow cheez donate karein; Guru Mantra karein.',
+      Venus: 'Friday ko white ya fragrant cheez donate karein; relationships ko value dein; zyada indulgence se bachein.',
+      Saturn: 'Elderly aur hard-working logon ki help karein; Saturday ko dark-coloured cheez donate karein; discipline rakhein.',
+      Rahu: 'Thinking clear rakhein; Saturday ko blue/dark cheez donate karein; shortcuts aur galat sangat se bachein.',
+      Ketu: 'Meditation ya spiritual practice karein; life simple rakhein; spiritual institutions me donate karein.',
+    },
+    antar: {
+      Mars: 'Mars antardasha me risky decisions aur conflicts se bachein; Hanuman Chalisa padhein; physical discipline aur patience help karte hain.',
+      Moon: 'Moon antardasha me mann calm rakhein; Monday white donation emotional balance me help karta hai.',
+      Saturn: 'Saturn antardasha me patience sabse zaroori hai; elderly ya hard-working logon ki seva se achhe results milte hain.',
+      Jupiter: 'Jupiter antardasha me education, spiritual kaam aur honesty favorable hain; mentors ka respect karein.',
+    },
     money: 'Tuesday/Saturday ko Hanuman Chalisa padhein; bina soche loan ya risky investment se bachein.',
     health: 'Monday ko white cheez (doodh/chawal) donate karein aur routine regular rakhein.',
     career: 'Saturday ko hard-working aur elderly logon ki help karein; discipline banaye rakhein.',
     marriage: 'Life partner ke saath communication badhayein; Friday ko white/fragrant cheez ka daan achha rahega.',
-    children: 'Thursday ko yellow cheez/chane ki daal donate karein aur elders ka aashirwaad lein.',
+    children: 'Thursday ko yellow cheez/chane ki daal donate karein; elders ka aashirwaad lein aur zaroorat ho to medical advice lein.',
     spirituality: 'Thursday ko Gayatri Mantra ka jaap aur thoda seva-kaam mann ko strength dega.',
   },
 };

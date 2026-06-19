@@ -723,7 +723,9 @@ router.get('/:id/guidance', async (req, res) => {
     if (!chart) return fail(res, 'Unable to calculate chart', 500);
 
     const lang = req.query.lang;
-    const report = generateLifeReport(chart, { lang });
+    // Generate judgement so contradictions between sections and scores are resolved
+    const judgement = generateJudgement(chart, {}, { lang: lang || 'hi', admin: false });
+    const report = generateLifeReport(chart, { lang, judgement });
     const daily  = generateDailyGuidance(chart, new Date(), { lang });
     return ok(res, { report, daily });
   } catch (e) {

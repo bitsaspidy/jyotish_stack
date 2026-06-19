@@ -29,7 +29,55 @@ const colorOf = (key) => STATUS_COLORS[key] || STATUS_COLORS.mid;
 // ── Print / Save-as-PDF (browser renders any script correctly; no server font) ──
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function buildPrintHtml(report, daily, name, lang, ui) {
+function buildJudgementHtml(judgement, lang) {
+  if (!judgement) return '';
+  const isHi = lang === 'hi';
+  const score = judgement.overallScore ?? 0;
+  const overallLabel = isHi ? judgement.overallLabel?.hi : judgement.overallLabel?.en;
+  const scoreColor = score >= 65 ? '#15803d' : score >= 48 ? '#1d4ed8' : score >= 35 ? '#b45309' : '#b91c1c';
+  const statusLabels    = { strong: 'Strong', balanced: 'Balanced', 'needs-care': 'Needs Care', challenging: 'Focus Needed' };
+  const statusLabelsHi  = { strong: 'मजबूत', balanced: 'संतुलित', 'needs-care': 'देखभाल जरूरी', challenging: 'चुनौतीपूर्ण' };
+  const statusColors    = { strong: '#15803d', balanced: '#1d4ed8', 'needs-care': '#b45309', challenging: '#b91c1c' };
+  const statusBg        = { strong: '#f0fdf4', balanced: '#eff6ff', 'needs-care': '#fffbeb', challenging: '#fef2f2' };
+
+  const areaHtml = (judgement.areas || []).map((a) => {
+    const title  = isHi ? (a.titleHi || a.titleEn) : a.titleEn;
+    const slabel = isHi ? (statusLabelsHi[a.status] || a.status) : (statusLabels[a.status] || a.status);
+    const col    = statusColors[a.status] || '#374151';
+    const bg     = statusBg[a.status]    || '#f9fafb';
+    const summ   = isHi ? (a.userSummaryHi || a.userSummaryEn) : a.userSummaryEn;
+    return `<div style="background:${bg};border:1px solid ${col}44;border-radius:8px;padding:10px 12px;break-inside:avoid;page-break-inside:avoid;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:700;color:#111827;">${esc(title)}</span>
+        <span style="font-size:10px;font-weight:600;color:${col};background:${col}18;border-radius:10px;padding:2px 8px;white-space:nowrap;">${esc(slabel)}</span>
+      </div>
+      <div style="height:3px;border-radius:3px;background:#e5e7eb;margin-bottom:7px;">
+        <div style="height:100%;width:${a.score || 0}%;border-radius:3px;background:${col};"></div>
+      </div>
+      ${summ ? `<p style="font-size:11px;color:#374151;line-height:1.6;margin:0;">${esc(summ)}</p>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div style="border:1px solid #e9d5ff;border-radius:12px;padding:16px 18px;margin-bottom:18px;background:#faf5ff;break-inside:avoid;page-break-inside:avoid;">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+      <div style="flex-shrink:0;width:64px;height:64px;border-radius:50%;background:conic-gradient(${scoreColor} 0% ${score}%,#e5e7eb ${score}% 100%);display:flex;align-items:center;justify-content:center;">
+        <div style="width:48px;height:48px;border-radius:50%;background:#faf5ff;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:17px;font-weight:700;color:${scoreColor};">${score}</span>
+        </div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <p style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 5px;">⚖️ ${isHi ? 'कुंडली निर्णय स्कोर' : 'Kundli Judgement Score'}</p>
+        <span style="font-size:12px;font-weight:600;color:${scoreColor};background:${scoreColor}15;border-radius:10px;padding:3px 10px;">${esc(overallLabel || '')}</span>
+        <p style="font-size:11px;color:#6b7280;line-height:1.6;margin:6px 0 0;">
+          ${isHi ? '11 परत के शुद्ध ज्योतिषीय नियमों पर आधारित। 65+ मजबूत · 48–64 संतुलित · 35–47 देखभाल जरूरी।' : '11-layer pure Vedic rule analysis. 65+ strong · 48–64 balanced · 35–47 needs care.'}
+        </p>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;">${areaHtml}</div>
+  </div>`;
+}
+
+function buildPrintHtml(report, daily, name, lang, ui, judgement) {
   const pill = (s) => s.status ? `<span class="pill st-${s.statusKey || 'mid'}">${esc(s.status)}</span>` : '';
   const block = (s) => `
     <div class="section">
@@ -76,6 +124,7 @@ ul{margin:6px 0;padding-left:20px;}li{font-size:13px;margin-bottom:4px;color:#37
 </style></head><body><div class="wrap">
 <div class="top"><h1>${esc(ui.title)}</h1>
 <div class="sub">${name ? esc(name) + ' · ' : ''}${today} · Jyotish Stack AI</div></div>
+${buildJudgementHtml(judgement, lang)}
 <div class="summary">${(report.summary?.lines || []).map((l) => `<p>${esc(l)}</p>`).join('')}</div>
 ${dailyHtml}
 ${(report.sections || []).map(block).join('')}
@@ -169,7 +218,7 @@ export default function GuidanceReport({ uuid, admin = false, name = '', lang = 
 
   const handlePrint = () => {
     if (!report) return;
-    const html = buildPrintHtml(report, daily, name, L, ui);
+    const html = buildPrintHtml(report, daily, name, L, ui, judgement);
     const w = window.open('', '_blank');
     if (!w) { alert(ui.popup); return; }
     w.document.open(); w.document.write(html); w.document.close();
@@ -202,12 +251,13 @@ export default function GuidanceReport({ uuid, admin = false, name = '', lang = 
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
         <button onClick={handlePrint} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.4)', color: GOLD, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
           {ui.printBtn}
         </button>
       </div>
 
+      <div className="simple-report-print-area">
       {judgement && <JudgementPanel judgement={judgement} lang={L} admin={admin} />}
 
       <section style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.03))', border: '1px solid rgba(212,175,55,0.3)', borderRadius: 16, padding: '22px 24px', marginBottom: 18 }}>
@@ -233,6 +283,7 @@ export default function GuidanceReport({ uuid, admin = false, name = '', lang = 
       {(report.sections || []).map((s) => <SectionCard key={s.key} section={s} ui={ui} />)}
 
       <p style={{ color: 'rgba(245,240,232,0.35)', fontSize: 12, textAlign: 'center', marginTop: 8, lineHeight: 1.7 }}>{ui.disclaimer}</p>
+      </div>{/* end simple-report-print-area */}
 
       {admin && report.debug && (
         <div style={{ marginTop: 18 }}>

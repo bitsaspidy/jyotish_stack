@@ -26,8 +26,10 @@ module.exports = {
   },
 
   SCORE_LABEL: {
-    5: 'this area looks very strong', 4: 'this area looks strong',
-    3: 'this area is balanced', 2: 'this area needs patience and care',
+    5: 'this area looks very supportive',
+    4: 'this area looks supportive',
+    3: 'this area is fairly balanced',
+    2: 'this area needs extra care',
     1: 'this area needs special attention and effort',
   },
 
@@ -155,21 +157,39 @@ module.exports = {
     dailyHealth: 'Health: timely meals and a little rest are important.',
     dailyAdvice: 'Whatever you do today, do it with a calm mind and patience.',
     dailyCaution: 'Avoid haste and anger.',
+    jChallengeNote: 'Overall chart analysis shows this area may need extra patience, careful timing and consistent effort before results fully come through.',
+    jCareNote: 'Give this area a little extra patience and attention — with the right timing, improvement is possible.',
+    jBlockedYogaNote: 'This combination is present in the chart but may not fully activate in the current phase.',
   },
 
   REMEDIES: {
     base: [
-      'Offer water to the Sun and build the habit of waking up early.',
-      'Spend a few minutes daily in meditation or deep breathing — the mind stays calm and steady.',
       'Respect your parents and elders — this is the most effective remedy.',
-      'Donate food or grains to those in need.',
       'Avoid anger and haste; walk the path of truth and honesty.',
+      'Donate food or grains to those in need on any auspicious day.',
     ],
+    dasha: {
+      Sun: 'Offer water to the Sun each morning; wake up early, respect authority figures, and recite the Gayatri Mantra.',
+      Moon: 'Donate something white (milk, rice) on Monday; spend time near water and keep the mind calm.',
+      Mars: 'Recite the Hanuman Chalisa on Tuesday and Saturday; channel energy into physical discipline; avoid anger.',
+      Mercury: 'Donate green items on Wednesday; speak clearly and honestly; keep accounts clean and updated.',
+      Jupiter: 'Respect teachers and mentors; donate yellow items on Thursday; recite the Guru Mantra.',
+      Venus: 'Donate white or fragrant items on Friday; give value to relationships; avoid excess indulgence.',
+      Saturn: 'Help elderly and hard-working people; donate dark-coloured items on Saturday; maintain discipline.',
+      Rahu: 'Keep thinking clear; donate blue or dark items on Saturday; avoid shortcuts and wrong company.',
+      Ketu: 'Take up meditation or spiritual practice; simplify your life; donate to spiritual institutions.',
+    },
+    antar: {
+      Mars: 'During Mars antardasha: avoid risky decisions and conflicts; recite the Hanuman Chalisa; physical discipline and patience help.',
+      Moon: 'During Moon antardasha: keep the mind calm; Monday white donation supports emotional balance.',
+      Saturn: 'During Saturn antardasha: patience is key; service to elderly or hard-working people brings good results.',
+      Jupiter: 'During Jupiter antardasha: education, spiritual work and honesty are favoured; respect mentors.',
+    },
     money: 'Read the Hanuman Chalisa on Tuesday/Saturday; avoid unthinking loans or risky investments.',
     health: 'Donate something white (milk/rice) on Monday and keep a regular daily routine.',
     career: 'Help hard-working and elderly people on Saturday; stay disciplined.',
     marriage: 'Talk more openly with your partner; donating something white/fragrant on Friday is good.',
-    children: 'Donate yellow items / split gram on Thursday and seek the blessings of elders.',
+    children: 'Donate yellow items / split gram on Thursday; seek elders\' blessings and take medical advice when needed.',
     spirituality: 'Chanting the Gayatri Mantra on Thursday and a little service work will strengthen the mind.',
   },
 };

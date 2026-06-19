@@ -19,6 +19,39 @@ const REPORT_ORDER = [
   'siblings', 'health', 'debt', 'property', 'spirituality', 'dasha', 'yogas', 'remedies',
 ];
 
+// Judgement areaKey → life report section keys that it governs
+const J_AREA_MAP = {
+  lagna:    ['personality', 'health'],
+  mind:     ['family'],
+  gains:    ['career', 'money'],
+  marriage: ['marriage'],
+  children: ['children'],
+  maturity: ['spirituality'],
+};
+
+// When judgement says challenging/needs-care but section is purely positive, add caution note
+function applyJudgementOverrides(sections, judgement, LEX) {
+  if (!judgement?.areas?.length) return sections;
+  const statusByKey = {};
+  for (const area of judgement.areas) {
+    const keys = J_AREA_MAP[area.areaKey] || [];
+    for (const k of keys) statusByKey[k] = area.status;
+  }
+  const { fill } = require('./lexicon');
+  return sections.map((s) => {
+    const jStatus = statusByKey[s.key];
+    if (!jStatus) return s;
+    const isStrongSection = s.statusKey === 'strong' || (!s.caution?.filter(Boolean).length && s.statusKey !== 'care');
+    if ((jStatus === 'challenging' || jStatus === 'needs-care') && isStrongSection) {
+      const note = jStatus === 'challenging'
+        ? (LEX.PHRASES.jChallengeNote || 'This area may need extra patience and careful effort.')
+        : (LEX.PHRASES.jCareNote || 'Give this area a little extra patience and attention.');
+      return { ...s, statusKey: 'care', caution: [...(s.caution || []).filter(Boolean), note] };
+    }
+    return s;
+  });
+}
+
 const normLang = (lang) => (SUPPORTED.includes(lang) ? lang : 'hi');
 
 function buildDebug(ctx, areas, LEX) {
@@ -47,15 +80,19 @@ function generateLifeReport(chart, opts = {}) {
   const sections = [];
   for (const key of REPORT_ORDER) {
     if (key === 'dasha') sections.push(C.composeDasha(ctx, LEX));
-    else if (key === 'yogas') sections.push(C.composeYogas(ctx, LEX, lang));
+    else if (key === 'yogas') sections.push(C.composeYogas(ctx, LEX, lang, opts.judgement));
     else if (key === 'remedies') sections.push(C.composeRemedies(ctx, areas, LEX));
     else sections.push(C.composeArea(key, areas[key], LEX));
   }
 
+  const resolvedSections = opts.judgement
+    ? applyJudgementOverrides(sections, opts.judgement, LEX)
+    : sections;
+
   const report = {
     lang,
     summary: { heading: LEX.AREA_LABEL.summary, lines: C.composeSummary(ctx, areas, LEX) },
-    sections,
+    sections: resolvedSections,
     meta: { generated_at: new Date().toISOString() },
   };
   if (opts.admin) report.debug = buildDebug(ctx, areas, LEX);

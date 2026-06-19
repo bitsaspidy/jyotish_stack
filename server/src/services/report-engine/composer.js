@@ -54,22 +54,57 @@ function composeDasha(ctx, LEX) {
   };
 }
 
-function composeYogas(ctx, LEX, lang) {
+function composeYogas(ctx, LEX, lang, judgement) {
   const yogas = (ctx.chart?.yogas_doshas?.yogas || []).filter((y) => y && !y.is_cancelled);
+
+  // Build activation map from judgement yogas area
+  const activationMap = {};
+  const jYogaList = (judgement?.areas || []).find((a) => a.areaKey === 'yogas')?.yogas || [];
+  for (const jy of jYogaList) { if (jy.name) activationMap[jy.name] = jy.activation || 'partial'; }
+
+  const ACTLABEL = {
+    en: { full: 'Full', partial: 'Partial', weak: 'Weak', blocked: 'Blocked' },
+    hi: { full: 'पूर्ण', partial: 'आंशिक', weak: 'कमज़ोर', blocked: 'अवरुद्ध' },
+    hinglish: { full: 'Full', partial: 'Partial', weak: 'Weak', blocked: 'Blocked' },
+  };
+  const aL = ACTLABEL[lang] || ACTLABEL.hi;
+  const blockedNote = LEX.PHRASES.jBlockedYogaNote || 'Present in chart but may not fully activate in the current phase.';
+
   const seen = new Set();
   const points = [];
+  const caution = [];
   for (const y of yogas) {
     const name = lang === 'en' ? (y.name || y.name_hi) : (y.name_hi || y.name);
+    const nameKey = y.name || '';
     if (!name || seen.has(name)) continue;
     seen.add(name);
-    points.push(`${name}: ${explainYoga(LEX, y.name || '')}`);
+    const activation = activationMap[nameKey] || 'partial';
+    const label = aL[activation] || aL.partial;
+    const explanation = explainYoga(LEX, nameKey);
+    if (activation === 'blocked') {
+      caution.push(`${name} (${label}) — ${blockedNote}`);
+    } else {
+      points.push(`${name} (${label}) — ${explanation}`);
+    }
   }
+
+  const hasActivation = jYogaList.length > 0;
+  const introText = (points.length || caution.length)
+    ? (hasActivation
+        ? (lang === 'en'
+            ? 'These combinations are present in your chart. Their results depend on activation, current dasha and planet strength:'
+            : lang === 'hi'
+              ? 'ये योग आपकी कुंडली में हैं। इनका फल सक्रियता, दशा और ग्रह बल पर निर्भर करता है:'
+              : 'Yeh yog aapki kundli me hain. Inke results activation, dasha aur planet strength par depend karte hain:')
+        : LEX.PHRASES.yogasIntro)
+    : LEX.PHRASES.yogasNone;
+
   return {
     key: 'yogas',
     heading: LEX.AREA_LABEL.yogas,
     status: null, statusKey: null,
-    text: points.length ? LEX.PHRASES.yogasIntro : LEX.PHRASES.yogasNone,
-    points, advice: [], caution: [],
+    text: introText,
+    points, advice: [], caution,
   };
 }
 
@@ -77,6 +112,11 @@ function composeRemedies(ctx, areas, LEX) {
   const R = LEX.REMEDIES;
   const list = [...R.base];
   const weak = (k) => areas[k] && areas[k].score <= 2.6;
+
+  // Dasha-specific remedy (most important — unique to this person's current phase)
+  if (ctx.dasha && R.dasha?.[ctx.dasha]) list.push(R.dasha[ctx.dasha]);
+  // Antardasha remedy (only if different planet and has a specific entry)
+  if (ctx.antar && ctx.antar !== ctx.dasha && R.antar?.[ctx.antar]) list.push(R.antar[ctx.antar]);
 
   if (weak('money') || ctx.inHouse('Rahu', 2)) list.push(R.money);
   if (weak('health') || ctx.isWeak('Moon')) list.push(R.health);
@@ -95,7 +135,8 @@ function composeDaily(prediction, ctx, LEX, lang) {
   const P = LEX.PHRASES;
   const taraLine = meta.tara?.name ? LEX.TARA[meta.tara.name] : null;
 
-  const mood = [moon ? `${moon.manas}।` : null, taraLine].filter(Boolean).join(' ') || P.dailyMood;
+  const sentEnd = LEX.lang === 'en' ? '.' : '।';
+  const mood = [moon ? `${moon.manas}${sentEnd}` : null, taraLine].filter(Boolean).join(' ') || P.dailyMood;
   const work = maha ? fill(P.dailyWork, { x: maha.dasha.theme }) : P.dailyWorkFallback;
 
   const pick = (v, fallback) => {
