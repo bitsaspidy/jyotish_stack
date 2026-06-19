@@ -88,7 +88,7 @@ function _evaluateSun(planets, lagna, chart) {
   }
   if (isWeakDignity(sun)) {
     notes.push('Sun in debilitation can create challenges with authority, self-confidence, government matters, or father-related areas.');
-    notesHi.push('सूर्य नीच में है — अधिकार, आत्मविश्वास, सरकारी मामलों या पिता से जुड़े क्षेत्रों में extra care की जरूरत हो सकती है।');
+    notesHi.push('सूर्य नीच में है — अधिकार, आत्मविश्वास, सरकारी मामलों या पिता से जुड़े क्षेत्रों में विशेष सावधानी की जरूरत हो सकती है।');
     blockers.push('Debilitated Sun reduces authority/government/self-confidence results');
   }
   if (aff.includes('rahu_conjunct') || aff.includes('ketu_conjunct')) {
@@ -147,7 +147,7 @@ function _evaluateMoon(planets, lagna, chart) {
   }
   if (isWeakDignity(moon)) {
     notes.push('Moon in debilitation can create emotional sensitivity, mood fluctuations, or mother-related care areas.');
-    notesHi.push('चंद्रमा नीच में — भावनात्मक संवेदनशीलता, मन में उतार-चढ़ाव या माता से जुड़े क्षेत्रों में extra care की जरूरत हो सकती है।');
+    notesHi.push('चंद्रमा नीच में — भावनात्मक संवेदनशीलता, मन में उतार-चढ़ाव या माता से जुड़े क्षेत्रों में विशेष सावधानी की जरूरत हो सकती है।');
     blockers.push('Debilitated Moon: mind, emotional stability, and mother themes weakened');
   }
   if (grahanInfluence) {

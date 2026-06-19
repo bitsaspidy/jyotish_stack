@@ -111,4 +111,4 @@ function _statusFromScore(score) {
   return 'challenging';
 }
 
-module.exports = { resolveConflict, mergeAreaResult, sanitizeForUser, sanitizeUserText };
+module.exports = { resolveConflict, mergeAreaResult, sanitizeForUser, sanitizeUserText, FORBIDDEN_USER };

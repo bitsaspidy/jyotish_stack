@@ -45,7 +45,7 @@ function evaluateAshtakavargaGuard(chart) {
         : `Ashtakavarga for ${pName} can be used normally — no major dosha detected.`,
       // User note (never technical)
       userNoteHi: majorDosha
-        ? `इस ग्रह से जुड़े परिणामों में स्थिरता के लिए extra care और सही timing की जरूरत है।`
+        ? `इस ग्रह से जुड़े परिणामों में स्थिरता के लिए विशेष सावधानी और सही समय का चयन जरूरी है।`
         : null,
       userNoteEn: majorDosha
         ? `Results connected to this planet need extra care, right timing, and disciplined effort for stability.`

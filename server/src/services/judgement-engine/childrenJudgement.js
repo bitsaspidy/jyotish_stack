@@ -84,20 +84,20 @@ function evaluateChildren(chart, profile = {}) {
   if (ketuInFifth) {
     blockers.push('Ketu in 5th: delay/extra care in children, unconventional education path, love-life maturity themes');
     notes.push('Ketu in the 5th house can indicate a need for extra care and patience regarding children matters, an unconventional or intuitive approach to education, and a preference for arranged or family-supported marriage in love matters. Medical guidance and proper timing are very important.');
-    notesHi.push('5वें भाव में केतु — संतान के मामलों में extra care और धैर्य जरूरी हो सकता है, शिक्षा में असामान्य दृष्टिकोण हो सकता है, और प्रेम में परिवार-समर्थित विवाह बेहतर हो सकता है। चिकित्सा मार्गदर्शन और उचित समय बहुत महत्वपूर्ण है।');
+    notesHi.push('5वें भाव में केतु — संतान के मामलों में विशेष सावधानी और धैर्य जरूरी हो सकता है, शिक्षा में असामान्य दृष्टिकोण हो सकता है, और प्रेम में परिवार-समर्थित विवाह बेहतर हो सकता है। चिकित्सा मार्गदर्शन और उचित समय बहुत महत्वपूर्ण है।');
   }
 
   // Saturn aspects 5th — safe language
   if (saturnAspectsFifth) {
     blockers.push('Saturn aspects 5th: delay/responsibility themes around children and education');
     notes.push("Saturn's aspect on the 5th house can bring delays and a sense of responsibility around children or education. Patience, right timing, and medical guidance are important. This does not deny children — it asks for extra care and preparation.");
-    notesHi.push('शनि का 5वें भाव पर पहलू संतान या शिक्षा के आसपास देरी और जिम्मेदारी ला सकता है। धैर्य, सही समय और चिकित्सा मार्गदर्शन महत्वपूर्ण है। यह संतान से इनकार नहीं — यह extra care और तैयारी मांगता है।');
+    notesHi.push('शनि का 5वें भाव पर पहलू संतान या शिक्षा के आसपास देरी और जिम्मेदारी ला सकता है। धैर्य, सही समय और चिकित्सा मार्गदर्शन महत्वपूर्ण है। यह संतान से इनकार नहीं — यह विशेष सावधानी और तैयारी मांगता है।');
   }
 
   // 5th lord placement
   if (fifthLordHouse && isDusthana(fifthLordHouse)) {
     notes.push('The 5th lord in a trik house can indicate that education, children, or creative matters require extra effort and careful timing. Results come with perseverance.');
-    notesHi.push('5वें स्वामी का तृक भाव में होना — शिक्षा, संतान या रचनात्मक मामलों में extra प्रयास और सावधान समय जरूरी हो सकता है। दृढ़ता से परिणाम आते हैं।');
+    notesHi.push('5वें स्वामी का तृक भाव में होना — शिक्षा, संतान या रचनात्मक मामलों में विशेष प्रयास और सावधान समय जरूरी हो सकता है। दृढ़ता से परिणाम आते हैं।');
     blockers.push(`5th lord in ${fifthLordHouse}th: children/education themes need extra care`);
   } else if (fifthLordHouse && (isKendra(fifthLordHouse) || isTrikona(fifthLordHouse))) {
     notes.push('The 5th lord is well-placed — children, education, and creative expression are naturally supported.');
@@ -113,7 +113,7 @@ function evaluateChildren(chart, profile = {}) {
   } else if (isWeakDignity(jupiter)) {
     blockers.push('Jupiter debilitated: karaka for children weakened — extra care and remedy recommended');
     notes.push('Jupiter, the natural significator of children, is in debilitation. This is not a denial but calls for extra care, medical guidance, proper timing, and Jupiter remedies.');
-    notesHi.push('गुरु (संतान के नैसर्गिक कारक) नीच में है। यह इनकार नहीं — extra care, चिकित्सा मार्गदर्शन, उचित समय और गुरु उपाय बहुत सहायक होंगे।');
+    notesHi.push('गुरु (संतान के नैसर्गिक कारक) नीच में है। यह इनकार नहीं — विशेष सावधानी, चिकित्सा मार्गदर्शन, उचित समय और गुरु उपाय बहुत सहायक होंगे।');
   }
 
   // Benefics in 5th
@@ -143,8 +143,8 @@ function evaluateChildren(chart, profile = {}) {
     : finalScore >= 52
     ? 'संतान और शिक्षा के विषयों को मध्यम समर्थन है। लगातार प्रयास, सही समय और चिकित्सा मार्गदर्शन सर्वोत्तम परिणाम सुनिश्चित करते हैं।'
     : finalScore >= 35
-    ? 'संतान और शिक्षा के मामलों में extra care, धैर्य और उचित समय जरूरी है। चिकित्सा मार्गदर्शन और उपाय की सिफारिश — यह सोच-समझकर तैयारी की पुकार है, इनकार नहीं।'
-    : 'संतान और शिक्षा के मामलों में महत्वपूर्ण extra care, धैर्य, चिकित्सा मार्गदर्शन, गुरु उपाय और सही समय जरूरी है। यह सचेत तैयारी और पारिवारिक समर्थन की पुकार है।';
+    ? 'संतान और शिक्षा के मामलों में विशेष सावधानी, धैर्य और उचित समय जरूरी है। चिकित्सा मार्गदर्शन और उपाय की सिफारिश — यह सोच-समझकर तैयारी की पुकार है, इनकार नहीं।'
+    : 'संतान और शिक्षा के मामलों में महत्वपूर्ण सावधानी, धैर्य, चिकित्सा मार्गदर्शन, गुरु उपाय और सही समय जरूरी है। यह सचेत तैयारी और पारिवारिक समर्थन की पुकार है।';
 
   return {
     score: finalScore, status,

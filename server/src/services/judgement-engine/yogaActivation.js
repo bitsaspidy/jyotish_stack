@@ -289,7 +289,10 @@ function evaluateYogas(chart, lagnaResult, pillarResult) {
 
     // Yoga strength from detection engine affects result
     const yogaStrengthMod = yoga.strength === 'strong' ? 1.1 : yoga.strength === 'weak' ? 0.8 : 1.0;
-    const effectiveStrength = clamp(Math.round(reductionFactor * yogaStrengthMod * 100), 0, 100);
+    // Blocked yogas always report 0 effective strength — they give no results
+    const effectiveStrength = activation === 'blocked'
+      ? 0
+      : clamp(Math.round(reductionFactor * yogaStrengthMod * 100), 0, 100);
 
     // Default EN/HI if rule didn't provide
     if (!userEN) {

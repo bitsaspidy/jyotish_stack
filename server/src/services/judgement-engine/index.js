@@ -97,6 +97,9 @@ function generateJudgement(chart, profile = {}, opts = {}) {
       report.avGuard      = avGuardResult;
     }
 
+    // Add freshness version — used by ensureCalculatedChart to detect stale charts
+    report.version = 'judgement-priority-v2';
+
     // Sanitize user output (strip forbidden phrases)
     return isAdmin ? report : sanitizeForUser(report);
 
@@ -125,15 +128,16 @@ function _normLang(lang) {
 
 function _emptyResult(lang, isAdmin) {
   return {
-    overallScore:  50,
-    overallStatus: 'balanced',
-    overallLabel:  { en: 'Chart data not available', hi: 'कुंडली डेटा उपलब्ध नहीं' },
-    areas:         [],
-    lagnaStrength: null,
+    version:        'judgement-priority-v2',
+    overallScore:   50,
+    overallStatus:  'balanced',
+    overallLabel:   { en: 'Chart data not available', hi: 'कुंडली डेटा उपलब्ध नहीं' },
+    areas:          [],
+    lagnaStrength:  null,
     pillarStrength: null,
-    yogaReducers:  [],
-    rahuPlacement: null,
-    ashtakavargaGuard: null,
+    yogaReducers:   [],
+    rahuPlacement:  null,
+    ashtakavargaGuard: {},
   };
 }
 

@@ -133,7 +133,7 @@ function _assessCharaKarakas(karakas, notes, notesHi, blockers, amplifiers) {
     if (gkPlanet === 'Mars') {
       // Use safe language only
       notes.push('In Chara Karaka analysis, the Gnatikaraka (Mars) connecting with the Darakaraka or Atmakaraka suggests extra care is needed in matters of safety, health, anger management, and impulsive decisions in relationships and partnerships.');
-      notesHi.push('चर कारक विश्लेषण में ज्ञाति/नाति कारक (मंगल) का दाराकारक या आत्मकारक से संबंध — जीवनसाथी या वैवाहिक जीवन से जुड़े मामलों में safety, health, anger management और impulsive decisions पर extra care की जरूरत हो सकती है।');
+      notesHi.push('चर कारक विश्लेषण में ज्ञाति/नाति कारक (मंगल) का दाराकारक या आत्मकारक से संबंध — जीवनसाथी या वैवाहिक जीवन से जुड़े मामलों में सुरक्षा, स्वास्थ्य, क्रोध प्रबंधन और आवेगशील निर्णयों पर विशेष सावधानी की जरूरत हो सकती है।');
     } else if (gkPlanet) {
       notes.push(`Gnatikaraka (${gkPlanet}) in the chart — matters related to competition, jealousy, or friction in close relationships need mindful attention.`);
       notesHi.push(`ज्ञाति/नाति कारक (${pHi(gkPlanet)}) कुंडली में — प्रतिस्पर्धा, ईर्ष्या या करीबी रिश्तों में घर्षण के मामलों पर सचेत ध्यान जरूरी है।`);

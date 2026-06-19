@@ -74,7 +74,7 @@ function evaluateGains(chart, lagnaResult) {
   } else if (isWeakDignity(elevLord)) {
     blockers.push(`${elevLordName} debilitated: 11th house gains significantly weakened`);
     notes.push(`The 11th lord ${elevLordName} is in debilitation — income potential exists but gains may require extra effort, smart strategy, and disciplined saving.`);
-    notesHi.push(`11वें भाव का स्वामी ${pHi(elevLordName)} नीच में है — आय की संभावना है लेकिन लाभ के लिए extra प्रयास, चतुर रणनीति और अनुशासित बचत जरूरी हो सकती है।`);
+    notesHi.push(`11वें भाव का स्वामी ${pHi(elevLordName)} नीच में है — आय की संभावना है लेकिन लाभ के लिए विशेष प्रयास, चतुर रणनीति और अनुशासित बचत जरूरी हो सकती है।`);
   }
 
   if (elevLordHouse && isDusthana(elevLordHouse)) {
@@ -130,7 +130,7 @@ function evaluateGains(chart, lagnaResult) {
     : gainPotentialScore >= 52
     ? 'मध्यम आय संभावना है। लाभ लगातार प्रयास, सही व्यवसाय और चतुर वित्तीय प्रबंधन से आते हैं। नेटवर्क निर्माण महत्वपूर्ण है।'
     : gainPotentialScore >= 35
-    ? 'आय की संभावना है लेकिन extra care जरूरी है। लाभ देरी, संघर्ष या अस्थिरता के साथ आ सकते हैं। अनुशासित बचत और सही आय स्रोत बहुत जरूरी हैं।'
+    ? 'आय की संभावना है लेकिन विशेष सावधानी जरूरी है। लाभ देरी, संघर्ष या अस्थिरता के साथ आ सकते हैं। अनुशासित बचत और सही आय स्रोत बहुत जरूरी हैं।'
     : 'आने वाले लाभ काफी चुनौतीग्रस्त हैं। सावधान वित्तीय योजना, विविध आय स्रोत और उपाय की दृढ़ता से सिफारिश की जाती है।';
 
   return {

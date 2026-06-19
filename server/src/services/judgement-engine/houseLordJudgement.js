@@ -117,7 +117,7 @@ function _buildNotes(houseNum, lordName, lord, lordHouse, aff, ppk, dashaSupport
       amplifiers.push(`${lordName} in upachaya dusthana — challenges can convert to growth`);
     } else {
       notes.push(`${lordName} (${houseNum}th lord) is in the ${lordHouse}th house — ${HOUSE_THEMES[houseNum].en.toLowerCase()} themes need extra care and perseverance.`);
-      notesHi.push(`${pHi(lordName)} (${houseNum}वें भाव का स्वामी) ${lordHouse}वें भाव में है — ${HOUSE_THEMES[houseNum].hi} से जुड़े विषयों में extra care और दृढ़ता जरूरी है।`);
+      notesHi.push(`${pHi(lordName)} (${houseNum}वें भाव का स्वामी) ${lordHouse}वें भाव में है — ${HOUSE_THEMES[houseNum].hi} से जुड़े विषयों में विशेष सावधानी और दृढ़ता जरूरी है।`);
       blockers.push(`${houseNum}th lord in trik house (${lordHouse}): results delayed/restricted`);
     }
   } else if (isKendra(lordHouse) || isTrikona(lordHouse)) {
@@ -134,7 +134,7 @@ function _buildNotes(houseNum, lordName, lord, lordHouse, aff, ppk, dashaSupport
     amplifiers.push(`${lordName} in ${dig}: strong dignity supports ${houseNum}th house results`);
   } else if (isWeakDignity(lord)) {
     notes.push(`${lordName} in debilitation weakens ${HOUSE_THEMES[houseNum].en.split(',')[0].toLowerCase()} — extra effort and remedy are needed.`);
-    notesHi.push(`${pHi(lordName)} नीच में है — ${HOUSE_THEMES[houseNum].hi.split(',')[0]} के लिए extra प्रयास और उपाय जरूरी हैं।`);
+    notesHi.push(`${pHi(lordName)} नीच में है — ${HOUSE_THEMES[houseNum].hi.split(',')[0]} के लिए विशेष प्रयास और उपाय जरूरी हैं।`);
     blockers.push(`${lordName} debilitated: ${houseNum}th house results significantly weakened`);
   }
 

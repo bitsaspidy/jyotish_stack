@@ -247,7 +247,7 @@ function _defaultSummaryEn(status, area) {
 function _defaultSummaryHi(status, area) {
   if (status === 'strong')     return `${area} इस कुंडली में मजबूत समर्थन दिखाता है।`;
   if (status === 'balanced')   return `${area} एक संतुलित तस्वीर दिखाता है — लगातार प्रयास से अच्छे परिणाम मिलते हैं।`;
-  if (status === 'needs-care') return `${area} में extra care और सावधान ध्यान जरूरी है। सही समय और प्रयास सहायक है।`;
+  if (status === 'needs-care') return `${area} में विशेष सावधानी और सचेत ध्यान जरूरी है। सही समय और प्रयास सहायक है।`;
   return `${area} में महत्वपूर्ण देखभाल और योजना जरूरी है। उपाय और धैर्य की सिफारिश की जाती है।`;
 }
 
@@ -263,13 +263,13 @@ function _blockerToUserEn(blocker) {
 }
 
 function _blockerToUserHi(blocker) {
-  if (/debilitat/i.test(blocker)) return 'पूर्ण परिणाम के लिए extra प्रयास और सही समय जरूरी है।';
-  if (/trik|dusthana/i.test(blocker)) return 'इस क्षेत्र में देरी हो सकती है या extra दृढ़ता जरूरी हो सकती है।';
+  if (/debilitat/i.test(blocker)) return 'पूर्ण परिणाम के लिए विशेष प्रयास और सही समय जरूरी है।';
+  if (/trik|dusthana/i.test(blocker)) return 'इस क्षेत्र में देरी हो सकती है या विशेष दृढ़ता जरूरी हो सकती है।';
   if (/Rahu|Ketu/i.test(blocker)) return 'इस क्षेत्र में अनिश्चितता और तीव्रता के लिए सचेत प्रबंधन जरूरी है।';
-  if (/Paap Kartari/i.test(blocker)) return 'इस क्षेत्र में दबाव या प्रतिबंध के लिए extra care और धैर्य जरूरी है।';
+  if (/Paap Kartari/i.test(blocker)) return 'इस क्षेत्र में दबाव या प्रतिबंध के लिए विशेष सावधानी और धैर्य जरूरी है।';
   if (/combust/i.test(blocker)) return 'इस क्षेत्र की शक्ति में कुछ कमी — उपाय और सही समय सहायक है।';
   if (/Kemadruma/i.test(blocker)) return 'भावनात्मक या मानसिक समर्थन को सचेत रूप से विकसित करने की जरूरत हो सकती है।';
-  return 'इस क्षेत्र में extra care और सचेत प्रयास जरूरी है।';
+  return 'इस क्षेत्र में विशेष सावधानी और सचेत प्रयास जरूरी है।';
 }
 
 function _yogasSummaryEn(yogaResults) {
@@ -336,7 +336,7 @@ function _overallLabelHi(score) {
   if (score >= 75) return 'मजबूत और अच्छी तरह समर्थित कुंडली';
   if (score >= 60) return 'अच्छी संभावना वाली संतुलित कुंडली';
   if (score >= 45) return 'विकास अवसरों वाली कुंडली';
-  if (score >= 32) return 'extra care और योजना की जरूरत वाली कुंडली';
+  if (score >= 32) return 'विशेष सावधानी और योजना की जरूरत वाली कुंडली';
   return 'महत्वपूर्ण ध्यान और उपाय की जरूरत वाली कुंडली';
 }
 

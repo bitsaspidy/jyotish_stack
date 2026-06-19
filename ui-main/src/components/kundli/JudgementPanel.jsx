@@ -157,12 +157,12 @@ export default function JudgementPanel({ judgement, lang = 'hi', admin = false }
               </p>
             </div>
           )}
-          {judgement.ashtakavargaGuard && (
+          {judgement.ashtakavargaGuard && Object.keys(judgement.ashtakavargaGuard).length > 0 && (
             <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(245,158,11,0.15)', borderRadius:8, padding:'9px 12px' }}>
               <p style={{ color:'#F59E0B', fontSize:9.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>AV Guard</p>
               <p style={{ fontSize:11, color:DIM }}>
-                {judgement.ashtakavargaGuard.majorDosha ? '⚠ major dosha' : '✓ clear'}
-                {judgement.ashtakavargaGuard.reliability ? ` · ${Object.keys(judgement.ashtakavargaGuard.reliability).length} planets` : ''}
+                {Object.values(judgement.ashtakavargaGuard).some(p => p?.majorDosha) ? '⚠ major dosha' : '✓ clear'}
+                {` · ${Object.keys(judgement.ashtakavargaGuard).length} planets`}
               </p>
             </div>
           )}

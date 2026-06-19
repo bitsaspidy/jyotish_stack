@@ -90,7 +90,8 @@ async function ensureCalculatedChart(profile) {
     existing?.reports?.event_timing?.windows?.length &&
     existing?.life_report?.sections &&
     existing?.varga_analysis?.d1?.role_en &&
-    existing?.varga_analysis?.d60?.past_life_reading
+    existing?.varga_analysis?.d60?.past_life_reading &&
+    existing?.judgement?.version === 'judgement-priority-v2'
   ) return existing;
   return calcAndSave(profile);
 }

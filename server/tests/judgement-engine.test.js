@@ -379,3 +379,254 @@ test('CAT-10 graceful fallback: missing ascendant returns empty result', () => {
   assert.ok(Array.isArray(report.areas), 'Empty result must still have areas array');
   assert.equal(report.overallScore, 50, 'Empty result should default to score 50');
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 11: Version Marker (freshness tracking)
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-11 version: user output carries judgement-priority-v2 marker', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: false });
+  assert.equal(report.version, 'judgement-priority-v2',
+    'User report must carry version = judgement-priority-v2 for stale-chart detection');
+});
+
+test('CAT-11 version: empty result (no ascendant) also carries version marker', () => {
+  const report = generateJudgement({}, {}, { lang: 'en', admin: false });
+  assert.equal(report.version, 'judgement-priority-v2',
+    'Empty/fallback result must also carry version marker');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 12: FORBIDDEN_USER export and correctness
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-12 conflict resolver: FORBIDDEN_USER is exported as a non-empty RegExp array', () => {
+  assert.ok(Array.isArray(FORBIDDEN_USER), 'FORBIDDEN_USER must be an exported array');
+  assert.ok(FORBIDDEN_USER.length >= 8,
+    `FORBIDDEN_USER must have at least 8 patterns, got: ${FORBIDDEN_USER.length}`);
+  for (const pattern of FORBIDDEN_USER) {
+    assert.ok(pattern instanceof RegExp,
+      `Every FORBIDDEN_USER entry must be a RegExp, got: ${typeof pattern}`);
+  }
+});
+
+test('CAT-12 conflict resolver: FORBIDDEN_USER matches known fatalistic phrases', () => {
+  const english = [
+    'spouse death', 'divorce guaranteed', 'no children', 'no child possible',
+    'miscarriage will happen', 'disease confirm', 'you are cursed', 'dosha confirm',
+  ];
+  const hindi = ['पति की मृत्यु', 'तलाक होगा', 'संतान नहीं होगी', 'मिसकैरेज होगा'];
+
+  for (const phrase of [...english, ...hindi]) {
+    const matched = FORBIDDEN_USER.some(p => p.test(phrase));
+    assert.ok(matched, `FORBIDDEN_USER must catch fatalistic phrase: "${phrase}"`);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 13: Yoga gating — Lagna strength multiplier
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-13 yoga gating: Moon in 6th (dusthana) reduces yogaConfidenceMultiplier below 1.0', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const lagna = getLagnaStrength(chart, rahulProfile);
+  // Reference chart: Moon (Cancer lagna lord) is in 6th house (dusthana) → weak lagna
+  assert.ok(lagna.yogaConfidenceMultiplier < 1.0,
+    `Moon in dusthana must reduce yogaConfidenceMultiplier < 1.0, got: ${lagna.yogaConfidenceMultiplier}`);
+});
+
+test('CAT-13 yoga gating: exalted Moon (lagna lord in Taurus) gives yogaConfidenceMultiplier >= 1.0', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Cancer lagna lord = Moon. Moon exalted = Taurus (rashi 2) = house 11 for Cancer lagna.
+  // Must also set dignity string (normDignity reads planetObj.dignity, not rashi_num)
+  // and clear house_num so houseOf() re-computes from rashi_num.
+  mockChart.planets.Moon = { ...mockChart.planets.Moon, rashi_num: 2, dignity: 'Exaltation' };
+  delete mockChart.planets.Moon.house_num;
+  const lagna = getLagnaStrength(mockChart, rahulProfile);
+  assert.ok(lagna.yogaConfidenceMultiplier >= 1.0,
+    `Exalted Moon (lagna lord, dignityScore=92) must give yogaConfidenceMultiplier >= 1.0, got: ${lagna.yogaConfidenceMultiplier}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 14: 11th house gains — debilitation and amplifier
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-14 gains: debilitated 11th lord (Venus in Virgo) adds debilitation blocker', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Cancer lagna: 11th house = Taurus (rashi 2), lord = Venus.
+  // Venus debilitated in Virgo (rashi 6).
+  // Must also inject dignity string — normDignity() reads planetObj.dignity, not rashi_num.
+  mockChart.planets.Venus = { ...mockChart.planets.Venus, rashi_num: 6, dignity: 'Debilitation' };
+  delete mockChart.planets.Venus.house_num;
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const gains = report.rawGains;
+
+  assert.ok(gains.blockers.some(b => /debilitat|Venus/i.test(b)),
+    `Debilitated Venus (11th lord) must add blocker. Got: ${JSON.stringify(gains.blockers)}`);
+  assert.ok(gains.gainPotentialScore < 72,
+    `Debilitated 11th lord must reduce gainPotentialScore below 72, got: ${gains.gainPotentialScore}`);
+});
+
+test('CAT-14 gains: benefic planet in 11th contributes positive amplifier', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: true });
+  const gains = report.rawGains;
+  // Reference chart has Sun in 11th (house 11 for Cancer lagna = Taurus = rashi 2)
+  assert.ok(gains.gainPotentialScore >= 40,
+    `Sun in 11th must contribute decent gainPotentialScore (>=40), got: ${gains.gainPotentialScore}`);
+  assert.ok(typeof gains.summaryHi === 'string' && gains.summaryHi.length > 0,
+    'Hindi gains summary must be a non-empty string');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 15: Ashtakavarga Guard — affliction detection
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-15 av guard: Moon conjunct Rahu is flagged as unreliable / majorDosha', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Place Rahu on same rashi as Moon (Sagittarius = rashi 9) → Grahan Yoga → Moon unreliable
+  const moonRashi = mockChart.planets.Moon.rashi_num;
+  mockChart.planets.Rahu = { ...mockChart.planets.Rahu, rashi_num: moonRashi };
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const av = report.avGuard;
+
+  assert.ok(av.Moon.majorDosha === true || av.Moon.reliable === false,
+    `Moon+Rahu must mark Moon as unreliable/majorDosha. Got: ${JSON.stringify(av.Moon)}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 16: Rahu maturity gate in 11th house
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-16 rahu: 11th Rahu with age 36 (< 42) shows conditional potential and maturity restriction', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Cancer lagna: 11th house = Taurus (rashi 2)
+  mockChart.planets.Rahu = { ...mockChart.planets.Rahu, rashi_num: 2 };
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const rahu = report.rawRahu;
+
+  assert.equal(rahu.house, 11, 'Rahu must be in 11th house');
+  assert.equal(rahu.pastMaturityAge, false,
+    'Born 1990 → age 36 in 2026 must NOT pass the 42 maturity gate');
+  assert.equal(rahu.potential, 'conditional',
+    '11th house Rahu potential must be "conditional"');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 17: Marriage — 7th lord placements
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-17 marriage: 7th lord (Saturn) in 10th house (kendra) detected and gives positive signal', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Cancer lagna: 7th lord = Saturn; 10th house = Aries (rashi 1)
+  mockChart.planets.Saturn = { ...mockChart.planets.Saturn, rashi_num: 1 };
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const marriage = report.rawMarriage;
+
+  assert.equal(marriage.sevenLordHouse, 10,
+    'Saturn in Aries (rashi 1) = house 10 for Cancer lagna');
+  assert.ok(marriage.amplifiers.some(a => /10|kendra/i.test(a)) || marriage.score >= 45,
+    `7th lord in kendra (10th) must add amplifier or decent score. Amplifiers: ${JSON.stringify(marriage.amplifiers)}`);
+});
+
+test('CAT-17 marriage: Paap Kartari around 7th lord lowers marriage score or adds blockers', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Place Saturn (7th lord) in Leo (rashi 5 = house 2 for Cancer lagna)
+  // Bracket with malefics: Mars in Cancer (rashi 4) and Ketu in Virgo (rashi 6)
+  mockChart.planets.Saturn = { ...mockChart.planets.Saturn, rashi_num: 5 };
+  mockChart.planets.Mars   = { ...mockChart.planets.Mars,   rashi_num: 4 };
+  mockChart.planets.Ketu   = { ...mockChart.planets.Ketu,   rashi_num: 6 };
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const marriage = report.rawMarriage;
+
+  assert.ok(marriage.score <= 72 || marriage.blockers.length > 0,
+    `PPK around 7th lord must reduce score or add blockers. Score: ${marriage.score}`);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 18: Navamsha combined status
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-18 navamsha: combinedStatus is always a valid enumerated value', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: true });
+  const nav = report.rawNavamsha;
+
+  const valid = ['strong', 'improving', 'needs-depth', 'challenging', 'balanced', 'needs-care'];
+  assert.ok(valid.includes(nav.combinedStatus),
+    `navamsha.combinedStatus must be a valid enum value, got: "${nav.combinedStatus}"`);
+});
+
+test('CAT-18 navamsha: age 36 with weak D1 lagna produces improvement or uncertainty theme', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  // Reference chart: weak D1 (Moon in 6th), age 36 → D9 activated
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: true });
+  const nav = report.rawNavamsha;
+
+  assert.equal(nav.d9Activated, true, 'D9 must be activated at age 36');
+  // Weak D1 + active D9 = improving or needs-depth (not 'strong')
+  assert.ok(nav.combinedStatus !== 'strong',
+    `Weak D1 + activated D9 must not produce "strong" combined status, got: "${nav.combinedStatus}"`);
+  assert.ok(typeof nav.summaryHi === 'string' && nav.summaryHi.length > 0,
+    'Navamsha summaryHi must be a non-empty string');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 19: Children — Ketu in 5th uses safe delay language
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-19 children: Ketu in 5th adds blocker with safe delay-not-denial language', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const mockChart = JSON.parse(JSON.stringify(chart));
+  // Cancer lagna: 5th house = Scorpio (rashi 8)
+  mockChart.planets.Ketu = { ...mockChart.planets.Ketu, rashi_num: 8 };
+
+  const report = generateJudgement(mockChart, rahulProfile, { lang: 'hi', admin: true });
+  const children = report.rawChildren;
+
+  assert.ok(children.blockers.some(b => /Ketu|5th/i.test(b)),
+    `Ketu in 5th must add a blocker. Got: ${JSON.stringify(children.blockers)}`);
+  // Safe language — never deny children
+  assert.ok(!/no\s+child(ren)?/i.test(children.summaryEn),
+    `Ketu in 5th English summary must not say "no children": "${children.summaryEn}"`);
+  assert.ok(!/संतान\s+नहीं\s+होगी/.test(children.summaryHi),
+    `Ketu in 5th Hindi summary must not say "संतान नहीं होगी": "${children.summaryHi}"`);
+  // Must note delay/care, not denial
+  assert.ok(/delay|care|timing|patience|sāvdhānī|सावधानी|देरी|ध्यान/i.test(children.summaryEn + children.summaryHi),
+    'Ketu in 5th summary must mention delay/care language, not denial');
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Category 20: Output cleanliness — no forbidden labels, no English leakage in Hindi
+// ─────────────────────────────────────────────────────────────────────────────
+test('CAT-20 output: Hindi mode area summaries contain Devanagari (no full English leak)', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: false });
+
+  const devanagari = /[ऀ-ॿ]/;
+  for (const area of (report.areas || [])) {
+    const hiSummary = area.userSummaryHi || '';
+    if (hiSummary.length > 20) {
+      assert.ok(devanagari.test(hiSummary),
+        `Hindi summary for area "${area.areaKey}" has no Devanagari — English paragraph leak: "${hiSummary.slice(0, 80)}"`);
+    }
+  }
+});
+
+test('CAT-20 output: area status values are never forbidden labels (positive/negative/neutral/H1/H7)', () => {
+  const chart = calculateVedicChart(rahulBirth);
+  const report = generateJudgement(chart, rahulProfile, { lang: 'hi', admin: false });
+
+  const forbidden = new Set(['positive', 'negative', 'neutral', 'H1', 'H7', 'raw']);
+  for (const area of (report.areas || [])) {
+    assert.ok(!forbidden.has(area.status),
+      `Area "${area.areaKey}" must not use forbidden status: "${area.status}"`);
+    assert.ok(!forbidden.has(area.areaKey),
+      `Area key must not be a forbidden label, got: "${area.areaKey}"`);
+  }
+  assert.ok(!forbidden.has(report.overallStatus),
+    `overallStatus must not be a forbidden label: "${report.overallStatus}"`);
+});
