@@ -19,6 +19,7 @@ const { generateVarshphal, compactVarshphal } = require('../services/helpers/var
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
 const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
 const { generateJudgement } = require('../services/judgement-engine');
+const { composeKundliUserSummary } = require('../services/kundli-user-summary.service');
 
 router.use(authenticate);
 
@@ -558,7 +559,8 @@ router.get('/:id', async (req, res) => {
   profile.placement_narratives   = buildPlacementNarratives(cd);
   profile.asta_vakri        = await fetchAstaVakriAnalysis(cd);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
-  profile.judgement = generateJudgement(cd, profile, { lang: 'hi', admin: false });
+  profile.judgement    = generateJudgement(cd, profile, { lang: 'hi', admin: false });
+  profile.user_summary = composeKundliUserSummary(cd, profile.judgement);
 
   return ok(res, { profile });
 });
@@ -608,7 +610,8 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.placement_narratives   = buildPlacementNarratives(chart);
   freshProfile.asta_vakri        = await fetchAstaVakriAnalysis(chart);
   if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
-  freshProfile.judgement = generateJudgement(chart, { date_of_birth: freshProfile.date_of_birth, gender: freshProfile.gender }, { lang: 'hi', admin: false });
+  freshProfile.judgement    = generateJudgement(chart, { date_of_birth: freshProfile.date_of_birth, gender: freshProfile.gender }, { lang: 'hi', admin: false });
+  freshProfile.user_summary = composeKundliUserSummary(chart, freshProfile.judgement);
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });

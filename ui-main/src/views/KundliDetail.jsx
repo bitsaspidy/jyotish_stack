@@ -55,6 +55,7 @@ import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import JudgementPanel      from '../components/kundli/JudgementPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
+import KundliSummaryView  from '../components/kundli/KundliSummaryView';
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -285,10 +286,29 @@ export default function KundliDetail({ uuid }) {
 
         {/* ══ TAB: YOUR KUNDLI ══════════════════════════════════════════════ */}
         {activeTab === 'kundli' && (
-          <TodayPredictionPanel uuid={kundli?.uuid || uuid} lang={lang} />
+          <>
+            <TodayPredictionPanel uuid={kundli?.uuid || uuid} lang={lang} />
+
+            {/* Level 1 + Level 2: Human-friendly summary */}
+            {kundli?.user_summary && (
+              <div className="mb-6">
+                <KundliSummaryView userSummary={kundli.user_summary} lang={lang} />
+              </div>
+            )}
+          </>
         )}
 
-        {activeTab === 'kundli' && (
+        {/* Technical Section Accordions — collapsed by default */}
+        {activeTab === 'kundli' && chart && (
+          <div>
+            <details style={{ marginBottom:12, border:'1px solid rgba(212,175,55,0.14)', borderRadius:12, overflow:'hidden' }}>
+              <summary style={{ padding:'12px 18px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.05)', fontWeight:700, fontSize:12, color:'#D4AF37', fontFamily:'var(--font-devanagari),sans-serif' }}>
+                <span>🔯 {lang==='hi' ? 'जन्म चार्ट और ग्रह विवरण' : 'Birth Charts & Planet Details'}</span>
+                <span style={{ fontSize:10, color:'rgba(245,240,232,0.4)' }}>▾</span>
+              </summary>
+              <div style={{ padding:16 }}>
+
+        {/* ── original 2-column layout ── */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
           {/* ── Left col: Chart ────────────────────────────────────────────── */}
@@ -856,20 +876,38 @@ export default function KundliDetail({ uuid }) {
 
           </div>
         </div>
-        )} {/* end kundli tab */}
 
-        {/* Chara Karakas + Sade Sati Journey (kundli tab) */}
-        {activeTab === 'kundli' && (
-          <>
-            <AvakahadaPanel chart={chart} lang={lang} />
-            <PlacementNarrativesPanel data={kundli?.placement_narratives} lang={lang} />
-            <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
-            <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
-            <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
-            <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
-            <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
-            <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
-          </>
+              </div>
+            </details>
+
+            {/* Life Periods (Dasha) */}
+            <details style={{ marginBottom:12, border:'1px solid rgba(212,175,55,0.14)', borderRadius:12, overflow:'hidden' }}>
+              <summary style={{ padding:'12px 18px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.05)', fontWeight:700, fontSize:12, color:'#D4AF37', fontFamily:'var(--font-devanagari),sans-serif' }}>
+                <span>⏳ {lang==='hi' ? 'जीवन काल (दशा)' : 'Life Periods (Dasha)'}</span>
+                <span style={{ fontSize:10, color:'rgba(245,240,232,0.4)' }}>▾</span>
+              </summary>
+              <div style={{ padding:16 }}>
+                <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
+                <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
+              </div>
+            </details>
+
+            {/* Classical Details */}
+            <details style={{ marginBottom:12, border:'1px solid rgba(212,175,55,0.14)', borderRadius:12, overflow:'hidden' }}>
+              <summary style={{ padding:'12px 18px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.05)', fontWeight:700, fontSize:12, color:'#D4AF37', fontFamily:'var(--font-devanagari),sans-serif' }}>
+                <span>📜 {lang==='hi' ? 'शास्त्रीय विवरण' : 'Classical Details'}</span>
+                <span style={{ fontSize:10, color:'rgba(245,240,232,0.4)' }}>▾</span>
+              </summary>
+              <div style={{ padding:16 }}>
+                <AvakahadaPanel chart={chart} lang={lang} />
+                <PlacementNarrativesPanel data={kundli?.placement_narratives} lang={lang} />
+                <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
+                <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
+                <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
+                <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
+              </div>
+            </details>
+          </div>
         )}
 
         {/* ══ TAB: LIFE REPORT ════════════════════════════════════════════ */}
