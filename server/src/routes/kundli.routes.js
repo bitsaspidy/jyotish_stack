@@ -21,6 +21,7 @@ const { generateLifeReport, generateDailyGuidance } = require('../services/repor
 const { generateJudgement } = require('../services/judgement-engine');
 const { composeKundliUserSummary } = require('../services/kundli-user-summary.service');
 const { composeLifeReportUserFriendly } = require('../services/report-engine/life-report-humanizer');
+const { composeStrengthUserFriendly }   = require('../services/report-engine/strength-humanizer');
 
 router.use(authenticate);
 
@@ -706,7 +707,9 @@ router.get('/:id/strength', async (req, res) => {
     const strength = computeKundliStrength(chart);
     if (!strength) return fail(res, 'Unable to compute strength', 500);
 
-    return ok(res, { strength });
+    const strength_friendly = composeStrengthUserFriendly(strength, null, chart, {});
+
+    return ok(res, { strength, strength_friendly });
   } catch (e) {
     console.error('[Strength] Error:', e.message);
     return fail(res, 'Unable to generate strength report', 500);

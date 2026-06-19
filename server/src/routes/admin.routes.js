@@ -11,6 +11,7 @@ const {
   buildFullKundliResponse, generateVarshphal, computeKundliStrength,
   getOrCreateTodayPrediction, fetchPredictionHistory, buildKundliReportExtras,
 } = require('../services/kundli-admin.service');
+const { composeStrengthUserFriendly } = require('../services/report-engine/strength-humanizer');
 const { kundliReportPdf } = require('../services/report.service');
 const { resetInstance: resetRazorpay } = require('../services/razorpay.service');
 
@@ -383,7 +384,8 @@ router.get('/kundlis/:uuid/strength', ah(async (req, res) => {
   if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
   const strength = computeKundliStrength(chart);
   if (!strength) return fail(res, 'Unable to compute strength', 500);
-  return ok(res, { strength });
+  const strength_friendly = composeStrengthUserFriendly(strength, null, chart, {});
+  return ok(res, { strength, strength_friendly });
 }));
 
 // Today's personal prediction (persisted in predictions table)

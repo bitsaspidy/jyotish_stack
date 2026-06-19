@@ -92,14 +92,19 @@ function GSection({ title, items }) {
 
 // ─── Admin Strength Section ───────────────────────────────────────────────────
 function AdminStrengthSection({ uuid, lang = 'en' }) {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
+  const [data,     setData]     = useState(null);
+  const [sf,       setSf]       = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(false);
+  const [viewMode, setViewMode] = useState('technical'); // admin default
 
   useEffect(() => {
     setLoading(true);
     adminApi.get(`/admin/kundlis/${uuid}/strength`)
-      .then(({ data: d }) => setData(d.strength || null))
+      .then(({ data: d }) => {
+        setData(d.strength || null);
+        setSf(d.strength_friendly || null);
+      })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [uuid]);
@@ -112,15 +117,109 @@ function AdminStrengthSection({ uuid, lang = 'en' }) {
   const lbl   = data.label || {};
   const scoreColor = lbl.color || '#D4AF37';
 
+  if (sf && viewMode === 'friendly') {
+    const scoreColor = s => s >= 75 ? '#10B981' : s >= 60 ? '#22C55E' : s >= 45 ? '#F59E0B' : s >= 30 ? '#F97316' : '#EF4444';
+    return (
+      <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:24 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+          <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:16, fontWeight:700 }}>
+            🌟 {T('User-Friendly Strength View', 'उपयोगकर्ता-अनुकूल बल दृश्य')}
+          </h2>
+          <button onClick={() => setViewMode('technical')} style={{ fontSize:11, color:'#64748B', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:7, padding:'5px 12px', cursor:'pointer' }}>
+            ⚙ {T('Technical view', 'तकनीकी दृश्य')}
+          </button>
+        </div>
+        {/* Overall */}
+        <div style={{ padding:'14px 16px', background:`${scoreColor(sf.overall?.score)}08`, border:`1px solid ${scoreColor(sf.overall?.score)}22`, borderRadius:12, marginBottom:16 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
+            <div style={{ fontSize:28, fontWeight:900, color:scoreColor(sf.overall?.score), lineHeight:1 }}>{sf.overall?.score}</div>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:scoreColor(sf.overall?.score) }}>{T(sf.overall?.labelEn, sf.overall?.labelHi)}</div>
+              <div style={{ fontSize:10, color:'#475569' }}>{T('Overall Kundli', 'समग्र कुंडली')}</div>
+            </div>
+          </div>
+          <p style={{ fontSize:12, color:'rgba(245,240,232,0.82)', lineHeight:1.8, margin:'0 0 6px' }}>{T(sf.overall?.simpleMeaningEn, sf.overall?.simpleMeaningHi)}</p>
+          <p style={{ fontSize:11, color:'rgba(245,240,232,0.45)', fontStyle:'italic', margin:0 }}>→ {T(sf.overall?.adviceEn, sf.overall?.adviceHi)}</p>
+        </div>
+        {/* Score cards */}
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:16 }}>
+          {(sf.scoreBreakdownCards || []).map(c => (
+            <div key={c.key} style={{ flex:'1 1 120px', padding:'10px 12px', background:'rgba(255,255,255,0.025)', border:`1px solid ${scoreColor(c.score)}22`, borderRadius:9 }}>
+              <div style={{ fontSize:9, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:4 }}>{T(c.titleEn, c.titleHi)}</div>
+              <div style={{ fontSize:20, fontWeight:900, color:scoreColor(c.score), lineHeight:1, marginBottom:4 }}>{c.score}</div>
+              <p style={{ fontSize:10, color:'rgba(245,240,232,0.55)', lineHeight:1.5, margin:0 }}>{T(c.simpleMeaningEn, c.simpleMeaningHi)}</p>
+            </div>
+          ))}
+        </div>
+        {/* Yoga summary */}
+        {sf.yogaSummaryEn && (
+          <div style={{ padding:'10px 14px', background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:9, marginBottom:16 }}>
+            <p style={{ fontSize:11, color:'rgba(245,240,232,0.75)', lineHeight:1.8, margin:0 }}>{T(sf.yogaSummaryEn, sf.yogaSummaryHi)}</p>
+          </div>
+        )}
+        {/* Strengths + needs care */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+          <div>
+            <p style={{ color:'rgba(16,185,129,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>{T('Where life supports you', 'जहां जीवन साथ देता है')}</p>
+            {(sf.topStrengths || []).map(item => {
+              const meta = PLANET_META[item.planet] || { icon:'●', color:'#94A3B8', hi:item.planet };
+              return (
+                <div key={item.planet} style={{ display:'flex', gap:8, marginBottom:8, padding:'8px 10px', background:'rgba(16,185,129,0.05)', border:'1px solid rgba(16,185,129,0.15)', borderRadius:8 }}>
+                  <span style={{ color:meta.color, fontSize:14 }}>{meta.icon}</span>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:meta.color }}>{T(item.planet, item.planetHi)}</div>
+                    <p style={{ fontSize:10, color:'rgba(245,240,232,0.6)', lineHeight:1.5, margin:0 }}>{T(item.simpleMeaningEn, item.simpleMeaningHi)}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {!sf.topStrengths?.length && <p style={{ fontSize:11, color:'#475569' }}>{T('No strong planets identified.', 'कोई प्रबल ग्रह नहीं मिला।')}</p>}
+          </div>
+          <div>
+            <p style={{ color:'rgba(245,158,11,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>{T('Areas that benefit from care', 'जिन्हें देखभाल से लाभ होगा')}</p>
+            {(sf.needsCare || []).map(item => {
+              const meta = PLANET_META[item.planet] || { icon:'●', color:'#94A3B8', hi:item.planet };
+              return (
+                <div key={item.planet} style={{ display:'flex', gap:8, marginBottom:8, padding:'8px 10px', background:'rgba(245,158,11,0.05)', border:'1px solid rgba(245,158,11,0.15)', borderRadius:8 }}>
+                  <span style={{ color:meta.color, fontSize:14 }}>{meta.icon}</span>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:meta.color }}>{T(item.planet, item.planetHi)}</div>
+                    <p style={{ fontSize:10, color:'rgba(245,240,232,0.6)', lineHeight:1.5, margin:0 }}>{T(item.simpleMeaningEn, item.simpleMeaningHi)}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {!sf.needsCare?.length && <p style={{ fontSize:11, color:'#475569' }}>{T('No planets need special attention.', 'कोई ग्रह विशेष ध्यान नहीं चाहता।')}</p>}
+          </div>
+        </div>
+        {/* Dasha summary */}
+        {sf.dashaSummary && (
+          <div style={{ padding:'12px 14px', background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:10 }}>
+            <p style={{ fontSize:10, color:'rgba(212,175,55,0.6)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>{T('Current life phase', 'वर्तमान जीवन चरण')}</p>
+            <p style={{ fontSize:12, color:'rgba(245,240,232,0.82)', lineHeight:1.8, margin:'0 0 6px' }}>{T(sf.dashaSummary.simpleMeaningEn, sf.dashaSummary.simpleMeaningHi)}</p>
+            <p style={{ fontSize:11, color:'rgba(245,240,232,0.45)', fontStyle:'italic', margin:0 }}>→ {T(sf.dashaSummary.adviceEn, sf.dashaSummary.adviceHi)}</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:16, padding:24 }}>
 
       {/* Header + Overall Score Ring */}
       <div style={{ display:'flex', alignItems:'center', gap:20, marginBottom:20, flexWrap:'wrap' }}>
         <div style={{ flex:1 }}>
-          <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:16, fontWeight:700, marginBottom:4 }}>
-            ⚡ {T('Kundli Strength Analysis', 'कुंडली बल विश्लेषण')}
-          </h2>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+            <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:16, fontWeight:700, marginBottom:4 }}>
+              ⚡ {T('Kundli Strength Analysis', 'कुंडली बल विश्लेषण')}
+            </h2>
+            {sf && (
+              <button onClick={() => setViewMode('friendly')} style={{ fontSize:11, color:'#10B981', background:'rgba(16,185,129,0.07)', border:'1px solid rgba(16,185,129,0.2)', borderRadius:7, padding:'5px 12px', cursor:'pointer' }}>
+                🌟 {T('User view', 'उपयोगकर्ता दृश्य')}
+              </button>
+            )}
+          </div>
           <p style={{ color:'rgba(245,240,232,0.45)', fontSize:12 }}>
             {T(`${data.yoga_count ?? 0} yogas · ${data.dosha_count ?? 0} doshas`, `${data.yoga_count ?? 0} योग · ${data.dosha_count ?? 0} दोष`)}
           </p>
