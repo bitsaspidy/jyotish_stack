@@ -85,9 +85,12 @@ export default function Navbar() {
           </button>
 
           {user ? (
-            <div className="hidden md:flex items-center gap-3">
-              <Link href="/dashboard"
-                className="text-sm text-ivory/70 hover:text-gold transition-colors">
+            <div className="hidden md:flex items-center gap-2">
+              <Link href="/account"
+                className="text-sm text-ivory/70 hover:text-gold transition-colors flex items-center gap-1.5">
+                <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.35)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#D4AF37' }}>
+                  {user.name?.[0]?.toUpperCase() || '?'}
+                </span>
                 {user.name.split(' ')[0]}
               </Link>
               <button onClick={handleLogout}
@@ -146,10 +149,22 @@ export default function Navbar() {
                   {lang === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
                 </button>
                 {user ? (
-                  <button onClick={handleLogout}
-                    className="btn-outline-gold text-xs py-2.5 w-full text-center">
-                    Logout
-                  </button>
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link href="/dashboard" onClick={() => setMenuOpen(false)}
+                        className="text-xs border border-gold/25 text-ivory/70 hover:text-gold px-3 py-2.5 rounded-sm text-center transition-colors">
+                        {lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
+                      </Link>
+                      <Link href="/account" onClick={() => setMenuOpen(false)}
+                        className="text-xs border border-gold/35 text-gold/80 hover:text-gold px-3 py-2.5 rounded-sm text-center transition-colors">
+                        {lang === 'hi' ? 'प्रोफाइल' : 'My Account'}
+                      </Link>
+                    </div>
+                    <button onClick={handleLogout}
+                      className="btn-outline-gold text-xs py-2.5 w-full text-center">
+                      {lang === 'hi' ? 'बाहर' : 'Logout'}
+                    </button>
+                  </>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Link href="/login" onClick={() => setMenuOpen(false)}
