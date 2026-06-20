@@ -80,7 +80,7 @@ router.get('/users', ah(async (req, res) => {
   const status = req.query.status || '';
   const offset = (page - 1) * limit;
 
-  let q = db('users').select('id', 'uuid', 'name', 'email', 'phone', 'role', 'is_active', 'email_verified', 'preferred_language', 'created_at');
+  let q = db('users').select('id', 'uuid', 'name', 'email', 'phone', 'role', 'plan', 'is_active', 'email_verified', 'preferred_language', 'created_at');
 
   if (search) q = q.where((b) => b.where('name', 'like', `%${search}%`).orWhere('email', 'like', `%${search}%`));
   if (role)   q = q.where({ role });
@@ -96,7 +96,7 @@ router.get('/users', ah(async (req, res) => {
 
 router.get('/users/:id', ah(async (req, res) => {
   const user = await db('users').where({ id: req.params.id })
-    .select('id', 'uuid', 'name', 'email', 'phone', 'role', 'is_active', 'email_verified', 'preferred_language', 'avatar_url', 'meta', 'created_at', 'updated_at').first();
+    .select('id', 'uuid', 'name', 'email', 'phone', 'role', 'plan', 'is_active', 'email_verified', 'preferred_language', 'avatar_url', 'meta', 'created_at', 'updated_at').first();
   if (!user) return fail(res, 'User not found', 404);
   return ok(res, { user });
 }));
