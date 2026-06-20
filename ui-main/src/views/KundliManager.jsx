@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
 import { predictionHref } from '../lib/kundliLinks';
+import UpgradeModal, { PLAN_LIMITS } from '../components/UpgradeModal';
 
 const emptyForm = {
   name: '',
@@ -65,9 +66,10 @@ export default function KundliManager({ startWithForm = false }) {
   const router = useRouter();
   const [profiles, setProfiles] = useState([]);
   const [fetching, setFetching] = useState(true);
-  const [showForm, setShowForm] = useState(startWithForm);
+  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [locQuery,   setLocQuery]   = useState('');
   const [locResults, setLocResults] = useState([]);
@@ -89,6 +91,10 @@ export default function KundliManager({ startWithForm = false }) {
     if (!loading && !user) router.push('/login');
   }, [loading, user, router]);
 
+  // Plan limit derived client-side (same values as server PLAN_PROFILE_LIMITS)
+  const planLimit = user ? (user.role === 'admin' ? Infinity : (PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.basic)) : 1;
+  const canCreate = profiles.length < planLimit;
+
   const loadProfiles = async () => {
     setFetching(true);
     try {
@@ -104,6 +110,19 @@ export default function KundliManager({ startWithForm = false }) {
   useEffect(() => {
     if (user) loadProfiles();
   }, [user]);
+
+  // If page was opened directly via /kundli/new, check limit after profiles load
+  useEffect(() => {
+    if (!fetching && startWithForm) {
+      if (canCreate) setShowForm(true);
+      else setShowUpgradeModal(true);
+    }
+  }, [fetching]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleNewKundliClick = () => {
+    if (!canCreate) { setShowUpgradeModal(true); return; }
+    setShowForm((v) => !v);
+  };
 
   const stats = useMemo(() => {
     const calculated = profiles.filter((profile) => profile?.chart_summary?.calculated || !!profile.calculated_data).length;
@@ -198,6 +217,7 @@ export default function KundliManager({ startWithForm = false }) {
   }
 
   return (
+    <>
     <div className="relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={70} />
       <div className="relative z-10 max-w-8xl mx-auto">
@@ -211,9 +231,19 @@ export default function KundliManager({ startWithForm = false }) {
               {t('Create birth charts, review D1/D9 calculations, export reports, and use profiles for matching.', 'Birth chart banao, D1/D9 dekho, report export karo aur matching me use karo.')}
             </p>
           </div>
-          <button onClick={() => setShowForm((value) => !value)} className="btn-gold text-sm px-5 py-2">
-            {showForm ? t('Close Form', 'Form band') : t('New Kundli', 'Nayi Kundli')}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            {/* Usage indicator */}
+            {user && (
+              <p style={{ fontSize: 11, color: canCreate ? 'rgba(245,240,232,0.38)' : '#FBBF24', margin: 0 }}>
+                {planLimit === Infinity
+                  ? t('Unlimited kundlis', 'असीमित कुंडली')
+                  : `${profiles.length} / ${planLimit} ${t('used', 'उपयोग')}`}
+              </p>
+            )}
+            <button onClick={handleNewKundliClick} className={canCreate ? 'btn-gold text-sm px-5 py-2' : 'btn-outline-gold text-sm px-5 py-2'}>
+              {showForm ? t('Close Form', 'Form band') : (canCreate ? t('+ New Kundli', '+ नई कुंडली') : t('🔒 Limit Reached', '🔒 सीमा पूरी'))}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -366,7 +396,7 @@ export default function KundliManager({ startWithForm = false }) {
           <div className="card-royal p-10 text-center">
             <h2 className="font-serif text-gold text-2xl mb-2">{t('No Kundli yet', 'Abhi Kundli nahi hai')}</h2>
             <p className="text-ivory/55 text-sm mb-5">{t('Create the first profile to unlock D1, D9, dasha, gochar, predictions, and PDF exports.', 'Pehli profile banao aur D1, D9, dasha, gochar, predictions aur PDF export dekho.')}</p>
-            <button onClick={() => setShowForm(true)} className="btn-gold text-sm px-5 py-2">{t('Create First Kundli', 'Pehli Kundli')}</button>
+            <button onClick={handleNewKundliClick} className="btn-gold text-sm px-5 py-2">{t('Create First Kundli', 'Pehli Kundli')}</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,5 +439,16 @@ export default function KundliManager({ startWithForm = false }) {
         )}
       </div>
     </div>
+
+    {showUpgradeModal && (
+      <UpgradeModal
+        onClose={() => setShowUpgradeModal(false)}
+        used={profiles.length}
+        limit={planLimit === Infinity ? 9999 : planLimit}
+        plan={user?.plan || 'free'}
+        lang={lang}
+      />
+    )}
+    </>
   );
 }

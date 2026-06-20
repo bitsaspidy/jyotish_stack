@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
 import { predictionHref } from '../lib/kundliLinks';
+import UpgradeModal, { PLAN_LIMITS } from '../components/UpgradeModal';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -15,6 +16,15 @@ export default function Dashboard() {
   const router = useRouter();
   const [kundlis, setKundlis] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const planLimit = user ? (user.role === 'admin' ? Infinity : (PLAN_LIMITS[user.plan] ?? PLAN_LIMITS.basic)) : 1;
+  const canCreate = kundlis.length < planLimit;
+
+  const handleNewKundli = () => {
+    if (canCreate) router.push('/kundli/new');
+    else setShowUpgradeModal(true);
+  };
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
@@ -41,6 +51,7 @@ export default function Dashboard() {
   ];
 
   return (
+    <>
     <div className="relative min-h-screen pt-24 px-6 pb-20">
       <StarField count={80} />
       <div className="relative z-10 max-w-8xl mx-auto">
@@ -69,17 +80,17 @@ export default function Dashboard() {
           <div className="md:col-span-2">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-serif text-gold text-xl">{lang === 'hi' ? 'मेरी कुंडलियां' : 'My Kundlis'}</h2>
-              <Link href="/kundli/new" className="btn-outline-gold text-xs px-4 py-2">
-                + {lang === 'hi' ? 'नई कुंडली' : 'New Kundli'}
-              </Link>
+              <button onClick={handleNewKundli} className={canCreate ? 'btn-outline-gold text-xs px-4 py-2' : 'btn-outline-gold text-xs px-4 py-2 opacity-70'}>
+                {canCreate ? `+ ${lang === 'hi' ? 'नई कुंडली' : 'New Kundli'}` : `🔒 ${lang === 'hi' ? 'सीमा पूरी' : 'Limit Reached'}`}
+              </button>
             </div>
             {kundlis.length === 0 ? (
               <div className="card-royal p-10 text-center">
                 <p className="text-5xl mb-4">🪐</p>
                 <p className="text-ivory/60 mb-4">{lang === 'hi' ? 'कोई कुंडली नहीं बनाई गई' : 'No Kundli created yet'}</p>
-                <Link href="/kundli/new" className="btn-gold px-6 py-2 inline-block">
+                <button onClick={handleNewKundli} className="btn-gold px-6 py-2 inline-block">
                   {lang === 'hi' ? 'पहली कुंडली बनाएं' : 'Create First Kundli'}
-                </Link>
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -118,5 +129,16 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+
+    {showUpgradeModal && (
+      <UpgradeModal
+        onClose={() => setShowUpgradeModal(false)}
+        used={kundlis.length}
+        limit={planLimit === Infinity ? 9999 : planLimit}
+        plan={user?.plan || 'free'}
+        lang={lang}
+      />
+    )}
+  </>
   );
 }

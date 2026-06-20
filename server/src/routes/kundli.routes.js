@@ -27,7 +27,7 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 router.use(authenticate);
 
 // Max Kundli profiles a user may create, by plan tier
-const PLAN_PROFILE_LIMITS = { free: 1, basic: 1, premium: 5, yearly: 50 };
+const PLAN_PROFILE_LIMITS = { free: 1, basic: 3, premium: 10, yearly: 9999 };
 
 // ── Helper: run calculation and persist ──────────────────────────────────────
 async function calcAndSave(profile) {
@@ -330,6 +330,15 @@ router.post('/', async (req, res) => {
   calcAndSave(profile);   // fire-and-forget; result saved to DB
 
   return ok(res, { profile }, 'Kundli profile created. Chart calculation started.', 201);
+});
+
+// ── GET /api/kundli/usage — plan limit info ─────────────────────────────────
+router.get('/usage', async (req, res) => {
+  const plan  = req.user.plan || 'free';
+  const limit = req.user.role === 'admin' ? 9999 : (PLAN_PROFILE_LIMITS[plan] ?? PLAN_PROFILE_LIMITS.basic);
+  const { count } = await db('kundli_profiles').where({ user_id: req.user.id }).count('id as count').first();
+  const used = Number(count);
+  return ok(res, { plan, limit, used, canCreate: used < limit });
 });
 
 // ── GET /api/kundli — list ───────────────────────────────────────────────────
