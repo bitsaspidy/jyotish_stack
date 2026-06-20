@@ -1,9 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, useInView } from 'framer-motion';
+import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+import { useAuth } from '../context/AuthContext';
+import api from '../lib/api';
 
 const GOLD = '#D4AF37'; const IVORY = '#F5F0E8'; const DIM = 'rgba(245,240,232,0.45)';
 
@@ -55,6 +59,7 @@ const HOW_IT_WORKS = [
 
 const PLANS = [
   {
+    tier:'basic',
     en:'Basic', hi:'आधारभूत', price:'₹200', pe:'/month', ph:'/माह', hot:false,
     cta_en:'Get Started', cta_hi:'अभी शुरू करें',
     feats:[
@@ -66,6 +71,7 @@ const PLANS = [
     ],
   },
   {
+    tier:'premium',
     en:'Premium', hi:'प्रीमियम', price:'₹499', pe:'/month', ph:'/माह', hot:true,
     cta_en:'Get Premium', cta_hi:'प्रीमियम लें',
     feats:[
@@ -78,6 +84,7 @@ const PLANS = [
     ],
   },
   {
+    tier:'yearly',
     en:'Yearly', hi:'वार्षिक', price:'₹3,999', pe:'/year', ph:'/वर्ष', hot:false,
     cta_en:'Get Yearly', cta_hi:'वार्षिक योजना लें',
     feats:[
@@ -428,13 +435,104 @@ function ContactSection({ lang }) {
   );
 }
 
+// ── Razorpay script loader ────────────────────────────────────────────────────
+function loadRazorpay() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) { resolve(true); return; }
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.body.appendChild(s);
+  });
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home({ scrollTo }) {
   const { lang } = useLang();
+  const { user, setUser } = useAuth();
+  const router = useRouter();
   const pRef = useRef(null);
+  const [dbPlans, setDbPlans] = useState([]);
+  const [paying,  setPaying]  = useState(null); // tier key being purchased
+
   useEffect(() => {
     if (scrollTo === 'pricing') pRef.current?.scrollIntoView({ behavior:'smooth' });
   }, [scrollTo]);
+
+  // Fetch live plan catalogue once (public endpoint, no auth needed)
+  useEffect(() => {
+    api.get('/subscriptions/plans')
+      .then(({ data }) => setDbPlans(data.plans || []))
+      .catch(() => {});
+  }, []);
+
+  const handleUpgrade = async (tier) => {
+    if (!user) {
+      router.push('/register');
+      return;
+    }
+
+    const dbPlan = dbPlans.find(p => String(p.name).toLowerCase() === tier);
+    if (!dbPlan) {
+      toast.error('Plan details not loaded yet — please try again.');
+      return;
+    }
+
+    setPaying(tier);
+    try {
+      const { data: orderData } = await api.post('/subscriptions/order', { plan_id: dbPlan.id });
+
+      if (orderData.free) {
+        const { data: pd } = await api.get('/users/profile');
+        setUser(pd.user);
+        toast.success('Plan activated!');
+        setPaying(null);
+        return;
+      }
+
+      const loaded = await loadRazorpay();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Check your internet connection.');
+        setPaying(null);
+        return;
+      }
+
+      const options = {
+        key:         orderData.key_id,
+        amount:      orderData.amount,
+        currency:    orderData.currency,
+        order_id:    orderData.order_id,
+        name:        'Jyotish Stack AI',
+        description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan`,
+        prefill:     { name: user.name, email: user.email },
+        theme:       { color: '#D4AF37' },
+        handler: async (response) => {
+          try {
+            await api.post('/subscriptions/verify', {
+              order_id:        response.razorpay_order_id,
+              payment_id:      response.razorpay_payment_id,
+              signature:       response.razorpay_signature,
+              subscription_id: orderData.subscription_id,
+            });
+            const { data: pd } = await api.get('/users/profile');
+            setUser(pd.user);
+            toast.success('🎉 Plan activated! Enjoy your new features.');
+          } catch {
+            toast.error('Payment verified but activation failed — contact support.');
+          } finally {
+            setPaying(null);
+          }
+        },
+        modal: { ondismiss: () => setPaying(null) },
+      };
+
+      new window.Razorpay(options).open();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not initiate payment. Please try again.');
+      setPaying(null);
+    }
+  };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden"
@@ -580,12 +678,19 @@ export default function Home({ scrollTo }) {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register"
-                  className={`text-center py-3 rounded-sm text-sm font-semibold block transition-all ${
+                <button
+                  onClick={() => handleUpgrade(p.tier)}
+                  disabled={paying === p.tier}
+                  className={`text-center py-3 rounded-sm text-sm font-semibold block w-full transition-all ${
                     p.hot ? 'btn-gold shadow-gold' : 'btn-outline-gold'
-                  }`}>
-                  {lang === 'hi' ? p.cta_hi : p.cta_en}
-                </Link>
+                  } disabled:opacity-60 disabled:cursor-not-allowed`}>
+                  {paying === p.tier
+                    ? '⏳ Processing…'
+                    : (user
+                        ? (lang === 'hi' ? p.cta_hi : p.cta_en)
+                        : (lang === 'hi' ? 'अभी शुरू करें' : 'Get Started')
+                      )}
+                </button>
               </motion.div>
             ))}
           </motion.div>
