@@ -100,6 +100,16 @@ router.get('/verify-email', async (req, res) => {
   return ok(res, {}, 'Email verified successfully');
 });
 
+// POST /api/auth/resend-verification — authenticated user re-requests their own link
+router.post('/resend-verification', authenticate, async (req, res) => {
+  if (req.user.email_verified) return fail(res, 'Email is already verified', 400);
+  const token = randomToken();
+  await db('users').where({ id: req.user.id }).update({ email_verification_token: token });
+  const verifyUrl = `${process.env.APP_URL || 'https://jyotishstack.com'}/verify-email?token=${token}`;
+  await sendEmail({ to: req.user.email, template: 'verify_email', data: { verifyUrl } });
+  return ok(res, {}, 'Verification email sent');
+});
+
 // POST /api/auth/forgot-password
 router.post('/forgot-password', [body('email').isEmail().normalizeEmail({ gmail_remove_dots: false })], async (req, res) => {
   const { email } = req.body;

@@ -128,6 +128,20 @@ router.patch('/users/:id/plan', ah(async (req, res) => {
   return ok(res, { plan }, 'Plan updated');
 }));
 
+router.post('/users/:id/resend-verification', ah(async (req, res) => {
+  const user = await db('users').where({ id: req.params.id }).first();
+  if (!user) return fail(res, 'User not found', 404);
+  if (user.email_verified) return fail(res, 'User email is already verified', 400);
+  const { randomToken } = require('../utils/token');
+  const { sendEmail } = require('../services/email.service');
+  const token = randomToken();
+  await db('users').where({ id: user.id }).update({ email_verification_token: token });
+  const verifyUrl = `${process.env.APP_URL || 'https://jyotishstack.com'}/verify-email?token=${token}`;
+  await sendEmail({ to: user.email, template: 'verify_email', data: { verifyUrl } });
+  await logActivity(req, 'create', 'user', user.id, 'Admin resent verification email');
+  return ok(res, {}, 'Verification email sent');
+}));
+
 // Correct a user's email address (e.g. dots stripped by old normalizeEmail).
 // Lowercases but PRESERVES dots — does not re-normalize.
 router.patch('/users/:id/email', ah(async (req, res) => {

@@ -312,7 +312,7 @@ router.post('/', async (req, res) => {
     return fail(res, 'All birth details are required', 400);
 
   if (req.user.role !== 'admin') {
-    const limit = PLAN_PROFILE_LIMITS[req.user.plan] || PLAN_PROFILE_LIMITS.basic;
+    const limit = PLAN_PROFILE_LIMITS[req.user.plan ?? 'free'] ?? PLAN_PROFILE_LIMITS.free;
     const { count } = await db('kundli_profiles').where({ user_id: req.user.id }).count('id as count').first();
     if (Number(count) >= limit) {
       return fail(res, `Your plan allows up to ${limit} Kundli profile${limit > 1 ? 's' : ''}. Please upgrade to add more.`, 403);
@@ -335,7 +335,7 @@ router.post('/', async (req, res) => {
 // ── GET /api/kundli/usage — plan limit info ─────────────────────────────────
 router.get('/usage', async (req, res) => {
   const plan  = req.user.plan || 'free';
-  const limit = req.user.role === 'admin' ? 9999 : (PLAN_PROFILE_LIMITS[plan] ?? PLAN_PROFILE_LIMITS.basic);
+  const limit = req.user.role === 'admin' ? 9999 : (PLAN_PROFILE_LIMITS[plan] ?? PLAN_PROFILE_LIMITS.free);
   const { count } = await db('kundli_profiles').where({ user_id: req.user.id }).count('id as count').first();
   const used = Number(count);
   return ok(res, { plan, limit, used, canCreate: used < limit });

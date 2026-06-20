@@ -99,9 +99,10 @@ function CreateUserModal({ onClose, onCreated }) {
 
 // ── User Detail Slide-over ────────────────────────────────────────────────────
 function UserDetail({ user, onClose, onUpdated }) {
-  const [roleLoading, setRoleLoading] = useState(false);
-  const [planLoading, setPlanLoading] = useState(false);
-  const [toggling, setToggling] = useState(false);
+  const [roleLoading,    setRoleLoading]    = useState(false);
+  const [planLoading,    setPlanLoading]    = useState(false);
+  const [toggling,       setToggling]       = useState(false);
+  const [resendingVerif, setResendingVerif] = useState(false);
   const [email, setEmail]           = useState(user.email);
   const [editingEmail, setEditEmail] = useState(false);
   const [emailInput, setEmailInput] = useState(user.email);
@@ -140,6 +141,16 @@ function UserDetail({ user, onClose, onUpdated }) {
       onUpdated();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to update plan'); }
     finally { setPlanLoading(false); }
+  };
+
+  const resendVerification = async () => {
+    setResendingVerif(true);
+    try {
+      await adminApi.post(`/admin/users/${user.id}/resend-verification`);
+      toast.success('Verification email sent to ' + user.email);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send verification email');
+    } finally { setResendingVerif(false); }
   };
 
   const toggleActive = async () => {
@@ -220,7 +231,6 @@ function UserDetail({ user, onClose, onUpdated }) {
           {[
             ['Phone',    user.phone || '—'],
             ['Language', user.preferred_language?.toUpperCase() || '—'],
-            ['Verified', user.email_verified ? '✓ Yes' : '✗ No'],
             ['Joined',   new Date(user.created_at).toLocaleString('en-IN')],
             ['UUID',     user.uuid],
           ].map(([label, value]) => (
@@ -229,6 +239,24 @@ function UserDetail({ user, onClose, onUpdated }) {
               <p style={{ color:'#F5F0E8', fontSize:13, wordBreak:'break-all' }}>{value}</p>
             </div>
           ))}
+
+          {/* Email verification status */}
+          <div style={{ marginBottom:20, background: user.email_verified ? 'rgba(52,211,153,0.06)' : 'rgba(245,158,11,0.07)', border:`1px solid ${user.email_verified ? 'rgba(52,211,153,0.25)' : 'rgba(245,158,11,0.3)'}`, borderRadius:8, padding:'12px 14px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
+              <div>
+                <p style={{ color:'rgba(245,240,232,0.38)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:4 }}>Email Verified</p>
+                <span style={{ fontSize:12, fontWeight:600, color: user.email_verified ? '#34D399' : '#FBBF24' }}>
+                  {user.email_verified ? '✓ Verified' : '✗ Not Verified'}
+                </span>
+              </div>
+              {!user.email_verified && (
+                <button onClick={resendVerification} disabled={resendingVerif}
+                  style={{ padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:600, cursor:'pointer', background:'rgba(245,158,11,0.12)', border:'1px solid rgba(245,158,11,0.35)', color:'#FBBF24', opacity: resendingVerif ? 0.6 : 1, whiteSpace:'nowrap' }}>
+                  {resendingVerif ? '⏳ Sending…' : '📧 Resend Link'}
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Plan badge */}
           <div style={{ marginBottom:20 }}>
