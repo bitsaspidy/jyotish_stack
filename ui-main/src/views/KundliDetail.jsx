@@ -45,7 +45,8 @@ import CharaKarakaPanel     from '../components/CharaKarakaPanel';
 import SadeSatiPanel        from '../components/SadeSatiPanel';
 import YutiPanel            from '../components/YutiPanel';
 import AstaVakriPanel       from '../components/AstaVakriPanel';
-import RemedyManualPanel    from '../components/RemedyManualPanel';
+import RemedyManualPanel          from '../components/RemedyManualPanel';
+import PersonalizedRemedyPanel    from '../components/PersonalizedRemedyPanel';
 import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
 import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
@@ -1016,6 +1017,37 @@ export default function KundliDetail({ uuid }) {
               </div>
             </details>
 
+            {/* ── Remedy Plan ── */}
+            <details open style={{ marginBottom:12, border:'1px solid rgba(212,175,55,0.22)', borderRadius:12, overflow:'hidden' }}>
+              <summary style={{ padding:'12px 18px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.07)', fontWeight:700, fontSize:12, color:'#D4AF37', fontFamily:'var(--font-devanagari),sans-serif' }}>
+                <span>🪷 {lang==='hi' ? 'व्यक्तिगत उपाय योजना' : 'Remedy Plan'}</span>
+                <span style={{ fontSize:10, color:'rgba(245,240,232,0.4)' }}>▾</span>
+              </summary>
+              <div style={{ padding:16 }}>
+                {chart && (
+                  <PersonalizedRemedyPanel
+                    chart={chart}
+                    remedyManual={kundli?.remedy_manual}
+                    lang={lang}
+                    isAdmin={user?.role === 'admin'}
+                  />
+                )}
+
+                {/* Reference Library */}
+                {kundli?.remedy_manual && (
+                  <details style={{ marginTop:20, border:'1px solid rgba(212,175,55,0.12)', borderRadius:10, overflow:'hidden' }}>
+                    <summary style={{ padding:'10px 15px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.04)', fontWeight:600, fontSize:11, color:'rgba(212,175,55,0.65)', fontFamily:'var(--font-devanagari),sans-serif' }}>
+                      <span>📚 {lang==='hi' ? 'संदर्भ पुस्तकालय — वैदिक उपाय मार्गदर्शिका' : 'Reference Library — Vedic Remedy Manual'}</span>
+                      <span style={{ fontSize:10, color:'rgba(245,240,232,0.35)' }}>▾</span>
+                    </summary>
+                    <div style={{ padding:14 }}>
+                      <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
+                    </div>
+                  </details>
+                )}
+              </div>
+            </details>
+
             {/* Classical Details */}
             <details style={{ marginBottom:12, border:'1px solid rgba(212,175,55,0.14)', borderRadius:12, overflow:'hidden' }}>
               <summary style={{ padding:'12px 18px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.05)', fontWeight:700, fontSize:12, color:'#D4AF37', fontFamily:'var(--font-devanagari),sans-serif' }}>
@@ -1028,7 +1060,6 @@ export default function KundliDetail({ uuid }) {
                 <CharaKarakaPanel karakas={kundli?.chara_karakas} lang={lang} />
                 <YutiPanel yuti={kundli?.yuti_analysis} lang={lang} />
                 <AstaVakriPanel data={kundli?.asta_vakri} lang={lang} />
-                <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
               </div>
             </details>
           </div>
