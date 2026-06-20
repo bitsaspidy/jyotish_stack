@@ -15,6 +15,7 @@ const NAV = [
   { href: '/varshphal',        en: 'Varshphal',   hi: 'वर्षफल'  },
   { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
   { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },
+  { href: '/remedy',      en: 'Remedies',    hi: 'उपाय'       },
   { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'      },
 ];
 
