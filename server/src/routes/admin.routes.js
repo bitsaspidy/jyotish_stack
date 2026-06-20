@@ -407,10 +407,12 @@ router.get('/kundlis/:uuid/guidance', ah(async (req, res) => {
   const chart = await ensureCalculatedChart(profile);
   if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
   const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
+  const { generatePersonalizedRemedies } = require('../services/remedy-engine');
   const lang = req.query.lang;
   const report = generateLifeReport(chart, { admin: true, lang });
   const daily  = generateDailyGuidance(chart, new Date(), { admin: true, lang });
-  return ok(res, { report, daily });
+  const personalizedRemedies = generatePersonalizedRemedies(chart);
+  return ok(res, { report, daily, personalizedRemedies });
 }));
 
 // Stored prediction history for one kundli (what the user has been shown)

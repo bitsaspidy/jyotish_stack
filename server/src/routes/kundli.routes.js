@@ -753,7 +753,8 @@ router.get('/:id/guidance', async (req, res) => {
     const judgement = generateJudgement(chart, {}, { lang: lang || 'hi', admin: false });
     const report = generateLifeReport(chart, { lang, judgement });
     const daily  = generateDailyGuidance(chart, new Date(), { lang });
-    return ok(res, { report, daily });
+    const personalizedRemedies = generatePersonalizedRemedies(chart);
+    return ok(res, { report, daily, personalizedRemedies });
   } catch (e) {
     console.error('[Guidance] Error:', e.message);
     return fail(res, 'Unable to generate guidance report', 500);
