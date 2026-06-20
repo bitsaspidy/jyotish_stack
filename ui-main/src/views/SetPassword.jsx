@@ -65,8 +65,8 @@ export default function SetPassword() {
       if (data.user) setUser(data.user);
       setDone(true);
       toast.success('Password set! Welcome to Jyotish Stack AI.');
-      // Redirect to verify email notice, then pricing
-      setTimeout(() => router.push('/account?tab=email'), 2000);
+      // Redirect to dashboard — user is already on basic plan
+      setTimeout(() => router.push('/dashboard'), 2000);
     } catch (ex) {
       setErr(ex.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -124,13 +124,13 @@ export default function SetPassword() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 52, marginBottom: 16 }}>✅</div>
               <p style={{ color: IVORY, fontWeight: 600, marginBottom: 8 }}>
-                Account activated! Redirecting…
+                Account activated! Taking you to your dashboard…
               </p>
               <p style={{ color: DIM, fontSize: 13, marginBottom: 24 }}>
-                Please verify your email address — check your inbox for the verification link we sent.
+                Your Basic plan is active. Please also verify your email — the link is in the setup email we sent.
               </p>
-              <Link href="/account" style={{ color: GOLD, fontSize: 13, textDecoration: 'underline' }}>
-                Go to account settings
+              <Link href="/dashboard" style={{ color: GOLD, fontSize: 13, textDecoration: 'underline' }}>
+                Go to dashboard
               </Link>
             </div>
           )}

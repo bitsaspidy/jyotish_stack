@@ -275,20 +275,24 @@ const templates = {
             <li>Daily Puja sequence for consistent practice</li>
           </ul>
         </div>
-        <p>We've also created an account for you. Check for a separate email with a link to set your password and activate your full Jyotish Stack AI account.</p>
+        <p>Your <strong style="color:#D4AF37;">Basic plan</strong> is now active. Check for a separate email with your account activation link — set your password to log in and explore your full Kundli &amp; predictions.</p>
         <p style="font-size:12px;color:#888;">The remedies in this report are for spiritual guidance only and are not a substitute for professional advice.</p>`, sig),
   }),
 
   account_setup: (data, sig) => ({
-    subject: `Activate your Jyotish Stack AI account — ${data.name}`,
+    subject: `Welcome to Jyotish Stack AI — Activate your account, ${data.name}`,
     html: BRAND_SHELL(`
         <p style="font-size:16px;">Namaste ${data.name},</p>
-        <p>Your Vedic Remedy Report has been sent. We've also created a <strong style="color:#D4AF37;">Jyotish Stack AI</strong> account for you so you can access your full Kundli, predictions, and more.</p>
-        <p><strong>Step 1:</strong> Set your account password by clicking the button below:</p>
-        <a href="${data.setupUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:12px 28px;text-decoration:none;font-weight:bold;margin:16px 0;border-radius:4px;">Set My Password</a>
-        <p><strong>Step 2:</strong> Verify your email address (link sent separately).</p>
-        <p><strong>Step 3:</strong> Choose a plan (Basic, Premium, or Yearly) to unlock your full chart.</p>
-        <p style="font-size:12px;color:#888;">The password setup link is valid for 72 hours. If you did not request a remedy report, you can ignore this email.</p>`, sig),
+        <p>Your <strong style="color:#D4AF37;">Vedic Remedy Report</strong> is on its way (check your inbox for the PDF email). Your <strong style="color:#D4AF37;">Basic plan</strong> is already active — now let's set up your password to access your full account.</p>
+        <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:18px 22px;margin:20px 0;">
+          <p style="margin:0 0 14px;color:#D4AF37;font-weight:bold;">Complete your account in 2 steps:</p>
+          <p style="margin:0 0 6px;"><strong style="color:#EFE9D8;">Step 1 — Set your password</strong></p>
+          <a href="${data.setupUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:13px 32px;text-decoration:none;font-weight:bold;margin:10px 0 18px;border-radius:4px;font-size:15px;">Set My Password →</a>
+          <p style="margin:0 0 6px;"><strong style="color:#EFE9D8;">Step 2 — Verify your email address</strong></p>
+          <a href="${data.verifyUrl}" style="display:inline-block;color:#D4AF37;font-size:13px;text-decoration:underline;">Click here to verify your email</a>
+        </div>
+        <p style="color:#c8c0b0;">Once your account is set up you can access your full Kundli, daily Panchang, predictions, and more — all included in your Basic plan.</p>
+        <p style="font-size:12px;color:#888;">The password setup link is valid for 72 hours. If you did not request a remedy report, you can safely ignore this email.</p>`, sig),
   }),
 };
 
