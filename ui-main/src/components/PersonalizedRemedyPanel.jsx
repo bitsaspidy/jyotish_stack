@@ -176,7 +176,6 @@ function TabPlan({ plan, lang }) {
                         <div style={{ marginTop:8, background:'rgba(212,175,55,0.04)', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:'8px 10px' }}>
                           <p style={{ fontSize:9, fontWeight:700, color:'rgba(212,175,55,0.6)', marginBottom:3, textTransform:'uppercase', letterSpacing:'0.07em' }}>{T('Recommended Text','अनुशंसित पाठ')}</p>
                           <p className="text-ivory/60 text-[10px] font-devanagari">{r.primary_text_en}</p>
-                          <p style={{ fontSize:9, color:'rgba(245,240,232,0.35)', marginTop:4 }}>{T('Source: Remedy Class 1 — 4th May 2026','स्रोत: रेमेडी क्लास 1 — 4 मई 2026')}</p>
                         </div>
                       )}
                     </div>
@@ -258,7 +257,7 @@ function TabPuja({ plan, lang }) {
 
       {/* Vedic vs Pauranik rules */}
       <Divider />
-      <SH icon="📖" title={T('Practice Rules','साधना नियम')} sub={T('From Remedy Class 1, 4th May 2026','रेमेडी क्लास 1, 4 मई 2026 से')} />
+      <SH icon="📖" title={T('Practice Rules','साधना नियम')} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
           { title: T('Vedic Mantra / Suktam','वैदिक मंत्र / सूक्तम'), items: [
@@ -323,8 +322,7 @@ function TabTiming({ plan, lang }) {
       </div>
 
       {/* Best Time Windows */}
-      <SH icon="⏰" title={T('Best Practice Times','सर्वोत्तम साधना समय')}
-        sub={T('Source: Remedy Class 1 PDF — 4th May 2026','स्रोत: रेमेडी क्लास 1 PDF — 4 मई 2026')} />
+      <SH icon="⏰" title={T('Best Practice Times','सर्वोत्तम साधना समय')} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
         {timeWindows.map((w, i) => {
           const col = QUALITY_COLOR[w.quality] || '#A78BFA';
@@ -559,7 +557,7 @@ function TabAdmin({ plan, lang }) {
 
   return (
     <div>
-      <SH icon="🔬" title="Admin: Technical Remedy Analysis" sub={admin.source || 'Remedy Class 1 — 4th May 2026'} />
+      <SH icon="🔬" title="Admin: Technical Remedy Analysis" />
 
       {/* Input summary */}
       <div style={{ background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:9, padding:'10px 12px', marginBottom:12 }}>
@@ -697,7 +695,7 @@ export default function PersonalizedRemedyPanel({ serverPlan, chart, remedyManua
             🪷 {T('Personalized Remedy Plan','व्यक्तिगत उपाय योजना')}
           </h2>
           <p className="text-ivory/38 text-[10px] font-devanagari mt-0.5">
-            {T('Chart-driven · Source: Remedy Class 1 — 4th May 2026','कुंडली आधारित · स्रोत: रेमेडी क्लास 1 — 4 मई 2026')}
+            {T('Chart-driven · Personalised for your Kundli','कुंडली आधारित · आपकी कुंडली के लिए व्यक्तिगत')}
           </p>
         </div>
       </div>
