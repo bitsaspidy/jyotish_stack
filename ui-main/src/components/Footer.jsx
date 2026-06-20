@@ -82,10 +82,11 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-sm text-ivory/60">
               {[
-                ['/pricing', 'Pricing', 'मूल्य'],
-                ['#', 'Privacy Policy', 'गोपनीयता'],
-                ['#', 'Terms of Service', 'शर्तें'],
-                ['#', 'Contact', 'संपर्क'],
+                ['/pricing',         'Pricing',            'मूल्य'],
+                ['/terms',           'Terms & Conditions', 'नियम व शर्तें'],
+                ['/privacy',         'Privacy Policy',     'गोपनीयता नीति'],
+                ['/refund-policy',   'Refund Policy',      'धनवापसी नीति'],
+                ['/disclaimer',      'Disclaimer',         'अस्वीकरण'],
               ].map(([href, en, hi]) => (
                 <li key={en}>
                   <Link href={href} className="hover:text-gold transition-colors">

@@ -136,6 +136,104 @@
   .text-ivory\/75 { color: rgba(245,240,232,0.95) !important; }
 }
 
+/* ── Keyframe animations ──────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes float-alt {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-8px) rotate(3deg); }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes spin-slow-rev {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.18; }
+  50%       { opacity: 0.45; }
+}
+@keyframes shimmer-slide {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.4); }
+}
+
+.animate-float       { animation: float 5s ease-in-out infinite; }
+.animate-float-slow  { animation: float 8s ease-in-out infinite; }
+.animate-float-alt   { animation: float-alt 6.5s ease-in-out infinite; }
+.animate-spin-slow   { animation: spin-slow 30s linear infinite; }
+.animate-spin-rev    { animation: spin-slow-rev 24s linear infinite; }
+.animate-pulse-glow  { animation: pulse-glow 4s ease-in-out infinite; }
+.animate-twinkle     { animation: twinkle 3.5s ease-in-out infinite; }
+
+.shimmer-gold {
+  background: linear-gradient(90deg, #B8952A 0%, #F0D060 35%, #D4AF37 50%, #F0D060 65%, #B8952A 100%);
+  background-size: 200% 100%;
+  animation: shimmer-slide 2.5s linear infinite;
+}
+
+/* ── Legal page prose ─────────────────────────────────────────────────────── */
+.prose-legal h2 {
+  font-family: var(--font-playfair), Georgia, serif;
+  color: #D4AF37;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(212,175,55,0.14);
+}
+.prose-legal h3 {
+  color: rgba(245,240,232,0.9);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 1.25rem 0 0.6rem;
+}
+.prose-legal p {
+  color: rgba(245,240,232,0.6);
+  font-size: 0.875rem;
+  line-height: 1.9;
+  margin-bottom: 0.75rem;
+}
+.prose-legal ul, .prose-legal ol {
+  padding-left: 1.4rem;
+  margin: 0.5rem 0 1rem;
+}
+.prose-legal li {
+  color: rgba(245,240,232,0.6);
+  font-size: 0.875rem;
+  line-height: 1.85;
+  margin: 0.3rem 0;
+}
+.prose-legal ul { list-style: disc; }
+.prose-legal ol { list-style: decimal; }
+.prose-legal strong { color: rgba(245,240,232,0.88); font-weight: 600; }
+.prose-legal a { color: #D4AF37; text-decoration: underline; text-underline-offset: 3px; }
+.prose-legal a:hover { color: #F0D060; }
+.prose-legal .notice-box {
+  background: rgba(212,175,55,0.06);
+  border: 1px solid rgba(212,175,55,0.22);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+.prose-legal .notice-box p { margin: 0; }
+.prose-legal .warn-box {
+  background: rgba(239,68,68,0.06);
+  border: 1px solid rgba(239,68,68,0.22);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+.prose-legal .warn-box p { margin: 0; color: rgba(252,165,165,0.85); }
+
 /* ── Print styles for Simple Report tab ──────────────────────────────────── */
 @media print {
   /* Hide everything first */

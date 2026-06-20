@@ -1,34 +1,56 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
 
 const GOLD = '#D4AF37'; const IVORY = '#F5F0E8'; const DIM = 'rgba(245,240,232,0.45)';
 
 const T = {
-  tagline:    ['Ancient Wisdom. Modern Intelligence.','प्राचीन ज्ञान। आधुनिक बुद्धि।'],
-  h1:         ['Jyotish Stack AI','ज्योतिष स्टैक AI'],
-  sub:        ['Where 5,000 years of Vedic astrology meets artificial intelligence. Kundli, Dasha, and cosmic destiny — decoded precisely.','जहाँ 5,000 वर्षों की वैदिक ज्योतिष AI से मिलती है। कुंडली, दशा और भाग्य — सटीक विश्लेषण।'],
-  cta1:       ['Start for Free','निःशुल्क शुरू करें'],
-  cta2:       ['Create Kundli','कुंडली बनाएं'],
-  feat_h:     ['Our Services','हमारी सेवाएं'],
-  feat_s:     ['Complete Vedic astrology — powered by AI','AI की शक्ति से वैदिक ज्योतिष की सम्पूर्ण सेवाएं'],
-  price_h:    ['Pricing Plans','मूल्य योजनाएं'],
-  price_s:    ['Choose the plan that fits your journey','अपनी यात्रा के अनुसार योजना चुनें'],
-  popular:    ['Most Popular','सबसे लोकप्रिय'],
-  start:      ['Get Started','अभी शुरू करें'],
+  tagline:  ['Ancient Wisdom. Modern Intelligence.','प्राचीन ज्ञान। आधुनिक बुद्धि।'],
+  h1:       ['Jyotish Stack AI','ज्योतिष स्टैक AI'],
+  sub:      ['Where 5,000 years of Vedic astrology meets artificial intelligence. Kundli, Dasha, and cosmic destiny — decoded precisely.','जहाँ 5,000 वर्षों की वैदिक ज्योतिष AI से मिलती है। कुंडली, दशा और भाग्य — सटीक विश्लेषण।'],
+  cta1:     ['Start for Free','निःशुल्क शुरू करें'],
+  cta2:     ['Create Kundli','कुंडली बनाएं'],
+  feat_h:   ['Our Services','हमारी सेवाएं'],
+  feat_s:   ['Complete Vedic astrology — powered by AI','AI की शक्ति से वैदिक ज्योतिष की सम्पूर्ण सेवाएं'],
+  how_h:    ['How It Works','यह कैसे काम करता है'],
+  how_s:    ['Your cosmic journey in three simple steps','तीन आसान चरणों में आपकी ब्रह्मांडीय यात्रा'],
+  price_h:  ['Pricing Plans','मूल्य योजनाएं'],
+  price_s:  ['Choose the plan that fits your journey','अपनी यात्रा के अनुसार योजना चुनें'],
+  popular:  ['Most Popular','सबसे लोकप्रिय'],
 };
 const t = (key, lang) => T[key]?.[lang === 'hi' ? 1 : 0] || '';
 
 const FEATURES = [
-  { icon:'🪐', en:'Kundli Chart',       hi:'कुंडली चार्ट',    de:'Vedic birth chart with 12 houses, planets & Navamsha.', dh:'12 भावों और नवांश के साथ वैदिक जन्म कुंडली।', href:'/kundli' },
-  { icon:'💫', en:'Bhavishya Vani',     hi:'भविष्यवाणी',       de:'AI-powered daily, weekly & monthly predictions.',      dh:'AI-संचालित दैनिक, साप्ताहिक भविष्यवाणी।', href:'/predictions' },
-  { icon:'💍', en:'Kundli Matching',    hi:'विवाह मिलान',      de:'Guna Milan, Mangal Dosha & full compatibility.',       dh:'गुण मिलान, मंगल दोष और अनुकूलता।', href:'/matchmaking' },
-  { icon:'⏳', en:'Dasha Analysis',     hi:'दशा विश्लेषण',     de:'Vimshottari Dasha — life phase by phase.',             dh:'विंशोत्तरी दशा — जीवन चरण विश्लेषण।', href:'/predictions' },
-  { icon:'🔱', en:'Nakshatra Report',   hi:'नक्षत्र रिपोर्ट',  de:'27 Nakshatras — personality, career & spirit.',        dh:'27 नक्षत्र — व्यक्तित्व और करियर।', href:'/kundli' },
-  { icon:'🌙', en:'Transit Forecast',   hi:'गोचर भविष्यवाणी', de:'Real-time planetary transits on your chart.',           dh:'वास्तविक समय ग्रह गोचर फल।', href:'/predictions' },
+  { icon:'🪐', en:'Kundli Chart',      hi:'कुंडली चार्ट',    de:'Vedic birth chart with 12 houses, planets & Navamsha.', dh:'12 भावों और नवांश के साथ वैदिक जन्म कुंडली।', href:'/kundli' },
+  { icon:'💫', en:'Bhavishya Vani',    hi:'भविष्यवाणी',       de:'AI-powered daily, weekly & monthly predictions.',      dh:'AI-संचालित दैनिक, साप्ताहिक भविष्यवाणी।', href:'/predictions' },
+  { icon:'💍', en:'Kundli Matching',   hi:'विवाह मिलान',      de:'Guna Milan, Mangal Dosha & full compatibility.',       dh:'गुण मिलान, मंगल दोष और अनुकूलता।', href:'/matchmaking' },
+  { icon:'⏳', en:'Dasha Analysis',    hi:'दशा विश्लेषण',     de:'Vimshottari Dasha — life phase by phase.',             dh:'विंशोत्तरी दशा — जीवन चरण विश्लेषण।', href:'/predictions' },
+  { icon:'🔱', en:'Nakshatra Report',  hi:'नक्षत्र रिपोर्ट',  de:'27 Nakshatras — personality, career & spirit.',        dh:'27 नक्षत्र — व्यक्तित्व और करियर।', href:'/kundli' },
+  { icon:'🌙', en:'Transit Forecast',  hi:'गोचर भविष्यवाणी', de:'Real-time planetary transits on your chart.',           dh:'वास्तविक समय ग्रह गोचर फल।', href:'/predictions' },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step:'01', icon:'✨',
+    en:'Create Free Account',    hi:'निःशुल्क खाता बनाएं',
+    de:'Register in seconds — no credit card required to get started.',
+    dh:'कुछ सेकंड में रजिस्टर करें — शुरू करने के लिए क्रेडिट कार्ड आवश्यक नहीं।',
+  },
+  {
+    step:'02', icon:'📍',
+    en:'Enter Birth Details',    hi:'जन्म विवरण दर्ज करें',
+    de:'Provide your name, date, time, and place of birth for an accurate chart.',
+    dh:'सटीक कुंडली के लिए अपना नाम, जन्म तिथि, समय और स्थान दर्ज करें।',
+  },
+  {
+    step:'03', icon:'🔱',
+    en:'Discover Your Destiny',  hi:'अपना भाग्य जानें',
+    de:'Receive your complete Kundli, Dasha timeline, predictions, and life guidance.',
+    dh:'अपनी पूर्ण कुंडली, दशा, भविष्यवाणी और जीवन मार्गदर्शन प्राप्त करें।',
+  },
 ];
 
 const PLANS = [
@@ -37,6 +59,7 @@ const PLANS = [
     cta_en:'Get Started', cta_hi:'अभी शुरू करें',
     feats:[
       { en:'1 Kundli profile',    hi:'1 कुंडली प्रोफ़ाइल' },
+      { en:'Full chart analysis', hi:'पूर्ण चार्ट विश्लेषण' },
       { en:'Daily prediction',    hi:'दैनिक भविष्यवाणी' },
       { en:'Basic matchmaking',   hi:'बेसिक विवाह मिलान' },
       { en:'No PDF download',     hi:'PDF डाउनलोड शामिल नहीं' },
@@ -68,65 +91,171 @@ const PLANS = [
   },
 ];
 
-const fadeUp = { hidden:{ opacity:0, y:28 }, show:{ opacity:1, y:0, transition:{ duration:0.55 } } };
-const stag   = { show:{ transition:{ staggerChildren:0.09 } } };
+const STATS = [
+  { value:'10K+', en:'Kundlis',      hi:'कुंडलियां' },
+  { value:'50K+', en:'Predictions',  hi:'भविष्यवाणियां' },
+  { value:'27',   en:'Nakshatras',   hi:'नक्षत्र' },
+  { value:'99.8%',en:'Accuracy',     hi:'सटीकता' },
+];
 
-// ─── Testimonials Section ────────────────────────────────────────────────────
+const fadeUp = { hidden:{ opacity:0, y:28 }, show:{ opacity:1, y:0, transition:{ duration:0.55 } } };
+const fadeIn  = { hidden:{ opacity:0 },      show:{ opacity:1, transition:{ duration:0.7 } } };
+const stag    = { show:{ transition:{ staggerChildren:0.09 } } };
+const stagSlow= { show:{ transition:{ staggerChildren:0.15 } } };
+
+// ── Orbital rings decoration ──────────────────────────────────────────────────
+function OrbitalRings({ className = '' }) {
+  return (
+    <div className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden ${className}`}>
+      {[700, 520, 360, 220].map((size, i) => (
+        <div key={size} style={{
+          position:'absolute', width:size, height:size, borderRadius:'50%',
+          border:`1px solid rgba(212,175,55,${0.08 - i * 0.015})`,
+        }}
+        className={i % 2 === 0 ? 'animate-spin-slow' : 'animate-spin-rev'}
+        />
+      ))}
+      {/* Glowing accent dots on one ring */}
+      {[0, 120, 240].map((deg, i) => (
+        <div key={deg} style={{
+          position:'absolute', width:4, height:4, borderRadius:'50%',
+          background:GOLD, opacity:0.55,
+          transform:`rotate(${deg}deg) translateX(260px)`,
+          animation:`spin-slow 30s linear infinite`,
+          animationDelay:`${i * -10}s`,
+          filter:'blur(0.5px)',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Floating accent dots ──────────────────────────────────────────────────────
+function FloatingDots() {
+  const dots = [
+    { w:10, h:10, top:'18%', left:'10%',  delay:'0s',   dur:6, color:GOLD },
+    { w:6,  h:6,  top:'30%', left:'6%',   delay:'1.2s', dur:8, color:'#9B89F0' },
+    { w:7,  h:7,  top:'60%', right:'8%',  delay:'0.5s', dur:5, color:GOLD },
+    { w:5,  h:5,  top:'75%', left:'18%',  delay:'2s',   dur:7, color:'#F0D060' },
+    { w:8,  h:8,  top:'45%', right:'15%', delay:'1.5s', dur:6.5, color:GOLD },
+    { w:4,  h:4,  top:'22%', right:'22%', delay:'0.8s', dur:9, color:'#9B89F0' },
+  ];
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {dots.map((d, i) => (
+        <div key={i} style={{
+          position:'absolute', borderRadius:'50%', background:d.color,
+          width:d.w, height:d.h, top:d.top, left:d.left, right:d.right,
+          animation:`float ${d.dur}s ease-in-out infinite`,
+          animationDelay:d.delay, opacity:0.45,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// ── Section heading helper ────────────────────────────────────────────────────
+function SectionHead({ title, sub }) {
+  return (
+    <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
+      className="text-center mb-14">
+      <h2 className="section-title mb-3">{title}</h2>
+      <p style={{ color:DIM }} className="font-devanagari">{sub}</p>
+      <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
+    </motion.div>
+  );
+}
+
+// ── How It Works ──────────────────────────────────────────────────────────────
+function HowItWorksSection({ lang }) {
+  const hi = lang === 'hi';
+  return (
+    <section className="relative z-10 py-20 px-6">
+      <div style={{ maxWidth:1100, margin:'0 auto' }}>
+        <SectionHead title={t('how_h', lang)} sub={t('how_s', lang)} />
+        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stagSlow}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {HOW_IT_WORKS.map((s, i) => (
+            <motion.div key={i} variants={fadeUp} className="relative">
+              {/* Connector line on desktop (not last) */}
+              {i < 2 && (
+                <div className="hidden md:block absolute top-10 z-10"
+                  style={{ left:'calc(50% + 60px)', width:'calc(100% - 60px)', height:1,
+                    background:'linear-gradient(90deg, rgba(212,175,55,0.35), transparent)' }} />
+              )}
+              <div className="text-center p-8 rounded-xl h-full transition-all duration-300 hover:-translate-y-1"
+                style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.12)',
+                  boxShadow:'0 8px 32px rgba(0,0,0,0.15)' }}>
+                <div className="relative inline-block mb-5">
+                  <div style={{ width:64, height:64, borderRadius:'50%', margin:'0 auto',
+                    background:'rgba(212,175,55,0.08)', border:'1px solid rgba(212,175,55,0.22)',
+                    display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }}>
+                    {s.icon}
+                  </div>
+                  <span className="absolute -top-1 -right-1 text-[10px] font-bold leading-none"
+                    style={{ color:'rgba(212,175,55,0.5)', fontFamily:'Georgia,serif' }}>{s.step}</span>
+                </div>
+                <h3 className="font-serif font-semibold mb-3" style={{ color:GOLD, fontSize:15 }}>
+                  {hi ? s.hi : s.en}
+                </h3>
+                <p className="font-devanagari text-sm leading-relaxed" style={{ color:DIM }}>
+                  {hi ? s.dh : s.de}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ── Testimonials ──────────────────────────────────────────────────────────────
 function TestimonialsSection({ lang }) {
   const hi = lang === 'hi';
   const [items, setItems] = useState([]);
-
   useEffect(() => {
-    fetch('/api/public/testimonials')
-      .then(r => r.json())
-      .then(d => setItems(d.data?.testimonials || []))
-      .catch(() => {});
+    fetch('/api/public/testimonials').then(r => r.json())
+      .then(d => setItems(d.data?.testimonials || [])).catch(() => {});
   }, []);
-
   if (items.length === 0) return null;
-
   return (
     <section className="relative z-10 py-24 px-6">
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
-        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="section-title mb-3">{hi ? 'हमारे उपयोगकर्ता क्या कहते हैं' : 'What Our Users Say'}</h2>
-          <p style={{ color:DIM }}>{hi ? 'हजारों संतुष्ट उपयोगकर्ताओं का विश्वास' : 'Trusted by thousands of satisfied users'}</p>
-          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
-        </motion.div>
-
+        <SectionHead
+          title={hi ? 'हमारे उपयोगकर्ता क्या कहते हैं' : 'What Our Users Say'}
+          sub={hi ? 'हजारों संतुष्ट उपयोगकर्ताओं का विश्वास' : 'Trusted by thousands of satisfied users'}
+        />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
           style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
-          {items.map((t, i) => (
-            <motion.div key={t.id} variants={fadeUp}
-              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.12)',
-                borderRadius:14, padding:'22px 24px' }}>
+          {items.map(item => (
+            <motion.div key={item.id} variants={fadeUp}
+              style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.1)',
+                borderRadius:14, padding:'22px 24px', transition:'border-color 0.25s' }}
+              className="hover:border-gold/25">
               <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
-                {t.avatar_url
-                  ? <img src={t.avatar_url} alt={t.name} style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover' }} />
+                {item.avatar_url
+                  ? <img src={item.avatar_url} alt={item.name} style={{ width:44, height:44, borderRadius:'50%', objectFit:'cover' }} />
                   : <div style={{ width:44, height:44, borderRadius:'50%', background:`${GOLD}20`,
                       border:`1px solid ${GOLD}40`, display:'flex', alignItems:'center',
-                      justifyContent:'center', color:GOLD, fontFamily:'Georgia,serif',
-                      fontWeight:700, fontSize:17 }}>
-                      {(t.name || '?')[0].toUpperCase()}
+                      justifyContent:'center', color:GOLD, fontFamily:'Georgia,serif', fontWeight:700, fontSize:17 }}>
+                      {(item.name || '?')[0].toUpperCase()}
                     </div>
                 }
                 <div>
-                  <p style={{ color:IVORY, fontFamily:'Georgia,serif', fontWeight:600, fontSize:14 }}>{t.name}</p>
-                  {(t.role || t.location) && (
-                    <p style={{ color:DIM, fontSize:11 }}>
-                      {[t.role, t.location].filter(Boolean).join(' · ')}
-                    </p>
+                  <p style={{ color:IVORY, fontFamily:'Georgia,serif', fontWeight:600, fontSize:14 }}>{item.name}</p>
+                  {(item.role || item.location) && (
+                    <p style={{ color:DIM, fontSize:11 }}>{[item.role, item.location].filter(Boolean).join(' · ')}</p>
                   )}
                 </div>
-                {t.rating > 0 && (
+                {item.rating > 0 && (
                   <span style={{ marginLeft:'auto', color:GOLD, fontSize:12, letterSpacing:1 }}>
-                    {'★'.repeat(Math.min(5, t.rating))}
+                    {'★'.repeat(Math.min(5, item.rating))}
                   </span>
                 )}
               </div>
               <p style={{ color:DIM, fontSize:13, lineHeight:1.75, fontStyle:'italic', fontFamily:'Georgia,serif' }}>
-                "{t.content}"
+                "{item.content}"
               </p>
             </motion.div>
           ))}
@@ -136,35 +265,27 @@ function TestimonialsSection({ lang }) {
   );
 }
 
-// ─── Team Section ─────────────────────────────────────────────────────────────
+// ── Team ──────────────────────────────────────────────────────────────────────
 function TeamSection({ lang }) {
   const hi = lang === 'hi';
   const [members, setMembers] = useState([]);
-
   useEffect(() => {
-    fetch('/api/public/team')
-      .then(r => r.json())
-      .then(d => setMembers(d.data?.members || []))
-      .catch(() => {});
+    fetch('/api/public/team').then(r => r.json())
+      .then(d => setMembers(d.data?.members || [])).catch(() => {});
   }, []);
-
   if (members.length === 0) return null;
-
   return (
     <section className="relative z-10 py-20 px-6">
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
-        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-          className="text-center mb-14">
-          <h2 className="section-title mb-3">{hi ? 'हमारी टीम' : 'Our Team'}</h2>
-          <p style={{ color:DIM }}>{hi ? 'अनुभवी ज्योतिषी और AI विशेषज्ञ' : 'Experienced astrologers and AI specialists'}</p>
-          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
-        </motion.div>
-
+        <SectionHead
+          title={hi ? 'हमारी टीम' : 'Our Team'}
+          sub={hi ? 'अनुभवी ज्योतिषी और AI विशेषज्ञ' : 'Experienced astrologers and AI specialists'}
+        />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
           style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
           {members.map(m => (
             <motion.div key={m.id} variants={fadeUp}
-              style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.1)',
+              style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.1)',
                 borderRadius:14, padding:'28px 24px', textAlign:'center', width:220, flexShrink:0 }}>
               {m.avatar_url
                 ? <img src={m.avatar_url} alt={m.name} style={{ width:72, height:72, borderRadius:'50%',
@@ -180,14 +301,8 @@ function TeamSection({ lang }) {
               {m.role && <p style={{ color:GOLD, fontSize:12, marginBottom:8, fontWeight:600 }}>{m.role}</p>}
               {m.bio && <p style={{ color:DIM, fontSize:11, lineHeight:1.65, marginBottom:12 }}>{m.bio}</p>}
               <div style={{ display:'flex', gap:8, justifyContent:'center' }}>
-                {m.linkedin && (
-                  <a href={m.linkedin} target="_blank" rel="noreferrer"
-                    style={{ color:DIM, fontSize:11, textDecoration:'none' }}>💼 LinkedIn</a>
-                )}
-                {m.twitter && (
-                  <a href={m.twitter} target="_blank" rel="noreferrer"
-                    style={{ color:DIM, fontSize:11, textDecoration:'none' }}>𝕏 Twitter</a>
-                )}
+                {m.linkedin && <a href={m.linkedin} target="_blank" rel="noreferrer" style={{ color:DIM, fontSize:11, textDecoration:'none' }}>💼 LinkedIn</a>}
+                {m.twitter  && <a href={m.twitter}  target="_blank" rel="noreferrer" style={{ color:DIM, fontSize:11, textDecoration:'none' }}>𝕏 Twitter</a>}
               </div>
             </motion.div>
           ))}
@@ -197,11 +312,11 @@ function TeamSection({ lang }) {
   );
 }
 
-// ─── Contact Section ──────────────────────────────────────────────────────────
+// ── Contact ───────────────────────────────────────────────────────────────────
 function ContactSection({ lang }) {
   const hi = lang === 'hi';
   const [form, setForm]     = useState({ name:'', email:'', department:'general', subject:'', message:'' });
-  const [status, setStatus] = useState('idle'); // idle | sending | done | error
+  const [status, setStatus] = useState('idle');
   const [errMsg, setErrMsg] = useState('');
 
   const DEPARTMENTS = [
@@ -212,43 +327,34 @@ function ContactSection({ lang }) {
   ];
 
   const submit = async (e) => {
-    e.preventDefault();
-    setStatus('sending');
+    e.preventDefault(); setStatus('sending');
     try {
       const r = await fetch('/api/public/contact', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(form),
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(form),
       });
       const d = await r.json();
       if (!d.success) throw new Error(d.message || 'Failed');
       setStatus('done');
       setForm({ name:'', email:'', department:'general', subject:'', message:'' });
-    } catch (e) {
-      setErrMsg(e.message);
-      setStatus('error');
-    }
+    } catch (e) { setErrMsg(e.message); setStatus('error'); }
   };
 
   const inp = {
     width:'100%', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(212,175,55,0.18)',
     borderRadius:8, color:IVORY, fontSize:13, padding:'11px 14px', boxSizing:'border-box',
-    outline:'none', fontFamily:'inherit',
+    outline:'none', fontFamily:'inherit', transition:'border-color 0.2s',
   };
 
   return (
     <section className="relative z-10 py-20 px-6">
       <div style={{ maxWidth:640, margin:'0 auto' }}>
+        <SectionHead
+          title={hi ? 'संपर्क करें' : 'Contact Us'}
+          sub={hi ? 'हम आपकी सहायता के लिए यहाँ हैं' : "We're here to help"}
+        />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-          className="text-center mb-12">
-          <h2 className="section-title mb-3">{hi ? 'संपर्क करें' : 'Contact Us'}</h2>
-          <p style={{ color:DIM }}>{hi ? 'हम आपकी सहायता के लिए यहाँ हैं' : "We're here to help"}</p>
-          <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
-        </motion.div>
-
-        <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-          style={{ background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.14)',
+          style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.14)',
             borderRadius:16, padding:'36px 40px' }}>
-
           {status === 'done' ? (
             <div style={{ textAlign:'center', padding:'20px 0' }}>
               <p style={{ fontSize:52, marginBottom:14 }}>✅</p>
@@ -269,27 +375,20 @@ function ContactSection({ lang }) {
             <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                    {hi ? 'नाम *' : 'Name *'}
-                  </label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'नाम *' : 'Name *'}</label>
                   <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
                     required placeholder={hi ? 'आपका नाम' : 'Your name'} style={inp} />
                 </div>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                    {hi ? 'ईमेल *' : 'Email *'}
-                  </label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'ईमेल *' : 'Email *'}</label>
                   <input type="email" value={form.email} onChange={e => setForm(f=>({...f,email:e.target.value}))}
                     required placeholder="you@example.com" style={inp} />
                 </div>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                    {hi ? 'विषय श्रेणी' : 'Topic'}
-                  </label>
-                  <select value={form.department}
-                    onChange={e => setForm(f=>({...f,department:e.target.value}))}
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'विषय श्रेणी' : 'Topic'}</label>
+                  <select value={form.department} onChange={e => setForm(f=>({...f,department:e.target.value}))}
                     style={{ ...inp, appearance:'auto', cursor:'pointer' }}>
                     {DEPARTMENTS.map(d => (
                       <option key={d.value} value={d.value} style={{ background:'#0B0D1A', color:IVORY }}>
@@ -299,37 +398,27 @@ function ContactSection({ lang }) {
                   </select>
                 </div>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                    {hi ? 'विषय' : 'Subject'}
-                  </label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'विषय' : 'Subject'}</label>
                   <input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))}
                     placeholder={hi ? 'विषय लिखें' : 'Subject'} style={inp} />
                 </div>
               </div>
               <div>
-                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>
-                  {hi ? 'संदेश *' : 'Message *'}
-                </label>
+                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'संदेश *' : 'Message *'}</label>
                 <textarea value={form.message} onChange={e => setForm(f=>({...f,message:e.target.value}))}
-                  required rows={5}
-                  placeholder={hi ? 'अपना संदेश लिखें…' : 'Write your message…'}
+                  required rows={5} placeholder={hi ? 'अपना संदेश लिखें…' : 'Write your message…'}
                   style={{ ...inp, resize:'vertical' }} />
               </div>
-
               {status === 'error' && (
                 <p style={{ color:'#EF4444', fontSize:12 }}>⚠ {errMsg || (hi ? 'त्रुटि हुई।' : 'Something went wrong.')}</p>
               )}
-
               <button type="submit" disabled={status === 'sending'} style={{
                 background:`linear-gradient(135deg, #B8952A, ${GOLD})`,
-                color:'#06070F', border:'none', borderRadius:8,
-                fontWeight:800, fontSize:14, padding:'13px 24px',
-                cursor: status === 'sending' ? 'not-allowed' : 'pointer',
-                opacity: status === 'sending' ? 0.7 : 1,
+                color:'#06070F', border:'none', borderRadius:8, fontWeight:800,
+                fontSize:14, padding:'13px 24px', cursor:status==='sending'?'not-allowed':'pointer',
+                opacity:status==='sending'?0.7:1,
               }}>
-                {status === 'sending'
-                  ? (hi ? 'भेजा जा रहा है…' : 'Sending…')
-                  : (hi ? 'संदेश भेजें ✦' : 'Send Message ✦')}
+                {status==='sending' ? (hi?'भेजा जा रहा है…':'Sending…') : (hi?'संदेश भेजें ✦':'Send Message ✦')}
               </button>
             </form>
           )}
@@ -339,6 +428,7 @@ function ContactSection({ lang }) {
   );
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home({ scrollTo }) {
   const { lang } = useLang();
   const pRef = useRef(null);
@@ -353,11 +443,17 @@ export default function Home({ scrollTo }) {
 
       {/* ── HERO ──────────────────────────────────────────────────────────── */}
       <section className="relative z-10 flex flex-col items-center justify-center text-center px-6 pt-28 pb-20 min-h-screen">
-        {/* Deep-indigo ambient blob */}
+        {/* Ambient glow blob */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div style={{ width:600, height:600, borderRadius:'50%',
-            background:'radial-gradient(circle, rgba(61,53,128,0.22) 0%, transparent 70%)' }} />
+          <div className="animate-pulse-glow" style={{ width:700, height:700, borderRadius:'50%',
+            background:'radial-gradient(circle, rgba(61,53,128,0.28) 0%, transparent 65%)' }} />
         </div>
+
+        {/* Orbital rings */}
+        <OrbitalRings />
+
+        {/* Floating dots */}
+        <FloatingDots />
 
         <motion.div initial="hidden" animate="show" variants={stag}
           className="relative flex flex-col items-center max-w-4xl w-full">
@@ -365,7 +461,7 @@ export default function Home({ scrollTo }) {
           {/* Pill badge */}
           <motion.span variants={fadeUp}
             className="inline-flex items-center gap-2 border border-gold/30 bg-gold/5 rounded-full px-5 py-2 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-saffron" />
+            <span className="w-2 h-2 rounded-full bg-saffron animate-pulse" />
             <span className="text-saffron text-xs tracking-widest uppercase font-medium font-devanagari">
               {t('tagline', lang)}
             </span>
@@ -377,61 +473,68 @@ export default function Home({ scrollTo }) {
             <span className="text-gradient-gold">{t('h1', lang)}</span>
           </motion.h1>
 
-          {/* Sub */}
+          {/* Subtitle */}
           <motion.p variants={fadeUp}
             className="text-ivory/60 text-lg md:text-xl leading-relaxed max-w-2xl mb-12 font-devanagari">
             {t('sub', lang)}
           </motion.p>
 
-          {/* Buttons */}
+          {/* CTA buttons */}
           <motion.div variants={fadeUp} className="flex flex-wrap gap-4 justify-center mb-20">
-            <Link href="/register" className="btn-gold text-base px-8 py-4 font-semibold shadow-gold">
+            <Link href="/register"
+              className="btn-gold text-base px-8 py-4 font-semibold shadow-gold">
               {t('cta1', lang)}
             </Link>
-            <Link href="/kundli" className="btn-outline-gold text-base px-8 py-4 font-semibold">
+            <Link href="/kundli"
+              className="btn-outline-gold text-base px-8 py-4 font-semibold">
               {t('cta2', lang)}
             </Link>
           </motion.div>
 
           {/* Stats row */}
-          <motion.div variants={fadeUp}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-8 w-full max-w-xl">
-            {[['10K+','Kundlis','कुंडलियां'],['50K+','Predictions','भविष्यवाणियां'],['27','Nakshatras','नक्षत्र'],['99.8%','Accuracy','सटीकता']].map(([v,en,hi])=>(
-              <div key={v} className="text-center">
-                <p className="font-serif text-3xl font-bold text-gradient-gold">{v}</p>
-                <p className="text-ivory/40 text-xs mt-1 tracking-wide">{lang==='hi'?hi:en}</p>
-              </div>
+          <motion.div variants={stag} className="grid grid-cols-2 sm:grid-cols-4 gap-8 w-full max-w-xl">
+            {STATS.map(s => (
+              <motion.div key={s.value} variants={fadeUp} className="text-center">
+                <p className="font-serif text-3xl font-bold text-gradient-gold">{s.value}</p>
+                <p className="text-ivory/40 text-xs mt-1 tracking-wide font-devanagari">
+                  {lang === 'hi' ? s.hi : s.en}
+                </p>
+              </motion.div>
             ))}
           </motion.div>
+        </motion.div>
+
+        {/* Scroll cue */}
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:0.4 }} transition={{ delay:2, duration:1 }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+          <span className="text-ivory/30 text-xs tracking-widest uppercase">Scroll</span>
+          <div className="w-px h-8 bg-gold/30 animate-pulse" />
         </motion.div>
       </section>
 
       {/* ── FEATURES ──────────────────────────────────────────────────────── */}
       <section className="relative z-10 py-24 px-6">
-        <div className="max-w-8xl mx-auto">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-            className="text-center mb-14">
-            <h2 className="section-title mb-3">{t('feat_h', lang)}</h2>
-            <p className="text-ivory/50 max-w-xl mx-auto">{t('feat_s', lang)}</p>
-            <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
-          </motion.div>
-
+        <div style={{ maxWidth:1100, margin:'0 auto' }}>
+          <SectionHead title={t('feat_h', lang)} sub={t('feat_s', lang)} />
           <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f,i)=>(
+            {FEATURES.map((f, i) => (
               <motion.div key={i} variants={fadeUp}>
                 <Link href={f.href}
-                  className="card-royal p-7 flex flex-col h-full group block
+                  className="card-royal p-7 flex flex-col h-full group block relative overflow-hidden
                              hover:border-gold/50 hover:-translate-y-1 transition-all duration-300">
-                  <span className="text-4xl mb-4 block">{f.icon}</span>
+                  {/* Icon glow on hover */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                    style={{ background:'radial-gradient(circle at 30% 30%, rgba(212,175,55,0.06), transparent 60%)' }} />
+                  <span className="text-4xl mb-4 block group-hover:scale-110 transition-transform duration-300">{f.icon}</span>
                   <h3 className="font-serif text-gold text-lg font-semibold mb-2">
-                    {lang==='hi'?f.hi:f.en}
+                    {lang === 'hi' ? f.hi : f.en}
                   </h3>
                   <p className="text-ivory/55 text-sm leading-relaxed flex-1 font-devanagari">
-                    {lang==='hi'?f.dh:f.de}
+                    {lang === 'hi' ? f.dh : f.de}
                   </p>
                   <p className="text-gold/40 group-hover:text-gold text-xs mt-4 transition-colors">
-                    {lang==='hi'?'अधिक जानें →':'Learn more →'}
+                    {lang === 'hi' ? 'अधिक जानें →' : 'Learn more →'}
                   </p>
                 </Link>
               </motion.div>
@@ -440,58 +543,67 @@ export default function Home({ scrollTo }) {
         </div>
       </section>
 
-      {/* Thin gold divider */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6">
-        <div className="divider-gold" />
-      </div>
+      <div className="relative z-10 max-w-5xl mx-auto px-6"><div className="divider-gold" /></div>
+
+      {/* ── HOW IT WORKS ──────────────────────────────────────────────────── */}
+      <HowItWorksSection lang={lang} />
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6"><div className="divider-gold" /></div>
 
       {/* ── PRICING ───────────────────────────────────────────────────────── */}
       <section ref={pRef} id="pricing" className="relative z-10 py-24 px-6">
         <div className="max-w-5xl mx-auto">
-          <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-            className="text-center mb-14">
-            <h2 className="section-title mb-3">{t('price_h', lang)}</h2>
-            <p className="text-ivory/50">{t('price_s', lang)}</p>
-            <div className="w-16 h-0.5 bg-gold mx-auto mt-5 rounded-full" />
-          </motion.div>
-
+          <SectionHead title={t('price_h', lang)} sub={t('price_s', lang)} />
           <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
             className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-            {PLANS.map((p,i)=>(
+            {PLANS.map((p, i) => (
               <motion.div key={i} variants={fadeUp}
                 className={`card-royal p-8 flex flex-col relative ${
-                  p.hot ? 'border-gold/55 shadow-gold-lg md:scale-105 md:z-10' : ''
-                }`}>
+                  p.hot ? 'border-gold/55 md:scale-105 md:z-10' : ''
+                }`}
+                style={p.hot ? { boxShadow:'0 0 40px rgba(212,175,55,0.15)' } : {}}>
                 {p.hot && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gold text-cosmos-900 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-cosmos-900 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider whitespace-nowrap shimmer-gold">
                     {t('popular', lang)}
                   </span>
                 )}
-
-                <p className="font-serif text-ivory text-xl font-semibold mb-1">{lang==='hi'?p.hi:p.en}</p>
+                <p className="font-serif text-ivory text-xl font-semibold mb-1">{lang === 'hi' ? p.hi : p.en}</p>
                 <div className="flex items-baseline gap-1 my-4">
-                  <span className={`font-serif text-4xl font-bold ${p.hot?'text-gradient-gold':'text-ivory'}`}>{p.price}</span>
-                  <span className="text-ivory/40 text-sm">{lang==='hi'?p.ph:p.pe}</span>
+                  <span className={`font-serif text-4xl font-bold ${p.hot ? 'text-gradient-gold' : 'text-ivory'}`}>{p.price}</span>
+                  <span className="text-ivory/40 text-sm">{lang === 'hi' ? p.ph : p.pe}</span>
                 </div>
-
                 <ul className="space-y-2.5 text-sm text-ivory/65 flex-1 mb-8">
-                  {p.feats.map(f=>(
+                  {p.feats.map(f => (
                     <li key={f.en} className="flex items-start gap-2">
                       <span className="text-gold text-xs mt-0.5 shrink-0">✦</span>
-                      <span className="font-devanagari">{lang==='hi' ? f.hi : f.en}</span>
+                      <span className="font-devanagari">{lang === 'hi' ? f.hi : f.en}</span>
                     </li>
                   ))}
                 </ul>
-
                 <Link href="/register"
                   className={`text-center py-3 rounded-sm text-sm font-semibold block transition-all ${
                     p.hot ? 'btn-gold shadow-gold' : 'btn-outline-gold'
                   }`}>
-                  {lang==='hi' ? p.cta_hi : p.cta_en}
+                  {lang === 'hi' ? p.cta_hi : p.cta_en}
                 </Link>
               </motion.div>
             ))}
           </motion.div>
+
+          {/* Legal note under pricing */}
+          <motion.p initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }}
+            className="text-center text-ivory/25 text-xs mt-8 font-devanagari">
+            {lang === 'hi'
+              ? 'सभी मूल्य GST सहित हैं • '
+              : 'All prices inclusive of GST • '}
+            <Link href="/refund-policy" className="underline hover:text-gold transition-colors">
+              {lang === 'hi' ? 'धनवापसी नीति' : 'Refund Policy'}
+            </Link>
+            {' • '}
+            <Link href="/disclaimer" className="underline hover:text-gold transition-colors">
+              {lang === 'hi' ? 'अस्वीकरण' : 'Disclaimer'}
+            </Link>
+          </motion.p>
         </div>
       </section>
 
@@ -507,18 +619,22 @@ export default function Home({ scrollTo }) {
       {/* ── BOTTOM CTA ────────────────────────────────────────────────────── */}
       <section className="relative z-10 py-16 px-6">
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
-          className="max-w-3xl mx-auto text-center card-royal p-10 border-gold/25">
-          <p className="text-5xl mb-5">🔱</p>
-          <h3 className="font-serif text-2xl md:text-3xl text-gradient-gold font-bold mb-4">
-            {lang==='hi'?'अपनी ब्रह्मांडीय यात्रा शुरू करें':'Begin Your Cosmic Journey'}
+          className="max-w-3xl mx-auto text-center card-royal p-10 border-gold/25 relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background:'radial-gradient(circle at 50% 0%, rgba(212,175,55,0.07), transparent 60%)' }} />
+          <p className="text-5xl mb-5 relative z-10">🔱</p>
+          <h3 className="font-serif text-2xl md:text-3xl text-gradient-gold font-bold mb-4 relative z-10">
+            {lang === 'hi' ? 'अपनी ब्रह्मांडीय यात्रा शुरू करें' : 'Begin Your Cosmic Journey'}
           </h3>
-          <p className="text-ivory/55 mb-8 font-devanagari">
-            {lang==='hi'
-              ?'आज ही निःशुल्क खाता बनाएं और अपनी पहली कुंडली देखें।'
-              :"Create your free account today and discover your Vedic birth chart."}
+          <p className="text-ivory/55 mb-8 font-devanagari relative z-10">
+            {lang === 'hi'
+              ? 'आज ही निःशुल्क खाता बनाएं और अपनी पहली कुंडली देखें।'
+              : 'Create your free account today and discover your Vedic birth chart.'}
           </p>
-          <Link href="/register" className="btn-gold text-base px-10 py-4 inline-block shadow-gold font-semibold">
-            {lang==='hi'?'अभी शुरू करें — निःशुल्क':"Get Started — It's Free"}
+          <Link href="/register"
+            className="btn-gold text-base px-10 py-4 inline-block shadow-gold font-semibold relative z-10">
+            {lang === 'hi' ? 'अभी शुरू करें — निःशुल्क' : "Get Started — It's Free"}
           </Link>
         </motion.div>
       </section>
