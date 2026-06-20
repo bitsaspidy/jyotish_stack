@@ -177,9 +177,8 @@ function ProfileTab({ user, setUser, lang, onResendVerif }) {
             value={form.preferred_language}
             onChange={e => setForm(f => ({ ...f, preferred_language: e.target.value }))}
             options={[
-              { value: 'hi',       label: 'हिंदी (Hindi)'          },
-              { value: 'en',       label: 'English'                 },
-              { value: 'hinglish', label: 'Hinglish'                },
+              { value: 'en', label: 'English'        },
+              { value: 'hi', label: 'हिंदी (Hindi)'  },
             ]}
           />
         </Field>

@@ -14,27 +14,35 @@ router.get('/profile', async (req, res) => {
 
 // PATCH /api/users/profile
 router.patch('/profile', async (req, res) => {
-  const allowed = ['name', 'phone', 'avatar_url', 'preferred_language', 'meta'];
-  const update = {};
-  allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
-  if (!Object.keys(update).length) return fail(res, 'Nothing to update', 400);
-  await db('users').where({ id: req.user.id }).update(update);
-  const updated = await db('users').where({ id: req.user.id }).first();
-  const { password_hash, email_verification_token, password_reset_token, ...safe } = updated;
-  return ok(res, { user: safe }, 'Profile updated');
+  try {
+    const allowed = ['name', 'phone', 'avatar_url', 'preferred_language', 'meta'];
+    const update = {};
+    allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+    if (!Object.keys(update).length) return fail(res, 'Nothing to update', 400);
+    await db('users').where({ id: req.user.id }).update(update);
+    const updated = await db('users').where({ id: req.user.id }).first();
+    const { password_hash, email_verification_token, password_reset_token, ...safe } = updated;
+    return ok(res, { user: safe }, 'Profile updated');
+  } catch (err) {
+    return fail(res, err.message || 'Failed to update profile', 500);
+  }
 });
 
 // PATCH /api/users/password
 router.patch('/password', async (req, res) => {
-  const { current_password, new_password } = req.body;
-  if (!current_password || !new_password) return fail(res, 'current_password and new_password required', 400);
-  if (new_password.length < 8) return fail(res, 'New password must be at least 8 characters', 400);
-  const user = await db('users').where({ id: req.user.id }).first();
-  const valid = await bcrypt.compare(current_password, user.password_hash);
-  if (!valid) return fail(res, 'Current password is incorrect', 400);
-  const password_hash = await bcrypt.hash(new_password, 12);
-  await db('users').where({ id: req.user.id }).update({ password_hash });
-  return ok(res, {}, 'Password updated');
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return fail(res, 'current_password and new_password required', 400);
+    if (new_password.length < 8) return fail(res, 'New password must be at least 8 characters', 400);
+    const user = await db('users').where({ id: req.user.id }).first();
+    const valid = await bcrypt.compare(current_password, user.password_hash);
+    if (!valid) return fail(res, 'Current password is incorrect', 400);
+    const password_hash = await bcrypt.hash(new_password, 12);
+    await db('users').where({ id: req.user.id }).update({ password_hash });
+    return ok(res, {}, 'Password updated');
+  } catch (err) {
+    return fail(res, err.message || 'Failed to update password', 500);
+  }
 });
 
 // GET /api/users/notifications
