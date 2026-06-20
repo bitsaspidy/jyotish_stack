@@ -21,7 +21,7 @@ const CONFIG_DEFAULTS = {
   gst_inclusive: 'true',
   hsn_sac: '999799', // SAC for other professional/astrology services
   invoice_prefix: 'JYS',
-  tax_split_mode: 'auto', // auto | cgst_sgst | igst
+  tax_split_mode: 'igst', // auto | cgst_sgst | igst — default IGST (inter-state)
 };
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
