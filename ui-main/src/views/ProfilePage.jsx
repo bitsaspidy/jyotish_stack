@@ -478,9 +478,14 @@ export default function ProfilePage() {
     if (!loading && !user) router.push('/login');
   }, [loading, user, router]);
 
+  // Fetch fresh profile + usage on mount — ensures admin plan changes are
+  // reflected immediately without the user needing to fully re-login.
   useEffect(() => {
-    if (user) api.get('/kundli/usage').then(({ data }) => setUsage(data)).catch(() => {});
-  }, [user]);
+    if (!loading && user) {
+      api.get('/users/profile').then(({ data }) => setUser(data.user)).catch(() => {});
+      api.get('/kundli/usage').then(({ data }) => setUsage(data)).catch(() => {});
+    }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading || !user) {
     return (

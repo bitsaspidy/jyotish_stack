@@ -504,7 +504,19 @@ export default function Users() {
 
       {/* Modals */}
       {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} onCreated={fetchUsers} />}
-      {detailUser && <UserDetail user={detailUser} onClose={() => setDetailUser(null)} onUpdated={fetchUsers} />}
+      {detailUser && (
+        <UserDetail
+          user={detailUser}
+          onClose={() => setDetailUser(null)}
+          onUpdated={async () => {
+            fetchUsers();
+            try {
+              const { data } = await adminApi.get(`/admin/users/${detailUser.id}`);
+              setDetailUser(data.user);
+            } catch {}
+          }}
+        />
+      )}
     </div>
   );
 }
