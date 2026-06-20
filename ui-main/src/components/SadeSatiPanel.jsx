@@ -16,8 +16,16 @@ export default function SadeSatiPanel({ journey, lang = 'en' }) {
   if (!journey?.phases?.length) return null;
   const T = (en, hi) => (lang === 'hi' ? hi : en);
 
-  const now = journey.current;
-  const phases = showAll ? journey.phases : journey.phases.filter((p) => !p.is_past || p.is_current);
+  // Recompute is_current / is_past from today's real date — stored flags freeze at calculation time.
+  const todayMs = Date.now();
+  const livePhases = journey.phases.map((p) => ({
+    ...p,
+    is_current: new Date(p.start).getTime() <= todayMs && todayMs <= new Date(p.end).getTime(),
+    is_past:    new Date(p.end).getTime() < todayMs,
+  }));
+  const now    = livePhases.find((p) => p.is_current) || null;
+  const active = !!now;
+  const phases = showAll ? livePhases : livePhases.filter((p) => !p.is_past || p.is_current);
 
   return (
     <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
@@ -28,11 +36,11 @@ export default function SadeSatiPanel({ journey, lang = 'en' }) {
         </h2>
         <span style={{
           fontSize:10, fontWeight:700, borderRadius:10, padding:'3px 10px',
-          color: journey.active ? '#EF4444' : '#22C55E',
-          background: journey.active ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
-          border: `1px solid ${journey.active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+          color: active ? '#EF4444' : '#22C55E',
+          background: active ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+          border: `1px solid ${active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
         }}>
-          {journey.active ? T('ACTIVE NOW', 'अभी सक्रिय') : T('Not active currently', 'वर्तमान में सक्रिय नहीं')}
+          {active ? T('ACTIVE NOW', 'अभी सक्रिय') : T('Not active currently', 'वर्तमान में सक्रिय नहीं')}
         </span>
       </div>
       <p className="text-ivory/45 text-[11px] mb-4 font-devanagari">
@@ -88,7 +96,7 @@ export default function SadeSatiPanel({ journey, lang = 'en' }) {
           </tbody>
         </table>
       </div>
-      {journey.phases.some((p) => p.is_past && !p.is_current) && (
+      {livePhases.some((p) => p.is_past && !p.is_current) && (
         <button onClick={() => setShowAll(!showAll)}
           style={{ marginTop:10, background:'transparent', border:'none', color:'#A78BFA', fontSize:11, fontWeight:700, cursor:'pointer', padding:0 }}>
           {showAll ? T('▲ Hide past cycles', '▲ पिछले चक्र छिपाएं') : T('▼ Show full lifetime map (incl. past)', '▼ पूरा जीवन मानचित्र देखें (पिछले सहित)')}
@@ -98,7 +106,7 @@ export default function SadeSatiPanel({ journey, lang = 'en' }) {
       {/* Phase meanings */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4">
         {['rising','peak','setting'].map((ph) => {
-          const info = journey.phases.find((p) => p.phase === ph);
+          const info = livePhases.find((p) => p.phase === ph);
           if (!info) return null;
           const st = PH_STYLE[ph];
           return (
