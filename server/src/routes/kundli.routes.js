@@ -9,7 +9,8 @@ const { kundliReportPdf, matchmakingReportPdf } = require('../services/report.se
 const { fetchVargaReferenceData } = require('../services/varga-reference.service');
 const { generateLifeGuidance }  = require('../services/helpers/life-guidance');
 const { computeFavouriteDays }  = require('../services/helpers/favourite-days');
-const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras, fetchAstaVakriAnalysis } = require('../services/kundli-admin.service');
+const { fetchYogaDoshaLibrary, fetchProblemRemedies, getOrCreateTodayPrediction, buildKundliReportExtras, fetchAstaVakriAnalysis, fetchRemedyManual } = require('../services/kundli-admin.service');
+const { generatePersonalizedRemedies } = require('../services/remedy-engine');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
 const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
 const { buildLifeReportNarratives }  = require('../services/helpers/life-report-narrative');
@@ -575,6 +576,8 @@ router.get('/:id', async (req, res) => {
   profile.judgement    = generateJudgement(cd, profile, { lang: 'hi', admin: false });
   profile.user_summary = composeKundliUserSummary(cd, profile.judgement);
   profile.life_report_friendly = composeLifeReportUserFriendly(cd, cd.life_report, profile.judgement, {});
+  profile.remedy_manual        = await fetchRemedyManual();
+  profile.personalized_remedies = generatePersonalizedRemedies(cd, { remedyManual: profile.remedy_manual });
 
   return ok(res, { profile });
 });
@@ -631,6 +634,8 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.judgement    = generateJudgement(chart, { date_of_birth: freshProfile.date_of_birth, gender: freshProfile.gender }, { lang: 'hi', admin: false });
   freshProfile.user_summary = composeKundliUserSummary(chart, freshProfile.judgement);
   freshProfile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, freshProfile.judgement, {});
+  freshProfile.remedy_manual        = await fetchRemedyManual();
+  freshProfile.personalized_remedies = generatePersonalizedRemedies(chart, { remedyManual: freshProfile.remedy_manual });
 
   return ok(res, { profile: freshProfile }, 'Chart recalculated successfully');
 });

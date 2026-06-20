@@ -1026,24 +1026,12 @@ export default function KundliDetail({ uuid }) {
               <div style={{ padding:16 }}>
                 {chart && (
                   <PersonalizedRemedyPanel
+                    serverPlan={kundli?.personalized_remedies}
                     chart={chart}
                     remedyManual={kundli?.remedy_manual}
                     lang={lang}
                     isAdmin={user?.role === 'admin'}
                   />
-                )}
-
-                {/* Reference Library */}
-                {kundli?.remedy_manual && (
-                  <details style={{ marginTop:20, border:'1px solid rgba(212,175,55,0.12)', borderRadius:10, overflow:'hidden' }}>
-                    <summary style={{ padding:'10px 15px', cursor:'pointer', listStyle:'none', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.04)', fontWeight:600, fontSize:11, color:'rgba(212,175,55,0.65)', fontFamily:'var(--font-devanagari),sans-serif' }}>
-                      <span>📚 {lang==='hi' ? 'संदर्भ पुस्तकालय — वैदिक उपाय मार्गदर्शिका' : 'Reference Library — Vedic Remedy Manual'}</span>
-                      <span style={{ fontSize:10, color:'rgba(245,240,232,0.35)' }}>▾</span>
-                    </summary>
-                    <div style={{ padding:14 }}>
-                      <RemedyManualPanel data={kundli?.remedy_manual} lang={lang} />
-                    </div>
-                  </details>
                 )}
               </div>
             </details>

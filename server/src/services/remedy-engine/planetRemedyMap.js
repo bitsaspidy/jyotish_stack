@@ -1,0 +1,142 @@
+'use strict';
+// Source: "Vedic Jyotish Remedial Manual — Remedy Class 1, 4th May 2026"
+
+const PLANET_REMEDY_MAP = {
+  Sun: {
+    name_hi: 'सूर्य', icon: '☀️',
+    ishta_devata_en: 'Lord Rama / Surya Narayan',
+    ishta_devata_hi: 'भगवान राम / सूर्य नारायण',
+    vedic_mantras:     ['Surya Upanishad'],
+    pauranik_stotras:  ['Aditya Hridayam', 'Surya Chalisa'],
+    primary_text:      'Surya Upanishad',
+    beeja_mantra:      'ॐ ह्रां ह्रीं ह्रौं सः सूर्याय नमः',
+    daan_en: 'wheat, jaggery, copper', daan_hi: 'गेहूं, गुड़, तांबा',
+    yantra: 'Surya Yantra',
+    gemstone_en: 'Ruby (Manikya)', gemstone_hi: 'माणिक्य (रूबी)',
+    day_en: 'Sunday', day_hi: 'रविवार',
+    direction: 'East', is_shakti: false,
+  },
+  Moon: {
+    name_hi: 'चंद्र', icon: '🌙',
+    ishta_devata_en: 'Lord Krishna / Shiva',
+    ishta_devata_hi: 'भगवान कृष्ण / शिव',
+    vedic_mantras:    ['Sri Rudram Namakam', 'Sri Rudram Chamakam'],
+    pauranik_stotras: ['Shiv Chalisa', 'Chandra Kavach'],
+    primary_text:     'Sri Rudram Namakam & Chamakam',
+    beeja_mantra:     'ॐ श्रां श्रीं श्रौं सः चंद्रमसे नमः',
+    daan_en: 'rice, milk, white cloth, silver', daan_hi: 'चावल, दूध, सफेद वस्त्र, चांदी',
+    yantra: 'Chandra Yantra',
+    gemstone_en: 'Pearl (Moti)', gemstone_hi: 'मोती',
+    day_en: 'Monday', day_hi: 'सोमवार',
+    direction: 'North-West', is_shakti: false,
+  },
+  Mars: {
+    name_hi: 'मंगल', icon: '🔴',
+    ishta_devata_en: 'Hanuman / Kartikeya / Narsimha',
+    ishta_devata_hi: 'हनुमान / कार्तिकेय / नरसिंह',
+    vedic_mantras:    ['Rog Nivaran Suktam'],
+    pauranik_stotras: ['Hanuman Bahuk', 'Rinn Mochan Mangal Stotra', 'Pragya Vivardhan Stotra'],
+    primary_text:     'Hanuman Bahuk | Rog Nivaran Suktam | Rinn Mochan Mangal Stotra',
+    beeja_mantra:     'ॐ क्रां क्रीं क्रौं सः भौमाय नमः',
+    daan_en: 'red cloth, lentils, copper, jaggery', daan_hi: 'लाल वस्त्र, मसूर, तांबा, गुड़',
+    yantra: 'Mangal Yantra',
+    gemstone_en: 'Red Coral (Moonga)', gemstone_hi: 'मूंगा',
+    day_en: 'Tuesday', day_hi: 'मंगलवार',
+    direction: 'South', is_shakti: false,
+  },
+  Mercury: {
+    name_hi: 'बुध', icon: '💚',
+    ishta_devata_en: 'Lord Vishnu',
+    ishta_devata_hi: 'भगवान विष्णु',
+    vedic_mantras:    ['Vishnu Suktam', 'Narayan Suktam', 'Purusha Suktam'],
+    pauranik_stotras: ['Vishnu Sahasranama', 'Budh Kavach'],
+    primary_text:     'Vishnu Suktam | Narayan Suktam | Purusha Suktam',
+    beeja_mantra:     'ॐ ब्रां ब्रीं ब्रौं सः बुधाय नमः',
+    daan_en: 'green cloth, moong dal, books', daan_hi: 'हरे वस्त्र, मूंग दाल, पुस्तकें',
+    yantra: 'Budh Yantra',
+    gemstone_en: 'Emerald (Panna)', gemstone_hi: 'पन्ना',
+    day_en: 'Wednesday', day_hi: 'बुधवार',
+    direction: 'North', is_shakti: false,
+  },
+  Jupiter: {
+    name_hi: 'गुरु', icon: '🟡',
+    ishta_devata_en: 'Lord Vishnu / Brihaspati',
+    ishta_devata_hi: 'भगवान विष्णु / बृहस्पति',
+    vedic_mantras:    ['Vishnu Suktam', 'Narayan Suktam', 'Purusha Suktam', 'Medha Suktam', 'Navgraha Suktam'],
+    pauranik_stotras: ['Vishnu Sahasranama', 'Guru Kavach'],
+    primary_text:     'Vishnu Suktam | Narayan Suktam | Purusha Suktam | Medha Suktam | Navgraha Suktam',
+    beeja_mantra:     'ॐ ग्रां ग्रीं ग्रौं सः गुरवे नमः',
+    daan_en: 'yellow cloth, turmeric, banana, gold', daan_hi: 'पीले वस्त्र, हल्दी, केला, सोना',
+    yantra: 'Guru Yantra',
+    gemstone_en: 'Yellow Sapphire (Pukhraj)', gemstone_hi: 'पुखराज',
+    day_en: 'Thursday', day_hi: 'गुरुवार',
+    direction: 'North-East', is_shakti: false,
+  },
+  Venus: {
+    name_hi: 'शुक्र', icon: '💎',
+    ishta_devata_en: 'Goddess Lakshmi / Parvati',
+    ishta_devata_hi: 'देवी लक्ष्मी / पार्वती',
+    vedic_mantras:    ['Sri Suktam', 'Devi Suktam'],
+    pauranik_stotras: ['Lakshmi Chalisa', 'Devi Kavach'],
+    primary_text:     'Sri Suktam | Devi Suktam',
+    beeja_mantra:     'ॐ द्रां द्रीं द्रौं सः शुक्राय नमः',
+    daan_en: 'white cloth, rice, ghee, silver, sweets', daan_hi: 'सफेद वस्त्र, चावल, घी, चांदी, मिठाई',
+    yantra: 'Shukra Yantra',
+    gemstone_en: 'Diamond (Heera)', gemstone_hi: 'हीरा',
+    day_en: 'Friday', day_hi: 'शुक्रवार',
+    direction: 'South-East', is_shakti: true,  // Lakshmi/Parvati — covers Shakti Pujan
+  },
+  Saturn: {
+    name_hi: 'शनि', icon: '🪐',
+    ishta_devata_en: 'Shani / Bhairava / Rudra',
+    ishta_devata_hi: 'शनि / भैरव / रुद्र',
+    vedic_mantras:    ['Sri Rudram Namakam', 'Sri Rudram Chamakam'],
+    pauranik_stotras: ['Shani Chalisa', 'Shani Kavach', 'Nilanjana Stuti'],
+    primary_text:     'Sri Rudram Namakam & Chamakam',
+    beeja_mantra:     'ॐ प्रां प्रीं प्रौं सः शनैश्चराय नमः',
+    daan_en: 'black sesame, mustard oil, iron, black cloth', daan_hi: 'काले तिल, सरसों का तेल, लोहा, काले वस्त्र',
+    yantra: 'Shani Yantra',
+    gemstone_en: 'Blue Sapphire (Neelam)', gemstone_hi: 'नीलम',
+    day_en: 'Saturday', day_hi: 'शनिवार',
+    direction: 'West', is_shakti: false,
+  },
+  Rahu: {
+    name_hi: 'राहु', icon: '☁️',
+    ishta_devata_en: 'Goddess Durga / Kali',
+    ishta_devata_hi: 'देवी दुर्गा / काली',
+    vedic_mantras:    ['Durga Suktam'],
+    pauranik_stotras: ['Durga Kavach', 'Durga Chalisa'],
+    primary_text:     'Durga Suktam | Durga Kavach',
+    beeja_mantra:     'ॐ भ्रां भ्रीं भ्रौं सः राहवे नमः',
+    daan_en: 'black sesame, mustard, blue cloth, coconut', daan_hi: 'काले तिल, सरसों, नीले वस्त्र, नारियल',
+    yantra: 'Rahu Yantra',
+    gemstone_en: 'Hessonite (Gomed)', gemstone_hi: 'गोमेद',
+    day_en: 'Saturday', day_hi: 'शनिवार',
+    direction: 'South-West', is_shakti: true,  // Durga/Kali — covers Shakti Pujan
+  },
+  Ketu: {
+    name_hi: 'केतु', icon: '🌀',
+    ishta_devata_en: 'Lord Ganesha',
+    ishta_devata_hi: 'भगवान गणेश',
+    vedic_mantras:    ['Ganapati Atharva Sheersha'],
+    pauranik_stotras: ['Ganapati Prarthna', 'Mayuresh Stotra'],
+    primary_text:     'Ganapati Atharva Sheersha | Ganapati Prarthna | Mayuresh Stotra',
+    beeja_mantra:     'ॐ स्त्रां स्त्रीं स्त्रौं सः केतवे नमः',
+    daan_en: 'sesame, blanket, iron, blue cloth', daan_hi: 'तिल, कंबल, लोहा, नीले वस्त्र',
+    yantra: 'Ketu Yantra',
+    gemstone_en: "Cat's Eye (Lahsuniya)", gemstone_hi: 'लहसुनिया',
+    day_en: 'Tuesday', day_hi: 'मंगलवार',
+    direction: 'North-West', is_shakti: false,
+  },
+};
+
+// Planets whose deities are Shakti (Divine Feminine) — for Conditional Shakti Pujan Step 4
+const SHAKTI_PLANETS = new Set(
+  Object.entries(PLANET_REMEDY_MAP)
+    .filter(([, r]) => r.is_shakti)
+    .map(([name]) => name)
+);  // → Set { 'Venus', 'Rahu' }
+
+const PLANET_ORDER = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu'];
+
+module.exports = { PLANET_REMEDY_MAP, SHAKTI_PLANETS, PLANET_ORDER };
