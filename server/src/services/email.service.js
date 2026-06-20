@@ -60,6 +60,8 @@ const TEMPLATE_DEPARTMENT = {
   reset_password:       'account',
   subscription_confirm: 'account',
   payment_success:      'account',
+  remedy_report:        'account',
+  account_setup:        'account',
   newsletter:           'team',
   custom:               'team',
   daily_digest:         'team',
@@ -254,6 +256,39 @@ const templates = {
           ${(data.message || '').replace(/</g, '&lt;').replace(/\n/g, '<br/>')}
         </blockquote>
         <p style="font-size:12px;color:#888;">Reply directly to this email to respond to ${data.name}.</p>`, sig),
+  }),
+
+  remedy_report: (data, sig) => ({
+    subject: data.lang === 'hi'
+      ? `${data.name} जी — आपकी वैदिक उपाय रिपोर्ट संलग्न है`
+      : `Your Vedic Remedy Report is Attached — ${data.name}`,
+    html: BRAND_SHELL(`
+        <p style="font-size:16px;">Namaste ${data.name},</p>
+        <p>Your personalised <strong style="color:#D4AF37;">Vedic Remedy Report</strong> has been generated from your birth chart and is attached to this email as a PDF.</p>
+        <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:16px 20px;margin:20px 0;">
+          <p style="margin:0 0 8px;color:#D4AF37;font-weight:bold;">What's inside your report:</p>
+          <ul style="margin:0;padding-left:20px;color:#c8c0b0;line-height:1.8;">
+            <li>Your Lagna Lord &amp; current Mahadasha analysis</li>
+            <li>Top 3 priority planets needing attention</li>
+            <li>Daily mantras, gemstone &amp; ritual guidance</li>
+            <li>Personalised sadhana duration (21 / 43 / 90 days)</li>
+            <li>Daily Puja sequence for consistent practice</li>
+          </ul>
+        </div>
+        <p>We've also created an account for you. Check for a separate email with a link to set your password and activate your full Jyotish Stack AI account.</p>
+        <p style="font-size:12px;color:#888;">The remedies in this report are for spiritual guidance only and are not a substitute for professional advice.</p>`, sig),
+  }),
+
+  account_setup: (data, sig) => ({
+    subject: `Activate your Jyotish Stack AI account — ${data.name}`,
+    html: BRAND_SHELL(`
+        <p style="font-size:16px;">Namaste ${data.name},</p>
+        <p>Your Vedic Remedy Report has been sent. We've also created a <strong style="color:#D4AF37;">Jyotish Stack AI</strong> account for you so you can access your full Kundli, predictions, and more.</p>
+        <p><strong>Step 1:</strong> Set your account password by clicking the button below:</p>
+        <a href="${data.setupUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:12px 28px;text-decoration:none;font-weight:bold;margin:16px 0;border-radius:4px;">Set My Password</a>
+        <p><strong>Step 2:</strong> Verify your email address (link sent separately).</p>
+        <p><strong>Step 3:</strong> Choose a plan (Basic, Premium, or Yearly) to unlock your full chart.</p>
+        <p style="font-size:12px;color:#888;">The password setup link is valid for 72 hours. If you did not request a remedy report, you can ignore this email.</p>`, sig),
   }),
 };
 

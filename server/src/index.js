@@ -69,6 +69,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/panchang', panchangRoutes);
 app.use('/api/public',   publicRoutes);
+app.use('/api/remedy',   require('./routes/remedy-package.routes'));
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => fail(res, 'Route not found', 404));
