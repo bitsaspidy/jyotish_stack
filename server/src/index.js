@@ -19,6 +19,7 @@ const settingsRoutes = require('./routes/settings.routes');
 const horoscopeRoutes  = require('./routes/horoscope.routes');
 const panchangRoutes   = require('./routes/panchang.routes');
 const publicRoutes     = require('./routes/public.routes');
+const { initDailyDigestJob } = require('./jobs/daily-digest');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -86,6 +87,7 @@ app.listen(PORT, async () => {
     console.log(`\n🪐  Jyotish Stack API running on http://localhost:${PORT}`);
     console.log(`    ENV  : ${process.env.NODE_ENV}`);
     console.log(`    DB   : ${process.env.DB_NAME}@${process.env.DB_HOST}\n`);
+    initDailyDigestJob();
   } catch (e) {
     console.error('❌  DB connection failed:', e.message);
     process.exit(1);

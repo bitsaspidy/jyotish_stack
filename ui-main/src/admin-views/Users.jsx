@@ -13,6 +13,17 @@ function roleBadge(role) {
   const s = ROLE_STYLE[role] || ROLE_STYLE.user;
   return { fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:s.bg, color:s.color, border:`1px solid ${s.border}` };
 }
+
+const PLAN_STYLE = {
+  free:    { bg:'rgba(107,114,128,0.15)', color:'#9CA3AF', border:'rgba(107,114,128,0.3)'  },
+  basic:   { bg:'rgba(59,130,246,0.15)',  color:'#60A5FA', border:'rgba(59,130,246,0.3)'   },
+  premium: { bg:'rgba(212,175,55,0.15)',  color:'#D4AF37', border:'rgba(212,175,55,0.3)'   },
+  yearly:  { bg:'rgba(167,139,250,0.18)', color:'#A78BFA', border:'rgba(167,139,250,0.35)' },
+};
+function planBadge(plan) {
+  const s = PLAN_STYLE[plan] || PLAN_STYLE.free;
+  return { fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background:s.bg, color:s.color, border:`1px solid ${s.border}` };
+}
 function relTime(d) {
   const m = Math.floor((Date.now() - new Date(d)) / 60000);
   if (m < 1) return 'just now';
@@ -89,6 +100,7 @@ function CreateUserModal({ onClose, onCreated }) {
 // ── User Detail Slide-over ────────────────────────────────────────────────────
 function UserDetail({ user, onClose, onUpdated }) {
   const [roleLoading, setRoleLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [email, setEmail]           = useState(user.email);
   const [editingEmail, setEditEmail] = useState(false);
@@ -118,6 +130,16 @@ function UserDetail({ user, onClose, onUpdated }) {
       onUpdated();
     } catch { toast.error('Failed to update role'); }
     finally { setRoleLoading(false); }
+  };
+
+  const changePlan = async (newPlan) => {
+    setPlanLoading(true);
+    try {
+      await adminApi.patch(`/admin/users/${user.id}/plan`, { plan: newPlan });
+      toast.success(`Plan updated to ${newPlan}`);
+      onUpdated();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to update plan'); }
+    finally { setPlanLoading(false); }
   };
 
   const toggleActive = async () => {
@@ -208,6 +230,12 @@ function UserDetail({ user, onClose, onUpdated }) {
             </div>
           ))}
 
+          {/* Plan badge */}
+          <div style={{ marginBottom:20 }}>
+            <p style={{ color:'rgba(245,240,232,0.38)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Subscription Plan</p>
+            <span style={planBadge(user.plan || 'free')}>{(user.plan || 'free').toUpperCase()}</span>
+          </div>
+
           {/* Status badge */}
           <div style={{ marginBottom:20 }}>
             <p style={{ color:'rgba(245,240,232,0.38)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Status</p>
@@ -235,6 +263,30 @@ function UserDetail({ user, onClose, onUpdated }) {
               </div>
             </div>
           )}
+
+          {/* Plan change */}
+          <div style={{ marginBottom:20 }}>
+            <p style={{ color:'rgba(245,240,232,0.38)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:6 }}>Change Plan</p>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {['free', 'basic', 'premium', 'yearly'].map(p => {
+                const ps = PLAN_STYLE[p];
+                const isCurrent = (user.plan || 'free') === p;
+                return (
+                  <button key={p} onClick={() => changePlan(p)} disabled={planLoading || isCurrent}
+                    style={{
+                      padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:600,
+                      cursor: isCurrent ? 'default' : 'pointer',
+                      background: isCurrent ? ps.bg : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isCurrent ? ps.border : 'rgba(255,255,255,0.1)'}`,
+                      color: isCurrent ? ps.color : 'rgba(245,240,232,0.4)',
+                      opacity: planLoading ? 0.6 : 1,
+                    }}>
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Actions footer */}
@@ -340,7 +392,7 @@ export default function Users() {
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:700 }}>
             <thead>
               <tr style={{ borderBottom:'1px solid rgba(212,175,55,0.12)' }}>
-                {['User', 'Email', 'Role', 'Status', 'Verified', 'Joined', 'Actions'].map(h => (
+                {['User', 'Email', 'Role', 'Plan', 'Status', 'Verified', 'Joined', 'Actions'].map(h => (
                   <th key={h} style={{ padding:'11px 14px', textAlign:'left', color:'rgba(212,175,55,0.6)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', whiteSpace:'nowrap' }}>
                     {h}
                   </th>
@@ -349,10 +401,10 @@ export default function Users() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>Loading…</td></tr>
+                <tr><td colSpan={8} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>Loading…</td></tr>
               ) : apiError ? (
                 <tr>
-                  <td colSpan={7} style={{ padding:'36px', textAlign:'center' }}>
+                  <td colSpan={8} style={{ padding:'36px', textAlign:'center' }}>
                     <p style={{ color:'#F87171', fontSize:14, fontWeight:600, marginBottom:10 }}>⚠ Could not load users</p>
                     <p style={{ color:'rgba(245,240,232,0.35)', fontSize:12, marginBottom:16 }}>Make sure the API server is running: <code style={{ color:'rgba(212,175,55,0.7)' }}>npm run dev:server</code></p>
                     <button onClick={fetchUsers}
@@ -362,7 +414,7 @@ export default function Users() {
                   </td>
                 </tr>
               ) : users.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>No users found</td></tr>
+                <tr><td colSpan={8} style={{ padding:'32px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>No users found</td></tr>
               ) : users.map(u => (
                 <tr key={u.id} style={{ borderBottom:'1px solid rgba(255,255,255,0.04)', transition:'background 0.12s' }}
                   onMouseEnter={e => e.currentTarget.style.background='rgba(212,175,55,0.03)'}
@@ -377,6 +429,7 @@ export default function Users() {
                   </td>
                   <td style={{ padding:'10px 14px', color:'rgba(245,240,232,0.55)', fontSize:13 }}>{u.email}</td>
                   <td style={{ padding:'10px 14px' }}><span style={roleBadge(u.role)}>{u.role}</span></td>
+                  <td style={{ padding:'10px 14px' }}><span style={planBadge(u.plan || 'free')}>{(u.plan || 'free').toUpperCase()}</span></td>
                   <td style={{ padding:'10px 14px' }}>
                     <span style={{ fontSize:10, padding:'2px 8px', borderRadius:10, fontWeight:600, background: u.is_active ? 'rgba(52,211,153,0.12)' : 'rgba(239,68,68,0.12)', color: u.is_active ? '#34D399' : '#F87171', border:`1px solid ${u.is_active ? 'rgba(52,211,153,0.25)' : 'rgba(239,68,68,0.25)'}` }}>
                       {u.is_active ? '● Active' : '○ Inactive'}

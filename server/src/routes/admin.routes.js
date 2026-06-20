@@ -117,6 +117,17 @@ router.patch('/users/:id/role', ah(async (req, res) => {
   return ok(res, { role }, 'Role updated');
 }));
 
+router.patch('/users/:id/plan', ah(async (req, res) => {
+  const { plan } = req.body;
+  const allowed = ['free', 'basic', 'premium', 'yearly'];
+  if (!allowed.includes(plan)) return fail(res, 'Invalid plan. Must be free, basic, premium, or yearly', 400);
+  const user = await db('users').where({ id: req.params.id }).first();
+  if (!user) return fail(res, 'User not found', 404);
+  await db('users').where({ id: req.params.id }).update({ plan, updated_at: new Date() });
+  await logActivity(req, 'update', 'user', req.params.id, `Plan changed to ${plan}`);
+  return ok(res, { plan }, 'Plan updated');
+}));
+
 // Correct a user's email address (e.g. dots stripped by old normalizeEmail).
 // Lowercases but PRESERVES dots — does not re-normalize.
 router.patch('/users/:id/email', ah(async (req, res) => {
@@ -965,6 +976,21 @@ router.put('/profile/password', ah(async (req, res) => {
   await db('users').where({ id: req.user.id }).update({ password: hash, updated_at: new Date() });
   await logActivity(req, 'update', 'profile', req.user.id, 'Changed password');
   return ok(res, { message: 'Password changed successfully' });
+}));
+
+// ─── Jobs ─────────────────────────────────────────────────────────────────────
+router.post('/jobs/daily-digest', ah(async (req, res) => {
+  const { sendDailyDigestToAll, sendDailyDigestToUser } = require('../services/daily-email.service');
+  const { user_id } = req.body;
+  if (user_id) {
+    const result = await sendDailyDigestToUser(user_id);
+    return ok(res, result, 'Daily digest sent to user');
+  }
+  // Run in background — respond immediately so the HTTP request doesn't time out
+  sendDailyDigestToAll()
+    .then((summary) => console.log('[Admin] Manual daily digest done:', summary))
+    .catch((err) => console.error('[Admin] Manual daily digest error:', err.message));
+  return ok(res, { message: 'Daily digest job started in background' });
 }));
 
 module.exports = router;

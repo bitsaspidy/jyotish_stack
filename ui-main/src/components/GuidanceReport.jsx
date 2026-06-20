@@ -12,9 +12,9 @@ const LANGS = ['en', 'hi', 'hinglish'];
 const normLang = (l) => (LANGS.includes(l) ? l : 'hi');
 
 const UI = {
-  en: { loading: 'Preparing your life report…', error: 'Could not load the report.', advice: 'Advice', caution: 'Caution', lucky: 'Lucky', disclaimer: 'This report is guidance based on astrological calculation and traditional rules — take it for positive direction, not for fear.', printBtn: '🖨️ PDF / Print', title: '🪔 Life Guidance Report', docTitle: 'Life Guidance Report', popup: 'Please allow pop-ups for this site.', dShow: '🔧 Show technical details (Admin)', dHide: '▲ Hide technical details', locale: 'en-IN' },
-  hi: { loading: 'आपकी जीवन रिपोर्ट तैयार हो रही है…', error: 'रिपोर्ट लोड नहीं हो पाई।', advice: 'सलाह', caution: 'सावधानी', lucky: 'शुभ', disclaimer: 'यह रिपोर्ट ज्योतिषीय गणना और परंपरागत नियमों पर आधारित मार्गदर्शन है — इसे सकारात्मक दिशा के लिए लें, किसी डर के लिए नहीं।', printBtn: '🖨️ PDF / प्रिंट', title: '🪔 जीवन मार्गदर्शन रिपोर्ट', docTitle: 'जीवन मार्गदर्शन रिपोर्ट', popup: 'कृपया इस साइट के लिए पॉप-अप की अनुमति दें।', dShow: '🔧 तकनीकी विवरण देखें (Admin)', dHide: '▲ तकनीकी विवरण छिपाएं', locale: 'hi-IN' },
-  hinglish: { loading: 'Aapki life report ready ho rahi hai…', error: 'Report load nahi ho payi.', advice: 'Advice', caution: 'Caution', lucky: 'Lucky', disclaimer: 'Yeh report astrological calculation aur traditional rules par based guidance hai — ise positive direction ke liye lein, dar ke liye nahi.', printBtn: '🖨️ PDF / Print', title: '🪔 Life Guidance Report', docTitle: 'Life Guidance Report', popup: 'Please is site ke liye pop-up allow karein.', dShow: '🔧 Technical details dekhein (Admin)', dHide: '▲ Technical details chhipayein', locale: 'hi-IN' },
+  en: { loading: 'Preparing your life report…', error: 'Could not load the report.', advice: 'Advice', caution: 'Caution', lucky: 'Lucky', disclaimer: 'This report reveals planetary influences — not fixed fate. Every challenge shown here is a signal that can be transformed through the prescribed remedies. Focus on the remedy, not the prediction. Regular practice of your Sadhana and Puja sequence can shift your life in a positive direction.', printBtn: '🖨️ PDF / Print', title: '🪔 Life Guidance Report', docTitle: 'Life Guidance Report', popup: 'Please allow pop-ups for this site.', dShow: '🔧 Show technical details (Admin)', dHide: '▲ Hide technical details', locale: 'en-IN' },
+  hi: { loading: 'आपकी जीवन रिपोर्ट तैयार हो रही है…', error: 'रिपोर्ट लोड नहीं हो पाई।', advice: 'सलाह', caution: 'सावधानी', lucky: 'शुभ', disclaimer: 'यह रिपोर्ट ग्रहीय प्रभावों को दर्शाती है — यह आपका अटल भाग्य नहीं है। यहाँ दिखाई गई हर चुनौती एक संकेत है जिसे दिए गए उपायों से परिवर्तित किया जा सकता है। भविष्यवाणी से नहीं, उपाय पर ध्यान दें। अपनी साधना और पूजा-क्रम का श्रद्धापूर्वक पालन करें।', printBtn: '🖨️ PDF / प्रिंट', title: '🪔 जीवन मार्गदर्शन रिपोर्ट', docTitle: 'जीवन मार्गदर्शन रिपोर्ट', popup: 'कृपया इस साइट के लिए पॉप-अप की अनुमति दें।', dShow: '🔧 तकनीकी विवरण देखें (Admin)', dHide: '▲ तकनीकी विवरण छिपाएं', locale: 'hi-IN' },
+  hinglish: { loading: 'Aapki life report ready ho rahi hai…', error: 'Report load nahi ho payi.', advice: 'Advice', caution: 'Caution', lucky: 'Lucky', disclaimer: 'Yeh report planetary influences dikhati hai — yeh aapka pakka bhagya nahi hai. Har challenge ek signal hai jo remedies se transform ho sakta hai. Prediction pe nahi, remedy pe focus karein. Apni Sadhana aur Puja sequence ka niyamit palan karein.', printBtn: '🖨️ PDF / Print', title: '🪔 Life Guidance Report', docTitle: 'Life Guidance Report', popup: 'Please is site ke liye pop-up allow karein.', dShow: '🔧 Technical details dekhein (Admin)', dHide: '▲ Technical details chhipayein', locale: 'hi-IN' },
 };
 
 const STATUS_COLORS = {
@@ -234,6 +234,9 @@ ul{margin:6px 0;padding-left:20px;}li{font-size:13px;margin-bottom:4px;color:#37
 .adv{background:#ecfdf5;border:1px solid #bbf7d0;border-radius:7px;padding:6px 10px;margin-top:6px;font-size:12.5px;color:#15803d;}
 .cau{background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:6px 10px;margin-top:6px;font-size:12.5px;color:#b45309;}
 .foot{margin-top:18px;text-align:center;color:#9ca3af;font-size:11px;line-height:1.6;}
+.disc-box{background:#fffbf0;border:1.5px solid #d4af37;border-radius:8px;padding:14px 18px;margin:24px 0 10px;text-align:center;}
+.disc-box h4{color:#b8860b;font-size:13px;font-weight:700;margin:0 0 6px;letter-spacing:0.04em;}
+.disc-box p{color:#92400e;font-size:12px;line-height:1.75;margin:0;}
 @page{margin:16mm;}
 </style></head><body><div class="wrap">
 <div class="top"><h1>${esc(ui.title)}</h1>
@@ -243,7 +246,11 @@ ${buildJudgementHtml(judgement, lang)}
 ${dailyHtml}
 ${(report.sections || []).map(block).join('')}
 ${buildRemedyHtml(personalizedRemedies, lang)}
-<div class="foot">${esc(ui.disclaimer)}<br/>© ${new Date().getFullYear()} Jyotish Stack AI · jyotishstack.com</div>
+<div class="disc-box">
+  <h4>📌 ${lang === 'hi' ? 'महत्वपूर्ण: उपाय पर ध्यान दें, भय पर नहीं' : 'Important: Focus on Remedies, Not on Fear'}</h4>
+  <p>${esc(ui.disclaimer)}</p>
+</div>
+<div class="foot">© ${new Date().getFullYear()} Jyotish Stack AI · jyotishstack.com · This report is for guidance only and does not constitute legal, medical, or financial advice.</div>
 </div></body></html>`;
 }
 

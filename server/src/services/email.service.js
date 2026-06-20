@@ -62,6 +62,7 @@ const TEMPLATE_DEPARTMENT = {
   payment_success:      'account',
   newsletter:           'team',
   custom:               'team',
+  daily_digest:         'team',
   contact_ack:          'team',
   contact_notify:       'team',
 };
@@ -219,6 +220,11 @@ const templates = {
   custom: (data, sig) => ({
     subject: data.subject,
     html: BRAND_SHELL(data.body, sig),
+  }),
+
+  daily_digest: (data) => ({
+    subject: data.subject,
+    html: data.html,
   }),
 
   contact_ack: (data, sig) => ({

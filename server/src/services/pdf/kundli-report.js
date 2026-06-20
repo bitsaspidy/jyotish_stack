@@ -731,6 +731,18 @@ function buildKundliReport(profile, chart, extras = {}) {
   // ════ 10. REMEDIES ════
   r.newPage('11 - Vedic Remedies');
   r.heading('Vedic Remedies');
+
+  // Disclaimer box — must appear before any remedy content
+  r.ensure(56);
+  const discMsg = 'This report reveals planetary influences — not fixed fate. Every challenge shown here is a signal that can be transformed through sincere practice of the remedies below. Your devoted Sadhana and Puja are more powerful than any planetary position. Focus on the remedy, not on fear.';
+  const discLines = r.d.wrap(discMsg, W - 20, 7.5);
+  const discH = 20 + discLines.length * 10.5 + 8;
+  r.d.rect(M, r.y, W, discH, CARD2);
+  r.d.rectStroke(M, r.y, W, discH, GOLD, 0.7);
+  r.d.text(M + 10, r.y + 11, 'IMPORTANT: Focus on Remedies — Not on Fear', { size: 8.5, bold: true, color: GOLD2 });
+  let dy = r.y + 22;
+  discLines.forEach((line) => { r.d.text(M + 10, dy, line, { size: 7.5, color: IVORY }); dy += 10.5; });
+  r.y += discH + 6;
   const remCard = (title, pl) => {
     if (!pl) return;
     r.ensure(40);
