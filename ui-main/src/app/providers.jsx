@@ -6,7 +6,6 @@ import { AuthProvider } from '../context/AuthContext';
 import { LangProvider, useLang } from '../context/LangContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import EmailVerificationBanner from '../components/EmailVerificationBanner';
 import ComingSoon from '../views/ComingSoon';
 import api from '../lib/api';
 
@@ -52,7 +51,6 @@ function PublicShell({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <EmailVerificationBanner />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
