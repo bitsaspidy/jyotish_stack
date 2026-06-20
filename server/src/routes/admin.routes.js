@@ -591,7 +591,7 @@ router.put('/email-signatures/:dept', ah(async (req, res) => {
 }));
 
 // ─── SALES / INVOICES ────────────────────────────────────────────────────────
-const { getBusinessConfig, saveBusinessConfig } = require('../services/invoice.service');
+const { getBusinessConfig, saveBusinessConfig, computeGst } = require('../services/invoice.service');
 const { buildInvoicePdf } = require('../services/pdf/invoice');
 
 // GET /admin/sales — paginated invoice list + revenue/GST summary
@@ -684,6 +684,57 @@ router.post('/sales/:uuid/resend', ah(async (req, res) => {
     attachments: [{ filename: `${String(invoice.invoice_number).replace(/[^\w.-]+/g, '-')}.pdf`, content: pdf, contentType: 'application/pdf' }],
   });
   return ok(res, {}, 'Invoice re-sent to customer');
+}));
+
+// PATCH /admin/sales/:uuid — edit invoice tax type, customer state, GSTIN
+router.patch('/sales/:uuid', ah(async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+
+  const { tax_mode, customer_state, customer_gstin } = req.body;
+  // tax_mode: 'igst' | 'cgst_sgst' | 'no_tax'
+
+  const cfg       = await getBusinessConfig();
+  const total     = Number(invoice.total_amount); // preserve what customer paid
+  const gstRate   = Number(cfg.gst_rate) || 18;
+  const inclusive = cfg.gst_inclusive !== false && String(cfg.gst_inclusive) !== 'false';
+
+  let patch = {
+    customer_state:  customer_state  !== undefined ? (customer_state  || null) : invoice.customer_state,
+    customer_gstin:  customer_gstin  !== undefined ? (customer_gstin  || null) : invoice.customer_gstin,
+    place_of_supply: customer_state  || invoice.place_of_supply,
+  };
+
+  if (tax_mode === 'no_tax') {
+    // International / exempt — zero tax, bill of supply
+    Object.assign(patch, {
+      is_interstate:  false,
+      document_type:  'bill_of_supply',
+      gst_rate:       0,
+      taxable_value:  total,
+      cgst: 0, sgst: 0, igst: 0,
+      total_tax:      0,
+      total_amount:   total,
+    });
+  } else if (tax_mode === 'igst' || tax_mode === 'cgst_sgst') {
+    const interstate = tax_mode === 'igst';
+    const calc = computeGst({ total, rate: gstRate, inclusive, interstate });
+    Object.assign(patch, {
+      is_interstate:  interstate,
+      document_type:  'tax_invoice',
+      gst_rate:       gstRate,
+      taxable_value:  calc.taxable_value,
+      cgst:           calc.cgst,
+      sgst:           calc.sgst,
+      igst:           calc.igst,
+      total_tax:      calc.total_tax,
+      total_amount:   calc.total_amount,
+    });
+  }
+
+  await db('invoices').where({ uuid: req.params.uuid }).update(patch);
+  const updated = await db('invoices').where({ uuid: req.params.uuid }).first();
+  return ok(res, { invoice: updated }, 'Invoice updated');
 }));
 
 // GET /admin/sales/business-config — current business/GST settings
