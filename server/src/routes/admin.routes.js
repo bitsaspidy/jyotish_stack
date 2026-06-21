@@ -509,6 +509,21 @@ router.post('/email-logs/:id/retry', ah(async (req, res) => {
 }));
 
 // ─── EMAIL MANAGER (IMAP INBOX) ──────────────────────────────────────────────
+// Unread count per department — piggybacks on the 60-second IMAP cache
+router.get('/email-manager/unread-counts', ah(async (req, res) => {
+  const { fetchMailbox } = require('../services/imap.service');
+  const depts = ['sales', 'team', 'account'];
+  const counts = { sales: 0, team: 0, account: 0, all: 0 };
+  await Promise.allSettled(depts.map(async (dept) => {
+    try {
+      const msgs = await fetchMailbox(dept, 'INBOX', 50);
+      counts[dept] = msgs.filter(m => m.seen === false).length;
+    } catch (_) {}
+  }));
+  counts.all = counts.sales + counts.team + counts.account;
+  return ok(res, { counts }, 'OK');
+}));
+
 router.get('/email-manager/inbox', ah(async (req, res) => {
   const { fetchMailbox } = require('../services/imap.service');
   const dept   = req.query.dept   || 'all';

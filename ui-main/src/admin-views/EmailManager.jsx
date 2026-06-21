@@ -344,10 +344,18 @@ export default function EmailManager() {
   const [search,       setSearch]       = useState('');
   const [signatures,   setSignatures]   = useState({});
   const [retrying,     setRetrying]     = useState({});
+  const [unreadCounts, setUnreadCounts] = useState({ all: 0, sales: 0, team: 0, account: 0 });
 
   // Load signatures once
   useEffect(() => {
     adminApi.get('/admin/email-signatures').then(({ data }) => setSignatures(data.signatures || {})).catch(() => {});
+  }, []);
+
+  const loadUnreadCounts = useCallback(async () => {
+    try {
+      const { data } = await adminApi.get('/admin/email-manager/unread-counts');
+      setUnreadCounts(data.counts || {});
+    } catch (_) {}
   }, []);
 
   const loadEmails = useCallback(async () => {
@@ -378,7 +386,9 @@ export default function EmailManager() {
     finally { setLoading(false); }
   }, [activeDept, activeFolder, page]);
 
-  useEffect(() => { loadEmails(); }, [loadEmails]);
+  useEffect(() => { loadEmails(); loadUnreadCounts(); }, [loadEmails, loadUnreadCounts]);
+
+  const doRefresh = () => { loadEmails(); loadUnreadCounts(); };
 
   const selectEmail = async (email) => {
     const id = email.uid || email.id;
@@ -456,6 +466,7 @@ export default function EmailManager() {
 
   return (
     <div style={{ display:'flex', height:'calc(100vh - 86px)', overflow:'hidden', background:'#0A0C18', gap:0 }}>
+      <style>{`@keyframes email-spin { to { transform: rotate(360deg); } }`}</style>
 
       {/* ── Left Sidebar ──────────────────────────────────────────────────────── */}
       <div style={{ width:192, flexShrink:0, borderRight:'1px solid rgba(212,175,55,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
@@ -474,18 +485,26 @@ export default function EmailManager() {
         {/* Dept selector */}
         <div style={{ padding:'10px 8px 6px' }}>
           <p style={{ color:'rgba(245,240,232,0.22)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6, paddingLeft:6 }}>Accounts</p>
-          {DEPT_TABS.map(t => (
-            <button key={t.key} onClick={() => { setActiveDept(t.key); setPage(1); }} style={{
-              width:'100%', display:'flex', alignItems:'center', gap:9, padding:'7px 8px', borderRadius:6,
-              background: activeDept===t.key ? `${t.color}12` : 'transparent',
-              border:'none', color: activeDept===t.key ? t.color : 'rgba(245,240,232,0.45)',
-              fontSize:12, fontWeight: activeDept===t.key ? 700 : 400, cursor:'pointer', textAlign:'left',
-              borderLeft: activeDept===t.key ? `2px solid ${t.color}` : '2px solid transparent',
-              transition:'all 0.12s',
-            }}>
-              {t.label}
-            </button>
-          ))}
+          {DEPT_TABS.map(t => {
+            const uc = t.key === 'all' ? (unreadCounts.all || 0) : (unreadCounts[t.key] || 0);
+            return (
+              <button key={t.key} onClick={() => { setActiveDept(t.key); setPage(1); }} style={{
+                width:'100%', display:'flex', alignItems:'center', gap:9, padding:'7px 8px', borderRadius:6,
+                background: activeDept===t.key ? `${t.color}12` : 'transparent',
+                border:'none', color: activeDept===t.key ? t.color : 'rgba(245,240,232,0.45)',
+                fontSize:12, fontWeight: activeDept===t.key ? 700 : 400, cursor:'pointer', textAlign:'left',
+                borderLeft: activeDept===t.key ? `2px solid ${t.color}` : '2px solid transparent',
+                transition:'all 0.12s',
+              }}>
+                <span style={{ flex:1 }}>{t.label}</span>
+                {uc > 0 && (
+                  <span style={{ background: t.color, color:'#0A0C18', borderRadius:10, fontSize:9, fontWeight:800, padding:'1px 5px', minWidth:14, textAlign:'center', lineHeight:1.6 }}>
+                    {uc}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Test SMTP */}
@@ -494,28 +513,26 @@ export default function EmailManager() {
         {/* Folder selector */}
         <div style={{ padding:'8px 8px 6px', borderTop:'1px solid rgba(255,255,255,0.05)' }}>
           <p style={{ color:'rgba(245,240,232,0.22)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:6, paddingLeft:6 }}>Folders</p>
-          {FOLDER_TABS.map(t => (
-            <button key={t.key} onClick={() => { setActiveFolder(t.key); setPage(1); }} style={{
-              width:'100%', display:'flex', alignItems:'center', gap:9, padding:'7px 8px', borderRadius:6,
-              background: activeFolder===t.key ? 'rgba(212,175,55,0.08)' : 'transparent',
-              border:'none', color: activeFolder===t.key ? gold : 'rgba(245,240,232,0.45)',
-              fontSize:12, fontWeight: activeFolder===t.key ? 700 : 400, cursor:'pointer', textAlign:'left',
-              borderLeft: activeFolder===t.key ? `2px solid ${gold}` : '2px solid transparent',
-              transition:'all 0.12s',
-            }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Refresh */}
-        <div style={{ marginTop:'auto', padding:'10px 12px', borderTop:'1px solid rgba(255,255,255,0.05)' }}>
-          <button onClick={loadEmails} disabled={loading} style={{
-            width:'100%', padding:'7px 0', borderRadius:6, border:'1px solid rgba(255,255,255,0.08)',
-            background:'transparent', color:'rgba(245,240,232,0.4)', fontSize:11, cursor: loading ? 'not-allowed' : 'pointer',
-          }}>
-            {loading ? '⏳ Loading…' : '🔄 Refresh'}
-          </button>
+          {FOLDER_TABS.map(t => {
+            const inboxUnread = t.key === 'inbox' ? (unreadCounts.all || 0) : 0;
+            return (
+              <button key={t.key} onClick={() => { setActiveFolder(t.key); setPage(1); }} style={{
+                width:'100%', display:'flex', alignItems:'center', gap:9, padding:'7px 8px', borderRadius:6,
+                background: activeFolder===t.key ? 'rgba(212,175,55,0.08)' : 'transparent',
+                border:'none', color: activeFolder===t.key ? gold : 'rgba(245,240,232,0.45)',
+                fontSize:12, fontWeight: activeFolder===t.key ? 700 : 400, cursor:'pointer', textAlign:'left',
+                borderLeft: activeFolder===t.key ? `2px solid ${gold}` : '2px solid transparent',
+                transition:'all 0.12s',
+              }}>
+                <span style={{ flex:1 }}>{t.label}</span>
+                {inboxUnread > 0 && (
+                  <span style={{ background:'#EF4444', color:'#fff', borderRadius:10, fontSize:9, fontWeight:800, padding:'1px 5px', minWidth:14, textAlign:'center', lineHeight:1.6 }}>
+                    {inboxUnread}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -526,7 +543,21 @@ export default function EmailManager() {
         <div style={{ padding:'12px 14px', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
             <span style={{ color:gold, fontSize:13, fontWeight:700 }}>{DEPT_LABEL[activeDept]} · {activeFolder.charAt(0).toUpperCase()+activeFolder.slice(1)}</span>
-            <span style={{ color:'rgba(245,240,232,0.3)', fontSize:11 }}>{total} emails</span>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              {activeFolder === 'inbox' && (unreadCounts[activeDept] || (activeDept === 'all' ? unreadCounts.all : 0) || 0) > 0 && (
+                <span style={{ background:'#EF4444', color:'#fff', borderRadius:10, fontSize:10, fontWeight:700, padding:'1px 7px' }}>
+                  {activeDept === 'all' ? unreadCounts.all : unreadCounts[activeDept]} unread
+                </span>
+              )}
+              <span style={{ color:'rgba(245,240,232,0.3)', fontSize:11 }}>{total} emails</span>
+              <button onClick={doRefresh} disabled={loading} title="Refresh emails" style={{
+                background:'none', border:'none', cursor: loading ? 'not-allowed' : 'pointer',
+                color: loading ? gold : 'rgba(245,240,232,0.45)', fontSize:17, lineHeight:1,
+                padding:'0 2px', display:'flex', alignItems:'center',
+              }}>
+                <span style={{ display:'inline-block', animation: loading ? 'email-spin 0.7s linear infinite' : 'none' }}>↻</span>
+              </button>
+            </div>
           </div>
           <input
             value={search}
