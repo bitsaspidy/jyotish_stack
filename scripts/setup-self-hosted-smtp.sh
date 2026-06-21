@@ -52,7 +52,7 @@ if ! getent group vmail >/dev/null 2>&1; then
   groupadd -g 5000 vmail
 fi
 if ! id -u vmail >/dev/null 2>&1; then
-  useradd -g vmail -u 5000 vmail -d /var/vmail -m -s /usr/sbin/nologin vmail
+  useradd -g vmail -u 5000 -d /var/vmail -m -s /usr/sbin/nologin vmail
 fi
 mkdir -p "/var/vmail/${DOMAIN}" /etc/postfix/virtual "/etc/opendkim/keys/${DOMAIN}"
 chown -R vmail:vmail /var/vmail
@@ -183,6 +183,8 @@ postconf -e "virtual_uid_maps = static:5000"
 postconf -e "virtual_gid_maps = static:5000"
 postconf -e "mailbox_size_limit = 0"
 postconf -e "message_size_limit = 52428800"
+# virtual_mailbox_limit must be >= message_size_limit; 0 = unlimited
+postconf -e "virtual_mailbox_limit = 0"
 
 postconf -M "submission/inet=submission inet n - y - - smtpd"
 postconf -P "submission/inet/syslog_name=postfix/submission"
