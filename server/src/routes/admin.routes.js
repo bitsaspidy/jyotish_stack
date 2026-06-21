@@ -548,14 +548,31 @@ router.post('/email-manager/compose', ah(async (req, res) => {
     return fail(res, 'from_dept, to, subject, body are required', 400);
 
   const { sendEmail } = require('../services/email.service');
-  await sendEmail({
-    to,
-    template:  'custom',
-    data:      { subject, body },
-    from:      from_dept,
-    replyTo:   reply_to || undefined,
-  });
+  try {
+    await sendEmail({
+      to,
+      template:       'custom',
+      data:           { subject, body },
+      from:           from_dept,
+      replyTo:        reply_to || undefined,
+      throwOnFailure: true,
+    });
+  } catch (err) {
+    return fail(res, `SMTP error: ${err.message}`, 502);
+  }
   return ok(res, {}, 'Email sent successfully');
+}));
+
+// Test SMTP connection for a department
+router.post('/email-manager/test-smtp', ah(async (req, res) => {
+  const { dept = 'account' } = req.body;
+  const { testSmtpConnection, sendEmail } = require('../services/email.service');
+  try {
+    const info = await testSmtpConnection(dept);
+    return ok(res, info, `SMTP connection OK for ${dept}`);
+  } catch (err) {
+    return fail(res, `SMTP connection failed: ${err.message}`, 502);
+  }
 }));
 
 // ─── EMAIL SIGNATURES ────────────────────────────────────────────────────────

@@ -49,6 +49,58 @@ function fmt(dateStr) {
   return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
 }
 
+// ─── SMTP Test Panel ──────────────────────────────────────────────────────────
+function SmtpTestPanel() {
+  const [testing, setTesting] = useState(null); // dept key while testing
+  const [results, setResults] = useState({});   // dept → { ok, msg }
+
+  const test = async (dept) => {
+    setTesting(dept);
+    try {
+      const { data } = await adminApi.post('/admin/email-manager/test-smtp', { dept });
+      setResults(r => ({ ...r, [dept]: { ok: true, msg: `Connected · ${data.from}` } }));
+    } catch (e) {
+      const msg = e.response?.data?.message || e.message || 'Connection failed';
+      setResults(r => ({ ...r, [dept]: { ok: false, msg } }));
+    } finally { setTesting(null); }
+  };
+
+  return (
+    <div style={{ padding:'10px 8px 8px', borderTop:'1px solid rgba(255,255,255,0.05)', marginTop:'auto' }}>
+      <p style={{ color:'rgba(245,240,232,0.22)', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:8, paddingLeft:6 }}>
+        Test SMTP
+      </p>
+      {['account','sales','team'].map(dept => {
+        const res = results[dept];
+        return (
+          <div key={dept} style={{ marginBottom:6 }}>
+            <button
+              onClick={() => test(dept)}
+              disabled={!!testing}
+              style={{
+                width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+                padding:'5px 8px', borderRadius:6, border:'1px solid rgba(255,255,255,0.07)',
+                background:'rgba(255,255,255,0.03)', cursor: testing ? 'wait' : 'pointer',
+                color:'rgba(245,240,232,0.5)', fontSize:11, opacity: testing && testing !== dept ? 0.5 : 1,
+              }}
+            >
+              <span>{dept}</span>
+              <span style={{ fontSize:10, color: testing === dept ? '#FBBF24' : (res ? (res.ok ? '#34D399' : '#F87171') : 'rgba(245,240,232,0.25)') }}>
+                {testing === dept ? '…' : (res ? (res.ok ? '✓ OK' : '✗ Fail') : 'Test →')}
+              </span>
+            </button>
+            {res && (
+              <p style={{ fontSize:9.5, padding:'2px 8px 0', color: res.ok ? '#34D399' : '#F87171', lineHeight:1.4, wordBreak:'break-all' }}>
+                {res.msg}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Compose Modal ────────────────────────────────────────────────────────────
 function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
   const [form, setForm]     = useState({ from_dept: defaultDept || 'team', to:'', cc:'', subject:'', body:'' });
@@ -71,7 +123,7 @@ function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
       toast.success('Email sent!');
       onSent();
       onClose();
-    } catch { toast.error('Send failed'); }
+    } catch (e) { toast.error(e.response?.data?.message || 'Send failed — check SMTP settings'); }
     finally { setSend(false); }
   };
 
@@ -435,6 +487,9 @@ export default function EmailManager() {
             </button>
           ))}
         </div>
+
+        {/* Test SMTP */}
+        <SmtpTestPanel />
 
         {/* Folder selector */}
         <div style={{ padding:'8px 8px 6px', borderTop:'1px solid rgba(255,255,255,0.05)' }}>

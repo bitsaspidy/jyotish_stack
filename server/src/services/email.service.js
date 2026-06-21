@@ -28,27 +28,39 @@ const DEFAULT_ACCOUNT = {
   from: process.env.SMTP_FROM || process.env.SMTP_USER,
 };
 
+// When a department-specific MAIL_*_USER is not configured, fall back to the
+// shared SMTP_USER for both auth AND the From address — SMTP servers reject mail
+// where the authenticated user does not match the envelope sender.
 const DEPARTMENTS = {
   sales: {
-    user: process.env.MAIL_SALES_USER   || DEFAULT_ACCOUNT.user,
-    pass: process.env.MAIL_SALES_PASS   || DEFAULT_ACCOUNT.pass,
-    from: process.env.MAIL_SALES_FROM   || 'Jyotish Stack Sales <sales@jyotishstack.com>',
-    address: process.env.MAIL_SALES_USER || 'sales@jyotishstack.com',
-    label: 'Sales',
+    user:    process.env.MAIL_SALES_USER   || DEFAULT_ACCOUNT.user,
+    pass:    process.env.MAIL_SALES_PASS   || DEFAULT_ACCOUNT.pass,
+    from:    process.env.MAIL_SALES_FROM
+             || (process.env.MAIL_SALES_USER
+                  ? `Jyotish Stack Sales <${process.env.MAIL_SALES_USER}>`
+                  : DEFAULT_ACCOUNT.from),
+    address: process.env.MAIL_SALES_USER   || DEFAULT_ACCOUNT.user,
+    label:   'Sales',
   },
   team: {
-    user: process.env.MAIL_TEAM_USER    || DEFAULT_ACCOUNT.user,
-    pass: process.env.MAIL_TEAM_PASS    || DEFAULT_ACCOUNT.pass,
-    from: process.env.MAIL_TEAM_FROM    || 'Jyotish Stack Support <team@jyotishstack.com>',
-    address: process.env.MAIL_TEAM_USER  || 'team@jyotishstack.com',
-    label: 'Support',
+    user:    process.env.MAIL_TEAM_USER    || DEFAULT_ACCOUNT.user,
+    pass:    process.env.MAIL_TEAM_PASS    || DEFAULT_ACCOUNT.pass,
+    from:    process.env.MAIL_TEAM_FROM
+             || (process.env.MAIL_TEAM_USER
+                  ? `Jyotish Stack Support <${process.env.MAIL_TEAM_USER}>`
+                  : DEFAULT_ACCOUNT.from),
+    address: process.env.MAIL_TEAM_USER    || DEFAULT_ACCOUNT.user,
+    label:   'Support',
   },
   account: {
-    user: process.env.MAIL_ACCOUNT_USER || DEFAULT_ACCOUNT.user,
-    pass: process.env.MAIL_ACCOUNT_PASS || DEFAULT_ACCOUNT.pass,
-    from: process.env.MAIL_ACCOUNT_FROM || 'Jyotish Stack <account@jyotishstack.com>',
-    address: process.env.MAIL_ACCOUNT_USER || 'account@jyotishstack.com',
-    label: 'Accounts',
+    user:    process.env.MAIL_ACCOUNT_USER || DEFAULT_ACCOUNT.user,
+    pass:    process.env.MAIL_ACCOUNT_PASS || DEFAULT_ACCOUNT.pass,
+    from:    process.env.MAIL_ACCOUNT_FROM
+             || (process.env.MAIL_ACCOUNT_USER
+                  ? `Jyotish Stack <${process.env.MAIL_ACCOUNT_USER}>`
+                  : DEFAULT_ACCOUNT.from),
+    address: process.env.MAIL_ACCOUNT_USER || DEFAULT_ACCOUNT.user,
+    label:   'Accounts',
   },
 };
 
@@ -303,7 +315,7 @@ const DEPT_LABELS = { sales: 'Sales', team: 'Support', account: 'Accounts', gene
  * Appends the department's active signature automatically.
  * Stores html_body + department + from_address in email_logs for retry support.
  */
-const sendEmail = async ({ to, template, data = {}, from, replyTo, attachments }) => {
+const sendEmail = async ({ to, template, data = {}, from, replyTo, attachments, throwOnFailure = false }) => {
   const tmpl = templates[template];
   if (!tmpl) throw new Error(`Unknown email template: ${template}`);
 
@@ -335,7 +347,21 @@ const sendEmail = async ({ to, template, data = {}, from, replyTo, attachments }
   } catch (err) {
     await db('email_logs').where({ id: logId }).update({ status: 'failed', error_message: err.message });
     console.error('[Email]', err.message);
+    if (throwOnFailure) throw err;
   }
+};
+
+// Quick SMTP connectivity + auth test — used by admin test-smtp endpoint
+const testSmtpConnection = async (deptKey = 'account') => {
+  const dept = DEPARTMENTS[deptKey] ? deptKey : 'account';
+  const { user, pass } = DEPARTMENTS[dept];
+  const transport = nodemailer.createTransport({
+    host: SHARED.host, port: SHARED.port, secure: SHARED.secure,
+    requireTLS: SHARED.requireTLS, tls: SHARED.tls,
+    auth: user ? { user, pass } : undefined,
+  });
+  await transport.verify(); // throws on connection/auth failure
+  return { dept, from: DEPARTMENTS[dept].from, host: SHARED.host, port: SHARED.port };
 };
 
 /**
@@ -383,6 +409,7 @@ const retryEmail = async (logId) => {
 module.exports = {
   sendEmail,
   retryEmail,
+  testSmtpConnection,
   departmentInbox,
   invalidateSignatureCache,
   DEPARTMENTS,
