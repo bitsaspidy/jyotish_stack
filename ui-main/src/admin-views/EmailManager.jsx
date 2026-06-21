@@ -201,20 +201,101 @@ function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
   );
 }
 
+// ─── Image Lightbox ───────────────────────────────────────────────────────────
+function ImageLightbox({ src, name, onClose }) {
+  useEffect(() => {
+    const fn = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', fn);
+    return () => window.removeEventListener('keydown', fn);
+  }, [onClose]);
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:99999, background:'rgba(0,0,0,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', cursor:'zoom-out' }}>
+      <div style={{ position:'absolute', top:18, right:22, display:'flex', alignItems:'center', gap:14 }}>
+        <span style={{ color:'rgba(255,255,255,0.55)', fontSize:12 }}>{name}</span>
+        <button onClick={onClose} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.6)', fontSize:22, cursor:'pointer', lineHeight:1 }}>×</button>
+      </div>
+      <img src={src} alt={name} onClick={e => e.stopPropagation()} style={{ maxWidth:'90vw', maxHeight:'85vh', objectFit:'contain', borderRadius:6, boxShadow:'0 8px 40px rgba(0,0,0,0.7)' }} />
+    </div>
+  );
+}
+
+// ─── Attachments panel ────────────────────────────────────────────────────────
+function AttachmentsPanel({ attachments, email, adminApi: api, toast: t }) {
+  const [lightbox, setLightbox] = useState(null); // { src, name }
+  const [downloading, setDl]    = useState({});
+
+  const download = async (att) => {
+    setDl(d => ({ ...d, [att.index]: true }));
+    try {
+      const { data } = await api.get(
+        `/admin/email-manager/attachment/${email.dept}/${email.uid}/${att.index}`,
+        { responseType: 'blob' }
+      );
+      const url = URL.createObjectURL(new Blob([data], { type: att.contentType }));
+      const a = document.createElement('a'); a.href = url; a.download = att.filename; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch { t.error('Download failed'); }
+    finally { setDl(d => ({ ...d, [att.index]: false })); }
+  };
+
+  if (!attachments || attachments.length === 0) return null;
+
+  return (
+    <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.06)', background:'rgba(255,255,255,0.015)', flexShrink:0 }}>
+      <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:8 }}>
+        📎 {attachments.length} Attachment{attachments.length > 1 ? 's' : ''}
+      </p>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+        {attachments.map(att => (
+          <div key={att.index} style={{
+            display:'flex', flexDirection:'column', width: att.isImage && att.preview ? 120 : 'auto',
+            border: att.suspicious ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius:8, overflow:'hidden', background:'rgba(255,255,255,0.03)',
+            minWidth: att.isImage && att.preview ? 120 : 200,
+          }}>
+            {/* Image thumbnail */}
+            {att.isImage && att.preview && (
+              <div onClick={() => setLightbox({ src: att.preview, name: att.filename })} style={{ cursor:'zoom-in', height:80, overflow:'hidden', background:'rgba(0,0,0,0.3)' }}>
+                <img src={att.preview} alt={att.filename} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              </div>
+            )}
+            {/* File info row */}
+            <div style={{ padding:'7px 10px', display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:16, flexShrink:0 }}>{fileIcon(att.contentType, att.filename)}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ color: att.suspicious ? '#F87171' : 'rgba(245,240,232,0.75)', fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:2 }}>
+                  {att.filename}
+                </p>
+                <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10 }}>
+                  {fmtSize(att.size)}{att.suspicious ? ' · ⚠️ suspicious' : ''}
+                </p>
+              </div>
+              <button onClick={() => download(att)} disabled={downloading[att.index]} title="Download" style={{
+                background:'none', border:'1px solid rgba(255,255,255,0.1)', borderRadius:5,
+                color:'rgba(245,240,232,0.5)', fontSize:11, padding:'3px 7px', cursor:'pointer', flexShrink:0,
+              }}>
+                {downloading[att.index] ? '…' : '⬇'}
+              </button>
+            </div>
+            {att.suspicious && (
+              <div style={{ padding:'4px 10px', background:'rgba(239,68,68,0.08)', borderTop:'1px solid rgba(239,68,68,0.2)' }}>
+                <p style={{ color:'#F87171', fontSize:9, fontWeight:700 }}>POTENTIALLY UNSAFE FILE — download with caution</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {lightbox && <ImageLightbox src={lightbox.src} name={lightbox.name} onClose={() => setLightbox(null)} />}
+    </div>
+  );
+}
+
 // ─── Email detail panel ───────────────────────────────────────────────────────
-function EmailDetail({ email, folder, onReply, onClose }) {
+function EmailDetail({ email, folder, onReply, onClose, onStar, onMarkUnread, onDelete }) {
   const iframeRef = useRef(null);
 
   useEffect(() => {
-    if (!email) return;
-    if (email.html && iframeRef.current) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;font-size:14px;color:#222;padding:12px;margin:0;word-break:break-word;}a{color:#1a56db;}img{max-width:100%;height:auto;}</style></head><body>${email.html}</body></html>`);
-        doc.close();
-      }
-    }
+    if (!email?.html && iframeRef.current) return;
   }, [email]);
 
   if (!email) return (
@@ -224,33 +305,56 @@ function EmailDetail({ email, folder, onReply, onClose }) {
     </div>
   );
 
-  const isLogEmail = !!email._isLog;                      // came from email_logs (Sent/Failed/Retried)
-  const bodyHtml   = email.html || email.html_body || ''; // inbox html OR stored log html
+  const isLogEmail = !!email._isLog;
+  const bodyHtml   = email.html || email.html_body || '';
+  const starred    = email.starred === true;
+
+  const handlePrint = () => {
+    const win = window.open('', '_blank');
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${email.subject}</title><style>body{font-family:sans-serif;font-size:14px;color:#000;padding:24px;} h1{font-size:18px;margin-bottom:8px;} .meta{color:#555;font-size:12px;margin-bottom:16px;line-height:1.8;} hr{border:none;border-top:1px solid #ddd;margin:16px 0;}</style></head><body>
+      <h1>${email.subject || '(no subject)'}</h1>
+      <div class="meta">
+        <div><b>From:</b> ${typeof email.from === 'object' ? `${email.from.name || ''} &lt;${email.from.address}&gt;` : (email.from || '')}</div>
+        <div><b>To:</b> ${email.to || ''}</div>
+        ${email.cc ? `<div><b>CC:</b> ${email.cc}</div>` : ''}
+        <div><b>Date:</b> ${email.date ? new Date(email.date).toLocaleString() : ''}</div>
+      </div><hr>${bodyHtml || `<pre>${email.text || ''}</pre>`}</body></html>`);
+    win.document.close(); win.print();
+  };
 
   return (
     <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0, overflow:'hidden' }}>
-      {/* Header */}
-      <div style={{ padding:'16px 22px', borderBottom:'1px solid rgba(255,255,255,0.07)', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:10 }}>
-          <h2 style={{ color:ivory, fontSize:16, fontWeight:700, margin:0, lineHeight:1.4, flex:1 }}>{email.subject}</h2>
-          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-            {email.dept && <Badge dept={email.dept} />}
-            {email.status && <StatusBadge status={email.status} />}
-            <button onClick={onClose} style={{ background:'none', border:'none', color:'rgba(245,240,232,0.35)', cursor:'pointer', fontSize:16 }}>×</button>
-          </div>
-        </div>
+      {/* Toolbar */}
+      <div style={{ padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:6, flexShrink:0, background:'rgba(255,255,255,0.015)' }}>
+        <button onClick={onClose} title="Back" style={{ background:'none', border:'none', color:'rgba(245,240,232,0.45)', cursor:'pointer', fontSize:15, padding:'3px 6px' }}>←</button>
+        <div style={{ width:1, height:16, background:'rgba(255,255,255,0.08)', margin:'0 2px' }} />
+        {!isLogEmail && (<>
+          <ToolBtn icon={starred ? '★' : '☆'} label={starred ? 'Unstar' : 'Star'} active={starred} color="#FBBF24" onClick={() => onStar && onStar(email, !starred)} />
+          <ToolBtn icon="✉" label="Mark as unread" onClick={() => onMarkUnread && onMarkUnread(email)} />
+          <ToolBtn icon="↩" label="Reply" onClick={() => onReply(email)} />
+          <ToolBtn icon="↗" label="Forward" onClick={() => onReply({ ...email, subject: `Fwd: ${email.subject}`, to: '' })} />
+          <ToolBtn icon="🖨" label="Print" onClick={handlePrint} />
+          <div style={{ flex:1 }} />
+          <ToolBtn icon="🗑" label="Delete" color="#F87171" onClick={() => onDelete && onDelete(email)} />
+        </>)}
+        {isLogEmail && <div style={{ flex:1 }} />}
+        {email.dept && <Badge dept={email.dept} />}
+        {email.status && <StatusBadge status={email.status} />}
+      </div>
 
+      {/* Subject + meta */}
+      <div style={{ padding:'14px 20px 10px', borderBottom:'1px solid rgba(255,255,255,0.05)', flexShrink:0 }}>
+        <h2 style={{ color:ivory, fontSize:15, fontWeight:700, margin:'0 0 10px', lineHeight:1.4 }}>{email.subject || '(no subject)'}</h2>
         <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', rowGap:3, columnGap:12, fontSize:12 }}>
           {email.from && <><span style={{ color:'rgba(245,240,232,0.38)' }}>From</span><span style={{ color:'rgba(245,240,232,0.75)' }}>{typeof email.from === 'object' ? `${email.from.name || ''} <${email.from.address}>` : email.from}</span></>}
           {email.to   && <><span style={{ color:'rgba(245,240,232,0.38)' }}>To</span><span style={{ color:'rgba(245,240,232,0.75)' }}>{email.to}</span></>}
-          {email.cc   && email.cc !== '' && <><span style={{ color:'rgba(245,240,232,0.38)' }}>CC</span><span style={{ color:'rgba(245,240,232,0.75)' }}>{email.cc}</span></>}
+          {email.cc && email.cc !== '' && <><span style={{ color:'rgba(245,240,232,0.38)' }}>CC</span><span style={{ color:'rgba(245,240,232,0.75)' }}>{email.cc}</span></>}
           <span style={{ color:'rgba(245,240,232,0.38)' }}>Date</span>
-          <span style={{ color:'rgba(245,240,232,0.55)' }}>{email.date ? new Date(email.date).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }) : '—'}</span>
+          <span style={{ color:'rgba(245,240,232,0.5)' }}>{email.date ? new Date(email.date).toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' }) : '—'}</span>
         </div>
-
         {email.error_message && (
-          <div style={{ marginTop:10, padding:'8px 12px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:6 }}>
-            <p style={{ color:red, fontSize:11, fontWeight:600 }}>⚠ Error: {email.error_message}</p>
+          <div style={{ marginTop:8, padding:'7px 10px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', borderRadius:6 }}>
+            <p style={{ color:red, fontSize:11, fontWeight:600 }}>⚠ SMTP Error: {email.error_message}</p>
           </div>
         )}
       </div>
@@ -272,42 +376,83 @@ function EmailDetail({ email, folder, onReply, onClose }) {
           <div style={{ padding:'40px 22px', textAlign:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>
             <p style={{ fontSize:28, marginBottom:10 }}>📄</p>
             <p>{isLogEmail ? 'No stored copy of this email body.' : '(empty body)'}</p>
-            {isLogEmail && <p style={{ fontSize:11, marginTop:6, color:'rgba(245,240,232,0.22)' }}>Only emails sent after the latest update store a full copy for preview/retry.</p>}
           </div>
         )}
       </div>
 
-      {/* Actions */}
-      {!isLogEmail && (
-        <div style={{ padding:'10px 16px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:8, flexShrink:0 }}>
-          <button onClick={() => onReply(email)} style={{ padding:'7px 16px', borderRadius:6, border:`1px solid ${gold}44`, background:`${gold}0a`, color:gold, fontSize:12, fontWeight:600, cursor:'pointer' }}>
-            ↩ Reply
-          </button>
-          <button onClick={() => onReply({ ...email, subject: `Fwd: ${email.subject}`, to: '' })} style={{ padding:'7px 16px', borderRadius:6, border:'1px solid rgba(255,255,255,0.1)', background:'transparent', color:'rgba(245,240,232,0.5)', fontSize:12, cursor:'pointer' }}>
-            ↗ Forward
-          </button>
-        </div>
+      {/* Attachments */}
+      {!isLogEmail && email.attachments && email.attachments.length > 0 && (
+        <AttachmentsPanel attachments={email.attachments} email={email} adminApi={adminApi} toast={toast} />
       )}
     </div>
   );
 }
 
+// Small icon-button used in EmailDetail toolbar
+function ToolBtn({ icon, label, onClick, color, active }) {
+  return (
+    <button onClick={onClick} title={label} style={{
+      background: active ? 'rgba(251,191,36,0.12)' : 'none',
+      border:'none', cursor:'pointer', padding:'4px 8px', borderRadius:6,
+      color: color || (active ? '#FBBF24' : 'rgba(245,240,232,0.5)'),
+      fontSize:14, lineHeight:1, transition:'color 0.12s, background 0.12s',
+    }}
+      onMouseEnter={e => e.currentTarget.style.color = color || ivory}
+      onMouseLeave={e => e.currentTarget.style.color = color || (active ? '#FBBF24' : 'rgba(245,240,232,0.5)')}
+    >
+      {icon}
+    </button>
+  );
+}
+
+// ─── File type icon helper ────────────────────────────────────────────────────
+function fileIcon(contentType = '', filename = '') {
+  const t = contentType.toLowerCase();
+  const ext = (filename.match(/\.([^.]+)$/) || ['',''])[1].toLowerCase();
+  if (t.startsWith('image/'))  return '🖼️';
+  if (t.startsWith('video/'))  return '🎬';
+  if (t.startsWith('audio/'))  return '🎵';
+  if (t.includes('pdf'))       return '📄';
+  if (t.includes('zip') || t.includes('rar') || t.includes('7z') || ext === 'zip') return '📦';
+  if (t.includes('word') || ext === 'doc' || ext === 'docx')  return '📝';
+  if (t.includes('excel') || t.includes('spreadsheet') || ext === 'xlsx' || ext === 'csv') return '📊';
+  if (t.includes('presentation') || ext === 'pptx' || ext === 'ppt') return '📊';
+  if (t.startsWith('text/'))   return '📃';
+  if (t.includes('x-ms') || t.includes('executable')) return '⚠️';
+  return '📎';
+}
+
+function fmtSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1048576)     return `${(bytes/1024).toFixed(1)} KB`;
+  return `${(bytes/1048576).toFixed(1)} MB`;
+}
+
 // ─── Email row ────────────────────────────────────────────────────────────────
-function EmailRow({ email, selected, onClick }) {
-  const unread = email.seen === false;
+function EmailRow({ email, selected, onClick, onStar }) {
+  const unread   = email.seen === false;
+  const starred  = email.starred === true;
   return (
     <div onClick={onClick} style={{
-      padding:'11px 14px', cursor:'pointer', borderBottom:'1px solid rgba(255,255,255,0.04)',
+      padding:'10px 12px 10px 14px', cursor:'pointer', borderBottom:'1px solid rgba(255,255,255,0.04)',
       background: selected ? 'rgba(212,175,55,0.08)' : unread ? 'rgba(255,255,255,0.025)' : 'transparent',
       borderLeft: selected ? `3px solid ${gold}` : '3px solid transparent',
-      transition:'background 0.12s',
+      transition:'background 0.12s', position:'relative',
     }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background='rgba(255,255,255,0.03)'; }}
+      onMouseEnter={e => { if (!selected) e.currentTarget.style.background='rgba(255,255,255,0.035)'; }}
       onMouseLeave={e => { if (!selected) e.currentTarget.style.background=unread?'rgba(255,255,255,0.025)':'transparent'; }}
     >
-      <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:3 }}>
-        {unread && <span style={{ width:6, height:6, borderRadius:'50%', background:gold, flexShrink:0, marginTop:4 }} />}
-        {!unread && <span style={{ width:6, flexShrink:0 }} />}
+      <div style={{ display:'flex', alignItems:'flex-start', gap:7 }}>
+        {/* Star */}
+        <button onClick={e => { e.stopPropagation(); onStar && onStar(email, !starred); }} style={{
+          background:'none', border:'none', cursor:'pointer', padding:'1px 2px', fontSize:13, lineHeight:1,
+          color: starred ? '#FBBF24' : 'rgba(245,240,232,0.18)', flexShrink:0, marginTop:1,
+        }} title={starred ? 'Unstar' : 'Star'}>
+          {starred ? '★' : '☆'}
+        </button>
+        {/* Unread dot */}
+        <span style={{ width:6, height:6, borderRadius:'50%', background: unread ? gold : 'transparent', flexShrink:0, marginTop:5 }} />
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6, marginBottom:2 }}>
             <span style={{ color: unread ? ivory : 'rgba(245,240,232,0.65)', fontSize:12, fontWeight: unread ? 700 : 400, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
@@ -345,6 +490,8 @@ export default function EmailManager() {
   const [signatures,   setSignatures]   = useState({});
   const [retrying,     setRetrying]     = useState({});
   const [unreadCounts, setUnreadCounts] = useState({ all: 0, sales: 0, team: 0, account: 0 });
+  const [starring,     setStarring]     = useState({});
+  const [deleting,     setDeleting]     = useState({});
 
   // Load signatures once
   useEffect(() => {
@@ -366,6 +513,12 @@ export default function EmailManager() {
       if (activeFolder === 'inbox') {
         const { data } = await adminApi.get('/admin/email-manager/inbox', {
           params: { dept: activeDept, page },
+        });
+        setEmails(data.emails || []);
+        setTotal(data.total || 0);
+      } else if (activeFolder === 'starred') {
+        const { data } = await adminApi.get('/admin/email-manager/starred', {
+          params: { dept: activeDept },
         });
         setEmails(data.emails || []);
         setTotal(data.total || 0);
@@ -394,11 +547,18 @@ export default function EmailManager() {
     const id = email.uid || email.id;
     setSelectedId(id);
 
-    if (activeFolder === 'inbox') {
+    if (activeFolder === 'inbox' || activeFolder === 'starred') {
       setDetailL(true);
+      // Optimistically mark as read in the list
+      setEmails(es => es.map(e => (e.uid === email.uid && e.dept === email.dept) ? { ...e, seen: true } : e));
       try {
         const { data } = await adminApi.get(`/admin/email-manager/inbox/${email.dept}/${email.uid}`);
         setDetail({ ...data.email, dept: email.dept });
+        setUnreadCounts(c => ({
+          ...c,
+          [email.dept]: Math.max(0, (c[email.dept] || 0) - (email.seen === false ? 1 : 0)),
+          all: Math.max(0, (c.all || 0) - (email.seen === false ? 1 : 0)),
+        }));
       } catch { toast.error('Could not load email'); setDetail(email); }
       finally { setDetailL(false); }
     } else {
@@ -442,6 +602,48 @@ export default function EmailManager() {
     setCompose(true);
   };
 
+  const handleStar = async (email, starred) => {
+    const key = `${email.dept}:${email.uid}`;
+    if (starring[key]) return;
+    setStarring(s => ({ ...s, [key]: true }));
+    // Optimistic update
+    setEmails(es => es.map(e => (e.uid === email.uid && e.dept === email.dept) ? { ...e, starred } : e));
+    if (detail?.uid === email.uid) setDetail(d => ({ ...d, starred }));
+    try {
+      await adminApi.patch(`/admin/email-manager/inbox/${email.dept}/${email.uid}/star`, { starred });
+      toast.success(starred ? 'Starred' : 'Unstarred');
+    } catch {
+      // Roll back
+      setEmails(es => es.map(e => (e.uid === email.uid && e.dept === email.dept) ? { ...e, starred: !starred } : e));
+      if (detail?.uid === email.uid) setDetail(d => ({ ...d, starred: !starred }));
+      toast.error('Could not update star');
+    } finally { setStarring(s => ({ ...s, [key]: false })); }
+  };
+
+  const handleMarkUnread = async (email) => {
+    try {
+      await adminApi.patch(`/admin/email-manager/inbox/${email.dept}/${email.uid}/seen`, { seen: false });
+      setEmails(es => es.map(e => (e.uid === email.uid && e.dept === email.dept) ? { ...e, seen: false } : e));
+      setDetail(d => d?.uid === email.uid ? { ...d, seen: false } : d);
+      setUnreadCounts(c => ({ ...c, [email.dept]: (c[email.dept] || 0) + 1, all: (c.all || 0) + 1 }));
+      toast.success('Marked as unread');
+    } catch { toast.error('Could not mark as unread'); }
+  };
+
+  const handleDelete = async (email) => {
+    const key = `${email.dept}:${email.uid}`;
+    if (deleting[key]) return;
+    if (!window.confirm(`Delete this email?\n"${email.subject}"`)) return;
+    setDeleting(d => ({ ...d, [key]: true }));
+    try {
+      await adminApi.delete(`/admin/email-manager/inbox/${email.dept}/${email.uid}`);
+      setEmails(es => es.filter(e => !(e.uid === email.uid && e.dept === email.dept)));
+      setDetail(null); setSelectedId(null);
+      toast.success('Email deleted');
+    } catch { toast.error('Could not delete email'); }
+    finally { setDeleting(d => ({ ...d, [key]: false })); }
+  };
+
   const filtered = search
     ? emails.filter(e => {
         const q = search.toLowerCase();
@@ -458,10 +660,11 @@ export default function EmailManager() {
   ];
 
   const FOLDER_TABS = [
-    { key:'inbox',   label:'📥 Inbox'  },
-    { key:'sent',    label:'📤 Sent'   },
-    { key:'failed',  label:'❌ Failed' },
-    { key:'retried', label:'🔄 Resent' },
+    { key:'inbox',   label:'📥 Inbox'   },
+    { key:'starred', label:'⭐ Starred'  },
+    { key:'sent',    label:'📤 Sent'    },
+    { key:'failed',  label:'❌ Failed'  },
+    { key:'retried', label:'🔄 Resent'  },
   ];
 
   return (
@@ -578,7 +781,7 @@ export default function EmailManager() {
             ))
           ) : filtered.length === 0 ? (
             <div style={{ padding:32, textAlign:'center', color:'rgba(245,240,232,0.25)', fontSize:13 }}>
-              {activeFolder === 'inbox' ? '📭 Inbox empty' : `No ${activeFolder} emails`}
+              {activeFolder === 'inbox' ? '📭 Inbox empty' : activeFolder === 'starred' ? '⭐ No starred emails' : `No ${activeFolder} emails`}
             </div>
           ) : filtered.map(email => {
             const id = email.uid || email.id;
@@ -588,6 +791,7 @@ export default function EmailManager() {
                   email={email}
                   selected={selectedId === id}
                   onClick={() => selectEmail(email)}
+                  onStar={handleStar}
                 />
                 {/* Send-again button for failed/queued emails in list */}
                 {(email.status === 'failed' || email.status === 'queued') && (
@@ -631,6 +835,9 @@ export default function EmailManager() {
             folder={activeFolder}
             onReply={handleReply}
             onClose={() => { setDetail(null); setSelectedId(null); }}
+            onStar={handleStar}
+            onMarkUnread={handleMarkUnread}
+            onDelete={handleDelete}
           />
         )}
       </div>

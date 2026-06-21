@@ -556,6 +556,60 @@ router.get('/email-manager/inbox/:dept/:uid', ah(async (req, res) => {
   return ok(res, { email });
 }));
 
+// Starred messages across departments
+router.get('/email-manager/starred', ah(async (req, res) => {
+  const { fetchStarred } = require('../services/imap.service');
+  const dept  = req.query.dept || 'all';
+  const depts = dept === 'all' ? ['sales', 'team', 'account'] : [dept];
+  const results = await Promise.allSettled(depts.map(d => fetchStarred(d)));
+  let emails = [];
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') r.value.forEach(e => emails.push({ ...e, dept: depts[i] }));
+  });
+  emails.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return ok(res, { emails, total: emails.length });
+}));
+
+// Mark read / unread
+router.patch('/email-manager/inbox/:dept/:uid/seen', ah(async (req, res) => {
+  const { markSeen } = require('../services/imap.service');
+  const { dept, uid } = req.params;
+  const seen = req.body.seen !== false; // default true
+  await markSeen(dept, uid, seen, req.body.folder || 'INBOX');
+  return ok(res, { seen }, seen ? 'Marked as read' : 'Marked as unread');
+}));
+
+// Star / un-star
+router.patch('/email-manager/inbox/:dept/:uid/star', ah(async (req, res) => {
+  const { toggleStar } = require('../services/imap.service');
+  const { dept, uid } = req.params;
+  const starred = req.body.starred !== false; // default true
+  await toggleStar(dept, uid, starred, req.body.folder || 'INBOX');
+  return ok(res, { starred });
+}));
+
+// Delete a message
+router.delete('/email-manager/inbox/:dept/:uid', ah(async (req, res) => {
+  const { deleteMessage } = require('../services/imap.service');
+  const { dept, uid } = req.params;
+  await deleteMessage(dept, uid, req.query.folder || 'INBOX');
+  return ok(res, {}, 'Email deleted');
+}));
+
+// Download an attachment — serves raw bytes with correct Content-Type
+router.get('/email-manager/attachment/:dept/:uid/:index', ah(async (req, res) => {
+  const { fetchAttachmentData } = require('../services/imap.service');
+  const { dept, uid, index } = req.params;
+  const att = await fetchAttachmentData(dept, uid, Number(index), req.query.folder || 'INBOX');
+  if (att.suspicious) {
+    res.setHeader('X-Content-Warning', 'Potentially unsafe file type');
+  }
+  res.setHeader('Content-Type', att.contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(att.filename)}"`);
+  res.setHeader('Content-Length', att.size);
+  res.send(att.content);
+}));
+
 // Compose & send from Email Manager
 router.post('/email-manager/compose', ah(async (req, res) => {
   const { from_dept, to, subject, body, reply_to } = req.body;
