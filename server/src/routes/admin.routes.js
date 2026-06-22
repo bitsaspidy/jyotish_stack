@@ -773,31 +773,44 @@ router.post('/sales/:uuid/resend', ah(async (req, res) => {
 }));
 
 // POST /admin/sales/:uuid/resend-remedy — regenerate and re-email the remedy PDF
+// Body may contain birth data override: { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang }
 router.post('/sales/:uuid/resend-remedy', ah(async (req, res) => {
   const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
   if (!invoice) return fail(res, 'Invoice not found', 404);
   if (!invoice.customer_email) return fail(res, 'Invoice has no customer email', 400);
 
-  // Find the subscription with remedy_meta
+  // Try stored remedy_meta, fall back to body-supplied birth data
   const sub = await db('user_subscriptions')
     .where({ user_id: invoice.user_id })
     .orderBy('created_at', 'desc')
     .first();
-  if (!sub) return fail(res, 'Subscription not found', 404);
 
-  let meta = sub.remedy_meta;
-  if (typeof meta === 'string') {
-    try { meta = JSON.parse(meta); } catch (_) { meta = null; }
+  let storedMeta = sub?.remedy_meta;
+  if (typeof storedMeta === 'string') {
+    try { storedMeta = JSON.parse(storedMeta); } catch (_) { storedMeta = null; }
   }
-  if (!meta || !meta.date_of_birth) {
-    return fail(res, 'Remedy birth data not available for this subscription (purchased before this feature was added). Contact customer for birth details to resend manually.', 422);
+
+  // Body params override stored meta (or supply it for old subscriptions)
+  const meta = {
+    name:             req.body.name             || storedMeta?.name             || invoice.customer_name,
+    date_of_birth:    req.body.date_of_birth    || storedMeta?.date_of_birth,
+    time_of_birth:    req.body.time_of_birth    || storedMeta?.time_of_birth    || '12:00:00',
+    place_of_birth:   req.body.place_of_birth   || storedMeta?.place_of_birth   || 'India',
+    latitude:         req.body.latitude         || storedMeta?.latitude         || '20.5937',
+    longitude:        req.body.longitude        || storedMeta?.longitude        || '78.9629',
+    timezone_offset:  req.body.timezone_offset  || storedMeta?.timezone_offset  || '5.5',
+    lang:             req.body.lang             || storedMeta?.lang             || 'en',
+  };
+
+  if (!meta.date_of_birth) {
+    return fail(res, 'Date of birth is required — please enter birth details and try again.', 422);
   }
 
   const { calculateVedicChart } = require('../services/vedic-calc.service');
   const { generatePersonalizedRemedies } = require('../services/remedy-engine');
   const { buildRemedyPackagePdf } = require('../services/pdf/remedy-package-pdf');
 
-  const { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang = 'en' } = meta;
+  const { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang } = meta;
 
   const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
   const [hr, mn, sc] = String(time_of_birth || '12:00:00').split(':').map(Number);

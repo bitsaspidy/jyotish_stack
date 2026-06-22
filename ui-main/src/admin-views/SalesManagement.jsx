@@ -251,6 +251,95 @@ function InvoiceEditModal({ invoice, onClose, onSaved }) {
   );
 }
 
+// ── Resend Remedy Modal ───────────────────────────────────────────────────────
+function ResendRemedyModal({ invoice, onClose, onSent }) {
+  const [form, setForm] = useState({
+    name:           invoice?.customer_name || '',
+    date_of_birth:  '',
+    time_of_birth:  '12:00',
+    place_of_birth: 'India',
+    lang:           'en',
+  });
+  const [sending, setSending] = useState(false);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async () => {
+    if (!form.date_of_birth) { toast.error('Date of birth is required'); return; }
+    setSending(true);
+    try {
+      const { data } = await adminApi.post(`/admin/sales/${invoice.uuid}/resend-remedy`, {
+        name:           form.name,
+        date_of_birth:  form.date_of_birth,
+        time_of_birth:  form.time_of_birth ? `${form.time_of_birth}:00` : '12:00:00',
+        place_of_birth: form.place_of_birth || 'India',
+        lang:           form.lang,
+      });
+      toast.success(data.message || `Remedy PDF sent to ${invoice.customer_email}`);
+      onSent?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Send failed');
+    } finally { setSending(false); }
+  };
+
+  const inp = { width: '100%', boxSizing: 'border-box', background: '#0D0F1E', border: '1px solid rgba(212,175,55,0.18)', borderRadius: 6, color: '#F5F0E8', padding: '8px 11px', fontSize: 13, outline: 'none' };
+  const lbl = { display: 'block', color: 'rgba(245,240,232,0.45)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#111428', border: '1px solid rgba(212,175,55,0.2)', borderRadius: 12, padding: '28px 28px 24px', width: '100%', maxWidth: 440 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+          <div>
+            <h2 style={{ color: '#34D399', fontFamily: 'Georgia,serif', fontSize: 17, fontWeight: 700, margin: 0 }}>📄 Resend Remedy PDF</h2>
+            <p style={{ color: 'rgba(245,240,232,0.4)', fontSize: 12, margin: '4px 0 0' }}>
+              To: <span style={{ color: 'rgba(245,240,232,0.75)' }}>{invoice?.customer_email}</span>
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(245,240,232,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+        </div>
+
+        <p style={{ color: 'rgba(245,240,232,0.4)', fontSize: 12, marginBottom: 18, background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.15)', borderRadius: 6, padding: '8px 12px' }}>
+          Enter the customer's birth details to generate and email the remedy PDF.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={lbl}>Customer Name</label>
+            <input style={inp} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Full name" />
+          </div>
+          <div>
+            <label style={lbl}>Date of Birth <span style={{ color: '#EF4444' }}>*</span></label>
+            <input type="date" style={inp} value={form.date_of_birth} onChange={(e) => set('date_of_birth', e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Time of Birth <span style={{ color: 'rgba(245,240,232,0.3)', fontWeight: 400, textTransform: 'none' }}>(defaults to 12:00 if unknown)</span></label>
+            <input type="time" style={inp} value={form.time_of_birth} onChange={(e) => set('time_of_birth', e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Place of Birth</label>
+            <input style={inp} value={form.place_of_birth} onChange={(e) => set('place_of_birth', e.target.value)} placeholder="City, Country" />
+          </div>
+          <div>
+            <label style={lbl}>Language</label>
+            <select style={inp} value={form.lang} onChange={(e) => set('lang', e.target.value)}>
+              <option value="en">English</option>
+              <option value="hi">Hindi</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(245,240,232,0.5)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={submit} disabled={sending} style={{ padding: '9px 24px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg,#22C55E,#16A34A)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
+            {sending ? 'Sending…' : '📄 Generate & Send PDF'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ────────────────────────────────────────────────────────────────
 export default function SalesManagement() {
   const [invoices, setInvoices] = useState([]);
@@ -262,6 +351,7 @@ export default function SalesManagement() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [editInvoice, setEditInvoice] = useState(null);
+  const [remedyInvoice, setRemedyInvoice] = useState(null);
   const [busy, setBusy] = useState({});
 
   const load = useCallback(() => {
@@ -304,14 +394,7 @@ export default function SalesManagement() {
     finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
   };
 
-  const resendRemedyPdf = async (inv) => {
-    setBusy((b) => ({ ...b, [inv.uuid]: 'remedy' }));
-    try {
-      const { data } = await adminApi.post(`/admin/sales/${inv.uuid}/resend-remedy`);
-      toast.success(data.message || `Remedy PDF sent to ${inv.customer_email}`);
-    } catch (e) { toast.error(e.response?.data?.message || 'Resend remedy failed'); }
-    finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
-  };
+  const resendRemedyPdf = (inv) => setRemedyInvoice(inv);
 
   const taxLabel = (inv) => {
     if (Number(inv.total_tax) <= 0) return '—';
@@ -325,6 +408,12 @@ export default function SalesManagement() {
           invoice={editInvoice}
           onClose={() => setEditInvoice(null)}
           onSaved={handleInvoiceSaved}
+        />
+      )}
+      {remedyInvoice && (
+        <ResendRemedyModal
+          invoice={remedyInvoice}
+          onClose={() => setRemedyInvoice(null)}
         />
       )}
 
@@ -433,10 +522,10 @@ export default function SalesManagement() {
                         padding: '4px 10px', borderRadius: 5, border: '1px solid rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
                         fontSize: 11, fontWeight: 700, cursor: 'pointer', marginRight: 6,
                       }}>✏️ Edit</button>
-                      <button onClick={() => resendRemedyPdf(inv)} disabled={!!busy[inv.uuid]} title="Re-send remedy PDF to customer" style={{
+                      <button onClick={() => resendRemedyPdf(inv)} title="Re-send remedy PDF to customer" style={{
                         padding: '4px 10px', borderRadius: 5, border: '1px solid rgba(52,211,153,0.4)', background: 'rgba(52,211,153,0.1)', color: '#34D399',
-                        fontSize: 11, fontWeight: 700, cursor: busy[inv.uuid] ? 'wait' : 'pointer',
-                      }}>{busy[inv.uuid] === 'remedy' ? '⏳' : '📄 Remedy'}</button>
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}>📄 Remedy</button>
                     </td>
                   </tr>
                 );
