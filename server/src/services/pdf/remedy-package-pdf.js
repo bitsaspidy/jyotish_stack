@@ -145,16 +145,19 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   r.gap(6);
 
   if (sad) {
-    r.ensure(32);
-    r.d.rect(M, r.y, W, 28, CARD2);
-    r.d.rect(M, r.y, 4, 28, AMBER);
     const sadLabel = hi
       ? `साधना अवधि: ${sad.days} दिन`
       : `Recommended Sadhana Duration: ${sad.days} days`;
-    r.d.text(M + 14, r.y + 8, sadLabel, { size: 9, bold: true, color: AMBER });
     const sadReason = hi ? (sad.reason_hi || '') : (sad.reason_en || '');
-    if (sadReason) r.d.text(M + 14, r.y + 20, sadReason.slice(0, 90), { size: 7.5, color: MUTED });
-    r.y += 36;
+    const sadLines  = sadReason ? r.d.wrap(sadReason, W - 28, 7.5) : [];
+    const sadCardH  = 14 + (sadLines.length ? 6 + sadLines.length * 11 : 0) + 8;
+    r.ensure(sadCardH + 4);
+    r.d.rect(M, r.y, W, sadCardH, CARD2);
+    r.d.rect(M, r.y, 4, sadCardH, AMBER);
+    r.d.text(M + 14, r.y + 8, sadLabel, { size: 9, bold: true, color: AMBER });
+    let sy = r.y + 20;
+    sadLines.forEach(line => { r.d.text(M + 14, sy, line, { size: 7.5, color: MUTED }); sy += 11; });
+    r.y += sadCardH + 4;
   }
   r.gap(8);
 
