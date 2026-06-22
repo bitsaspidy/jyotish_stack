@@ -142,6 +142,11 @@ router.post('/submit', async (req, res) => {
       email_verification_token: emailToken,
       password_reset_token:     setupToken,
       password_reset_expires:   new Date(Date.now() + 72 * 3600_000),
+      preferred_language:       lang === 'hi' ? 'hi' : 'en',
+      meta: JSON.stringify({
+        date_of_birth, time_of_birth, place_of_birth,
+        latitude, longitude, timezone_offset, lang,
+      }),
     });
 
     // 8. Create subscription record (active)

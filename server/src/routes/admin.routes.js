@@ -773,58 +773,52 @@ router.post('/sales/:uuid/resend', ah(async (req, res) => {
 }));
 
 // POST /admin/sales/:uuid/resend-remedy — regenerate and re-email the remedy PDF
-// Body may contain birth data override: { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang }
 router.post('/sales/:uuid/resend-remedy', ah(async (req, res) => {
   const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
   if (!invoice) return fail(res, 'Invoice not found', 404);
   if (!invoice.customer_email) return fail(res, 'Invoice has no customer email', 400);
 
-  // Try stored remedy_meta, fall back to body-supplied birth data
-  const sub = await db('user_subscriptions')
+  // Load user (carries meta with birth data) + subscription (older fallback)
+  const user = await db('users').where({ id: invoice.user_id }).first();
+  const sub  = await db('user_subscriptions')
     .where({ user_id: invoice.user_id })
     .orderBy('created_at', 'desc')
     .first();
 
-  let storedMeta = sub?.remedy_meta;
-  if (typeof storedMeta === 'string') {
-    try { storedMeta = JSON.parse(storedMeta); } catch (_) { storedMeta = null; }
-  }
+  let userMeta = user?.meta;
+  if (typeof userMeta === 'string') { try { userMeta = JSON.parse(userMeta); } catch (_) { userMeta = null; } }
 
-  // Body params override stored meta (or supply it for old subscriptions)
-  const meta = {
-    name:             req.body.name             || storedMeta?.name             || invoice.customer_name,
-    date_of_birth:    req.body.date_of_birth    || storedMeta?.date_of_birth,
-    time_of_birth:    req.body.time_of_birth    || storedMeta?.time_of_birth    || '12:00:00',
-    place_of_birth:   req.body.place_of_birth   || storedMeta?.place_of_birth   || 'India',
-    latitude:         req.body.latitude         || storedMeta?.latitude         || '20.5937',
-    longitude:        req.body.longitude        || storedMeta?.longitude        || '78.9629',
-    timezone_offset:  req.body.timezone_offset  || storedMeta?.timezone_offset  || '5.5',
-    lang:             req.body.lang             || storedMeta?.lang             || 'en',
-  };
+  let subMeta = sub?.remedy_meta;
+  if (typeof subMeta === 'string') { try { subMeta = JSON.parse(subMeta); } catch (_) { subMeta = null; } }
 
-  if (!meta.date_of_birth) {
-    return fail(res, 'Date of birth is required — please enter birth details and try again.', 422);
+  // users.meta is primary (set on every new purchase); remedy_meta is legacy fallback
+  const birth = userMeta?.date_of_birth ? userMeta : subMeta;
+
+  if (!birth?.date_of_birth) {
+    return fail(res, 'Birth data not found for this customer. They may have purchased before birth data was stored — ask them to re-submit their details.', 422);
   }
 
   const { calculateVedicChart } = require('../services/vedic-calc.service');
   const { generatePersonalizedRemedies } = require('../services/remedy-engine');
   const { buildRemedyPackagePdf } = require('../services/pdf/remedy-package-pdf');
 
-  const { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang } = meta;
+  const name            = user?.name || invoice.customer_name;
+  const { date_of_birth, time_of_birth = '12:00:00', place_of_birth = 'India',
+          latitude = '20.5937', longitude = '78.9629', timezone_offset = '5.5', lang = 'en' } = birth;
 
   const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
-  const [hr, mn, sc] = String(time_of_birth || '12:00:00').split(':').map(Number);
+  const [hr, mn, sc] = String(time_of_birth).split(':').map(Number);
   const chart = calculateVedicChart({
     year: yr, month: mo, day: dy,
     hour: hr || 0, minute: mn || 0, second: sc || 0,
-    latitude:        parseFloat(latitude)       || 20.59,
-    longitude:       parseFloat(longitude)      || 78.96,
+    latitude:        parseFloat(latitude)        || 20.59,
+    longitude:       parseFloat(longitude)       || 78.96,
     timezone_offset: parseFloat(timezone_offset) || 5.5,
   });
 
-  const remedies   = await generatePersonalizedRemedies(chart, { lang });
-  const pdfBuffer  = await buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place_of_birth, chart, remedies, lang });
-  const pdfName    = `remedy-report-${String(name).toLowerCase().replace(/\s+/g, '-')}.pdf`;
+  const remedies  = await generatePersonalizedRemedies(chart, { lang });
+  const pdfBuffer = await buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place_of_birth, chart, remedies, lang });
+  const pdfName   = `remedy-report-${String(name).toLowerCase().replace(/\s+/g, '-')}.pdf`;
 
   await sendEmail({
     to:       invoice.customer_email,
