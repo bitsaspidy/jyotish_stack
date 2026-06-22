@@ -76,6 +76,8 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
   const [tz,            setTz]            = useState('5.5');
   const [gender,        setGender]        = useState('male');
   const [geocoding,     setGeocoding]     = useState(false);
+  const [placeResults,  setPlaceResults]  = useState([]);
+  const [showPlaceDrop, setShowPlaceDrop] = useState(false);
   const [submitting,    setSubmitting]    = useState(false);
 
   const searchTimer = useRef(null);
@@ -105,24 +107,41 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
     setUserSuggests([]);
   };
 
-  // Nominatim geocode
+  // Nominatim search — shows a dropdown of results for selection
   const geocodePlace = async () => {
     if (!place.trim()) return;
     setGeocoding(true);
+    setPlaceResults([]);
+    setShowPlaceDrop(false);
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1`, {
-        headers: { 'Accept-Language': 'en' },
-      });
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=6`,
+        { headers: { 'Accept-Language': 'en' } },
+      );
       const data = await res.json();
-      if (data?.[0]) {
-        setLat(parseFloat(data[0].lat).toFixed(4));
-        setLon(parseFloat(data[0].lon).toFixed(4));
-        toast.success(`Location found: ${data[0].display_name.split(',').slice(0,2).join(',')}`, { duration: 3000 });
+      if (data?.length) {
+        setPlaceResults(data);
+        setShowPlaceDrop(true);
       } else {
-        toast.error('Location not found. Enter coordinates manually.');
+        toast.error('Location not found. Try a different name or enter coordinates manually.');
       }
     } catch { toast.error('Geocoding failed. Enter coordinates manually.'); }
     finally { setGeocoding(false); }
+  };
+
+  const selectLocation = (r) => {
+    const latV = parseFloat(r.lat).toFixed(4);
+    const lonV = parseFloat(r.lon).toFixed(4);
+    const latF = parseFloat(latV);
+    const lonF = parseFloat(lonV);
+    let tzV = Math.round((lonF / 15) * 2) / 2;
+    if (latF >= 6 && latF <= 37 && lonF >= 68 && lonF <= 98) tzV = 5.5;
+    setPlace(r.display_name);
+    setLat(latV);
+    setLon(lonV);
+    setTz(String(tzV));
+    setPlaceResults([]);
+    setShowPlaceDrop(false);
   };
 
   const handleSubmit = async (e) => {
@@ -250,20 +269,58 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
           {/* Place + Geocode */}
           <div>
             <label style={labelStyle}>{T('Place of Birth', 'जन्म स्थान')}</label>
-            <div style={{ display:'flex', gap:8 }}>
-              <input value={place} onChange={e => setPlace(e.target.value)}
-                placeholder={T('City, State, Country', 'शहर, राज्य, देश')}
-                style={{ ...inputStyle, flex:1 }} required />
-              <button type="button" onClick={geocodePlace} disabled={geocoding || !place.trim()}
-                style={{
-                  padding:'8px 14px', borderRadius:6, fontSize:12, fontWeight:600, flexShrink:0,
-                  background:'rgba(212,175,55,0.12)', border:'1px solid rgba(212,175,55,0.3)',
-                  color:'#D4AF37', cursor: geocoding || !place.trim() ? 'not-allowed' : 'pointer',
-                  opacity: geocoding || !place.trim() ? 0.5 : 1, whiteSpace:'nowrap',
+            <div style={{ position:'relative' }}>
+              <div style={{ display:'flex', gap:8 }}>
+                <input
+                  value={place}
+                  onChange={e => { setPlace(e.target.value); setShowPlaceDrop(false); setLat(''); setLon(''); }}
+                  placeholder={T('City, State, Country', 'शहर, राज्य, देश')}
+                  style={{ ...inputStyle, flex:1 }}
+                  required
+                />
+                <button type="button" onClick={geocodePlace} disabled={geocoding || !place.trim()}
+                  style={{
+                    padding:'8px 14px', borderRadius:6, fontSize:12, fontWeight:600, flexShrink:0,
+                    background:'rgba(212,175,55,0.12)', border:'1px solid rgba(212,175,55,0.3)',
+                    color:'#D4AF37', cursor: geocoding || !place.trim() ? 'not-allowed' : 'pointer',
+                    opacity: geocoding || !place.trim() ? 0.5 : 1, whiteSpace:'nowrap',
+                  }}>
+                  {geocoding ? '⏳' : '📍'} {T('Find', 'खोजें')}
+                </button>
+              </div>
+
+              {/* Results dropdown */}
+              {showPlaceDrop && placeResults.length > 0 && (
+                <div style={{
+                  position:'absolute', top:'100%', left:0, right:0, zIndex:200,
+                  background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.25)',
+                  borderRadius:6, boxShadow:'0 8px 28px rgba(0,0,0,0.6)',
+                  marginTop:3, maxHeight:220, overflowY:'auto',
                 }}>
-                {geocoding ? '⏳' : '📍'} {T('Find', 'खोजें')}
-              </button>
+                  {placeResults.map((r, i) => (
+                    <div key={i} onClick={() => selectLocation(r)}
+                      style={{
+                        padding:'9px 12px', cursor:'pointer',
+                        borderBottom: i < placeResults.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                        transition:'background 0.1s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(212,175,55,0.08)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <div style={{ color:'#F5F0E8', fontSize:12 }}>{r.display_name}</div>
+                      <div style={{ color:'rgba(245,240,232,0.35)', fontSize:11, fontFamily:'monospace', marginTop:2 }}>
+                        {parseFloat(r.lat).toFixed(4)}°, {parseFloat(r.lon).toFixed(4)}°
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {lat && lon && (
+              <p style={{ fontSize:11, color:'rgba(34,197,94,0.7)', marginTop:5 }}>
+                ✓ {lat}°, {lon}° · TZ {tz}
+              </p>
+            )}
           </div>
 
           {/* Lat + Lon + TZ */}
