@@ -11,17 +11,21 @@
     "ui-admin"
   ],
   "scripts": {
-    "dev:server":   "npm run dev --workspace=server",
-    "dev:main":     "npm run dev --workspace=ui-main",
-    "dev:admin":    "npm run dev --workspace=ui-admin",
-    "dev:in":       "npm run dev --workspace=ui-in",
-    "dev:ai-com":   "npm run dev --workspace=ui-ai-com",
-    "dev:ai-in":    "npm run dev --workspace=ui-ai-in",
-    "migrate":      "node node_modules/knex/bin/cli.js --knexfile server/knexfile.js migrate:latest",
+    "postinstall": "patch-package",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:main": "npm run dev --workspace=ui-main",
+    "dev:admin": "npm run dev --workspace=ui-admin",
+    "dev:in": "npm run dev --workspace=ui-in",
+    "dev:ai-com": "npm run dev --workspace=ui-ai-com",
+    "dev:ai-in": "npm run dev --workspace=ui-ai-in",
+    "migrate": "node node_modules/knex/bin/cli.js --knexfile server/knexfile.js migrate:latest",
     "migrate:rollback": "node node_modules/knex/bin/cli.js --knexfile server/knexfile.js migrate:rollback",
-    "seed":         "node node_modules/knex/bin/cli.js --knexfile server/knexfile.js seed:run",
-    "test:server":  "npm run test --workspace=server",
-    "build:main":   "npm run build --workspace=ui-main",
-    "build:admin":  "npm run build --workspace=ui-admin"
+    "seed": "node node_modules/knex/bin/cli.js --knexfile server/knexfile.js seed:run",
+    "test:server": "npm run test --workspace=server",
+    "build:main": "npm run build --workspace=ui-main",
+    "build:admin": "npm run build --workspace=ui-admin"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }

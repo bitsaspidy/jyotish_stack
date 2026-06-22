@@ -1,5 +1,5 @@
 'use strict';
-const { PdfDoc, PAGE_W, PAGE_H } = require('./pdf-doc');
+const { PdfDocUnicode, PAGE_W, PAGE_H } = require('./pdf-doc-unicode');
 
 const NAVY  = '#0E1226';
 const CARD  = '#1A2040';
@@ -28,10 +28,10 @@ function fmtDate(s) {
 }
 function cap(s) { return s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : ''; }
 
-// ── Report helper class (mirrors kundli-report.js pattern) ────────────────────
+// ── Report helper class ────────────────────────────────────────────────────────
 class R {
   constructor() {
-    this.d = new PdfDoc();
+    this.d = new PdfDocUnicode();
     this.page = 0;
     this.section = '';
     this.y = 0;
@@ -47,7 +47,7 @@ class R {
     this.d.line(M, 44, PAGE_W - M, 44, LINE, 0.8);
     this.d.line(M, 45.5, M + 60, 45.5, GOLD, 1.4);
     this.d.line(M, PAGE_H - 36, PAGE_W - M, PAGE_H - 36, LINE, 0.8);
-    this.d.text(M, PAGE_H - 30, 'Vedic Remedy Report  •  For spiritual guidance only  •  jyotishstack.com', { size: 6.5, color: DIM });
+    this.d.text(M, PAGE_H - 30, 'Vedic Remedy Report  |  For spiritual guidance only  |  jyotishstack.com', { size: 6.5, color: DIM });
     this.d.text(M, PAGE_H - 31, `Page ${this.page}`, { size: 8, bold: true, color: GOLD, align: 'right', width: W });
     this.y = 62;
   }
@@ -99,36 +99,35 @@ class R {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-// PDF is always rendered in English — the embedded font has no Devanagari support.
-// lang is accepted for API compatibility but not used for PDF text.
-async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place_of_birth, chart, remedies }) {
-  const r = new R();
+async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place_of_birth, chart, remedies, lang = 'en' }) {
+  const r  = new R();
+  const hi = lang === 'hi';
 
   // ────────────────────────────────────────────────────────────────────────────
   // PAGE 1 — Cover + Birth Details + Chart Snapshot
   // ────────────────────────────────────────────────────────────────────────────
-  r.newPage('Vedic Remedy Report');
+  r.newPage(hi ? 'वैदिक उपाय रिपोर्ट' : 'Vedic Remedy Report');
 
   // Cover band
   r.d.rect(M, r.y, W, 90, CARD);
   r.d.rect(M, r.y, W, 4, GOLD);
-  r.d.text(M + 16, r.y + 18, 'VEDIC REMEDY REPORT', { size: 9, bold: true, color: GOLD });
+  r.d.text(M + 16, r.y + 18, hi ? 'वैदिक उपाय रिपोर्ट' : 'VEDIC REMEDY REPORT', { size: 9, bold: true, color: GOLD });
   r.d.text(M + 16, r.y + 34, name, { size: 20, bold: true, color: IVORY });
-  r.d.text(M + 16, r.y + 58, 'Personalised Planetary Remedies & Sadhana Guidance', { size: 9, color: MUTED });
+  r.d.text(M + 16, r.y + 58, hi ? 'व्यक्तिगत ग्रह उपाय एवं साधना मार्गदर्शन' : 'Personalised Planetary Remedies & Sadhana Guidance', { size: 9, color: MUTED });
   const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
   r.d.text(M + 16, r.y + 72, `Generated: ${today}`, { size: 7.5, color: DIM });
   r.y += 102;
 
   // ── Birth Details ──────────────────────────────────────────────────────────
-  r.heading('Birth Details');
-  r.kv('Name', name, GOLD2);
-  r.kv('Date of Birth', fmtDate(date_of_birth));
-  r.kv('Time of Birth', time_of_birth ? time_of_birth.slice(0, 5) + ' IST' : 'Not provided');
-  r.kv('Place of Birth', (place_of_birth || 'India').split(',').slice(0, 2).join(','));
+  r.heading(hi ? 'जन्म विवरण' : 'Birth Details');
+  r.kv(hi ? 'नाम'           : 'Name',          name, GOLD2);
+  r.kv(hi ? 'जन्म तिथि' : 'Date of Birth', fmtDate(date_of_birth));
+  r.kv(hi ? 'जन्म समय'       : 'Time of Birth', time_of_birth ? time_of_birth.slice(0, 5) + ' IST' : 'Not provided');
+  r.kv(hi ? 'जन्म स्थान' : 'Place of Birth', (place_of_birth || 'India').split(',').slice(0, 2).join(','));
   r.gap(8);
 
   // ── Chart Snapshot ─────────────────────────────────────────────────────────
-  r.heading('Chart Snapshot');
+  r.heading(hi ? 'कुंडली सारांश' : 'Chart Snapshot');
 
   const meta = remedies?.meta || {};
   const lagnaRashi = cap(meta.lagna_rashi_en || chart?.lagna_rashi || '—');
@@ -138,19 +137,22 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   const ad         = cap(meta.current_ad_lord || '—');
   const sad        = remedies?.sadhanaDuration;
 
-  r.kv('Lagna Rashi', lagnaRashi);
-  r.kv('Lagna Lord', lagnaLord);
-  r.kv('Atmakaraka', atma);
-  r.kv('Current Mahadasha', md, AMBER);
-  r.kv('Current Antardasha', ad, AMBER);
+  r.kv(hi ? 'लग्न राशि'  : 'Lagna Rashi',        lagnaRashi);
+  r.kv(hi ? 'लग्नेश'               : 'Lagna Lord',         lagnaLord);
+  r.kv(hi ? 'आत्मकारक'   : 'Atmakaraka',         atma);
+  r.kv(hi ? 'महादशा'               : 'Current Mahadasha',  md, AMBER);
+  r.kv(hi ? 'अंतर्दशा'   : 'Current Antardasha', ad, AMBER);
   r.gap(6);
 
   if (sad) {
     r.ensure(32);
     r.d.rect(M, r.y, W, 28, CARD2);
     r.d.rect(M, r.y, 4, 28, AMBER);
-    r.d.text(M + 14, r.y + 8, `Recommended Sadhana Duration: ${sad.days} days`, { size: 9, bold: true, color: AMBER });
-    const sadReason = sad.reason_en || '';
+    const sadLabel = hi
+      ? `साधना अवधि: ${sad.days} दिन`
+      : `Recommended Sadhana Duration: ${sad.days} days`;
+    r.d.text(M + 14, r.y + 8, sadLabel, { size: 9, bold: true, color: AMBER });
+    const sadReason = hi ? (sad.reason_hi || '') : (sad.reason_en || '');
     if (sadReason) r.d.text(M + 14, r.y + 20, sadReason.slice(0, 90), { size: 7.5, color: MUTED });
     r.y += 36;
   }
@@ -159,79 +161,76 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   // ────────────────────────────────────────────────────────────────────────────
   // PAGE 2 — Priority Remedies
   // ────────────────────────────────────────────────────────────────────────────
-  r.newPage('Priority Remedies');
+  r.newPage(hi ? 'प्राथमिकता उपाय' : 'Priority Remedies');
 
   const prio = (remedies?.priorityRemedies || []).slice(0, 3);
 
   if (prio.length === 0) {
-    r.para('No priority remedies identified.', 10, MUTED);
+    r.para(hi ? 'कोई प्राथमिकता उपाय नहीं मिले।' : 'No priority remedies identified.', 10, MUTED);
   } else {
     r.heading(
-      'Priority Remedies',
-      'These planets require focused attention based on your chart',
+      hi ? 'प्राथमिकता उपाय' : 'Priority Remedies',
+      hi ? 'आपके जन्म चार्ट के आधार पर ये ग्रह विशेष ध्यान चाहते हैं'
+         : 'These planets require focused attention based on your chart',
     );
 
     const RANK_CLR = [RED, AMBER, BLUE];
 
     prio.forEach((rem, idx) => {
       const pl     = rem.planet || {};
-      const pname  = pl.name || '';
-      const why    = rem.why_en   || '';
-      const daily  = rem.daily_en || '';
-      const weekly = rem.weekly_en || '';
+      const pname  = hi ? (pl.name_hi || pl.name || '') : (pl.name || '');
+      const why    = hi ? (rem.why_hi   || rem.why_en   || '') : (rem.why_en   || '');
+      const daily  = hi ? (rem.daily_hi || rem.daily_en || '') : (rem.daily_en || '');
+      const weekly = hi ? (rem.weekly_hi || rem.weekly_en || '') : (rem.weekly_en || '');
       const mantra = rem.primary_text_en || '';
-      const dayStr = rem.day_en || '';
-      const devata = rem.ishta_devata_en || '';
+      const dayStr = hi ? (rem.day_hi   || rem.day_en   || '') : (rem.day_en   || '');
+      const devata = hi ? (rem.ishta_devata_hi || rem.ishta_devata_en || '') : (rem.ishta_devata_en || '');
 
-      // Pre-wrap with exact widths used in drawing code
       const whyLines    = why    ? r.d.wrap(why,    W - 28, 8.5) : [];
       const dailyLines  = daily  ? r.d.wrap(daily,  W - 28, 8.5) : [];
       const weeklyLines = weekly ? r.d.wrap(weekly, W - 28, 8.5) : [];
       const mantraLines = mantra ? r.d.wrap(mantra, W - 44, 8)   : [];
 
-      // cardH mirrors every iy += in the drawing code
-      let cardH = 12;  // iy = cy + 12
-      cardH += 14;     // iy += 14 (rank row)
-      cardH += 20;     // iy += 20 (planet name)
+      let cardH = 12;
+      cardH += 14;
+      cardH += 20;
       if (why)    cardH += 12 + whyLines.length    * 13 + 4;
       if (daily)  cardH += 12 + dailyLines.length  * 13 + 4;
       if (weekly) cardH += 12 + weeklyLines.length * 13 + 4;
       if (mantra) cardH += 17 + mantraLines.length * 12 + 8;
       if (dayStr) cardH += 14;
       if (devata) cardH += 14;
-      cardH += 12;  // bottom padding
+      cardH += 12;
 
       r.ensure(cardH);
 
-      // Card background
       const cy = r.y;
       r.d.rect(M, cy, W, cardH, CARD);
       r.d.rect(M, cy, 4, cardH, RANK_CLR[idx] || GOLD);
 
       let iy = cy + 12;
 
-      // Rank + score
       const rankLabel = `${['1st','2nd','3rd'][idx] || (idx+1)+'.'} Priority`;
       r.d.text(M + 14, iy, rankLabel.toUpperCase(), { size: 7, bold: true, color: RANK_CLR[idx] || GOLD });
       r.d.text(M + 80, iy, `Score: ${pl.score != null ? pl.score : '—'}`, { size: 7, color: DIM });
       iy += 14;
-      r.d.text(M + 14, iy, `${pl.icon || '\u{1FA90}'} ${pname}`, { size: 13, bold: true, color: IVORY });
+      r.d.text(M + 14, iy, pname, { size: 13, bold: true, color: IVORY });
       iy += 20;
 
       if (why) {
-        r.d.text(M + 14, iy, 'Why: ', { size: 8, bold: true, color: MUTED }); iy += 12;
+        r.d.text(M + 14, iy, hi ? 'क्यों: ' : 'Why: ', { size: 8, bold: true, color: MUTED }); iy += 12;
         whyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13; });
         iy += 4;
       }
 
       if (daily) {
-        r.d.text(M + 14, iy, 'Daily Practice:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
+        r.d.text(M + 14, iy, hi ? 'दैनिक अभ्यास:' : 'Daily Practice:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
         dailyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: IVORY }); iy += 13; });
         iy += 4;
       }
 
       if (weekly) {
-        r.d.text(M + 14, iy, 'Weekly:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
+        r.d.text(M + 14, iy, hi ? 'साप्ताहिक:' : 'Weekly:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
         weeklyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13; });
         iy += 4;
       }
@@ -239,17 +238,17 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
       if (mantra) {
         const mRectH = 17 + mantraLines.length * 12 + 4;
         r.d.rect(M + 14, iy, W - 28, mRectH, CARD2);
-        r.d.text(M + 22, iy + 5, 'Mantra:', { size: 7.5, bold: true, color: GOLD });
+        r.d.text(M + 22, iy + 5, hi ? 'मंत्र:' : 'Mantra:', { size: 7.5, bold: true, color: GOLD });
         iy += 17;
         mantraLines.forEach(line => { r.d.text(M + 22, iy, line, { size: 8, color: IVORY }); iy += 12; });
         iy += 8;
       }
 
       if (dayStr) {
-        r.d.text(M + 14, iy, 'Best day: ' + dayStr, { size: 8, color: AMBER }); iy += 14;
+        r.d.text(M + 14, iy, (hi ? 'शुभ दिन: ' : 'Best day: ') + dayStr, { size: 8, color: AMBER }); iy += 14;
       }
       if (devata) {
-        r.d.text(M + 14, iy, 'Deity: ' + devata, { size: 8, color: BLUE }); iy += 14;
+        r.d.text(M + 14, iy, (hi ? 'इष्ट देवता: ' : 'Deity: ') + devata, { size: 8, color: BLUE }); iy += 14;
       }
 
       r.y = cy + cardH + 12;
@@ -259,16 +258,19 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   // ────────────────────────────────────────────────────────────────────────────
   // PAGE 3 — Daily Puja Sequence + Optional Planets + Disclaimer
   // ────────────────────────────────────────────────────────────────────────────
-  r.newPage('Daily Practice & Disclaimer');
+  r.newPage(hi ? 'दैनिक अभ्यास' : 'Daily Practice & Disclaimer');
 
   // Daily Puja
   const puja = remedies?.dailyPujaSequence || [];
   if (puja.length > 0) {
-    r.heading('Daily Puja Sequence', 'Follow this sequence every day');
+    r.heading(
+      hi ? 'दैनिक पूजा क्रम' : 'Daily Puja Sequence',
+      hi ? 'प्रत्येक दिन इस क्रम में करें' : 'Follow this sequence every day',
+    );
 
     puja.forEach((step, i) => {
-      const title = step.label_en || '';
-      const desc  = step.action_en || '';
+      const title = hi ? (step.label_hi || step.label_en || '') : (step.label_en || '');
+      const desc  = hi ? (step.action_hi || step.action_en || '') : (step.action_en || '');
 
       r.ensure(30);
       r.d.text(M, r.y, `${i + 1}.`, { size: 9, bold: true, color: GOLD });
@@ -283,15 +285,15 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   // Optional (healthy) planets
   const opts = (remedies?.optionalRemedies || []).slice(0, 6);
   if (opts.length > 0) {
-    r.heading('Other Planets — In Good Standing');
+    r.heading(hi ? 'अन्य ग्रह — स्वस्थ स्थिति में' : 'Other Planets — In Good Standing');
 
     opts.forEach(op => {
-      const pname  = op.name || '';
-      const status = op.status_en || '';
-      const opt    = op.optional_en || '';
+      const pname  = hi ? (op.name_hi  || op.name  || '') : (op.name  || '');
+      const status = hi ? (op.status_hi || op.status_en || '') : (op.status_en || '');
+      const opt    = hi ? (op.optional_hi || op.optional_en || '') : (op.optional_en || '');
 
       r.ensure(20);
-      r.d.text(M, r.y, `${op.icon || '✶'} ${pname}`, { size: 9, bold: true, color: GREEN });
+      r.d.text(M, r.y, `✶ ${pname}`, { size: 9, bold: true, color: GREEN });
       r.d.text(M + 90, r.y, status, { size: 8, color: MUTED });
       r.y += 12;
       if (opt) r.para(opt, 8, DIM);
@@ -304,9 +306,14 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   r.ensure(90);
   r.d.rect(M, r.y, W, 78, CARD2);
   r.d.rect(M, r.y, W, 3, AMBER);
-  r.d.text(M + 12, r.y + 14, 'Important: Focus on Remedies — Not on Fear', { size: 9, bold: true, color: AMBER });
+  const discTitle = hi
+    ? '⚠ महत्वपूर्ण: उपाय पर ध्यान दें — भय पर नहीं'
+    : '⚠ Important: Focus on Remedies — Not on Fear';
+  r.d.text(M + 12, r.y + 14, discTitle, { size: 9, bold: true, color: AMBER });
 
-  const discText = 'This report is for spiritual guidance purposes only. Never be afraid of planetary placements — remedies are tools of empowerment, not prediction of fate. For health, legal, or financial decisions, always consult a qualified professional.';
+  const discText = hi
+    ? 'यह रिपोर्ट आध्यात्मिक मार्गदर्शन के लिए है। ग्रह-स्थिति से कभी भयभीत न हों — उपाय आपकी सुरक्षा करते हैं। स्वास्थ्य, कानूनी या वित्तीय निर्णय के लिए उचित विशेषज्ञ से परामर्श लें।'
+    : 'This report is for spiritual guidance purposes only. Never be afraid of planetary placements — remedies are tools of empowerment, not prediction of fate. For health, legal, or financial decisions, always consult a qualified professional.';
 
   const discLines = r.d.wrap(discText, W - 24, 7.5);
   let dy2 = r.y + 28;
@@ -314,7 +321,7 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   r.y += 90;
 
   r.gap(10);
-  r.d.text(M, r.y, 'jyotishstack.com  •  Lahiri Ayanamsa  •  Whole-sign houses  •  VSOP87 ephemeris', { size: 7, color: DIM });
+  r.d.text(M, r.y, 'jyotishstack.com  |  Lahiri Ayanamsa  |  Whole-sign houses  |  VSOP87 ephemeris', { size: 7, color: DIM });
 
   return r.d.build();
 }
