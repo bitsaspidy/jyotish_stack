@@ -101,7 +101,7 @@ export default function Footer() {
         <div className="divider-gold mt-10" />
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-ivory/40 text-xs">
           <p>© {new Date().getFullYear()} Jyotish Stack AI — <span className="font-devanagari">ज्योतिष स्टैक</span></p>
-          <p>jyotishstack.com · jyotishstack.in · jyotishstackai.com · jyotishstackai.in</p>
+          <p>jyotishstack.com</p>
         </div>
       </div>
     </footer>
