@@ -830,6 +830,36 @@ router.post('/sales/:uuid/resend-remedy', ah(async (req, res) => {
   return ok(res, {}, `Remedy PDF re-sent to ${invoice.customer_email}`);
 }));
 
+// POST /admin/sales/:uuid/send-resubmit-link — email customer a link to re-submit birth details
+router.post('/sales/:uuid/send-resubmit-link', ah(async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+  if (!invoice.customer_email) return fail(res, 'Invoice has no customer email', 400);
+
+  const user = await db('users').where({ id: invoice.user_id }).first();
+  if (!user) return fail(res, 'Customer account not found', 404);
+
+  const { randomToken } = require('../utils/token');
+  const token   = randomToken();
+  const expires = new Date(Date.now() + 72 * 3600_000);
+
+  await db('users').where({ id: user.id }).update({
+    resubmit_token:         token,
+    resubmit_token_expires: expires,
+  });
+
+  const base        = process.env.APP_URL || 'https://jyotishstack.com';
+  const resubmitUrl = `${base}/remedy-resubmit?token=${token}`;
+
+  await sendEmail({
+    to:       invoice.customer_email,
+    template: 'remedy_resubmit',
+    data:     { name: user.name, resubmitUrl },
+  });
+
+  return ok(res, {}, `Resubmit link sent to ${invoice.customer_email}`);
+}));
+
 // PATCH /admin/sales/:uuid — edit invoice tax type, customer state, GSTIN
 router.patch('/sales/:uuid', ah(async (req, res) => {
   const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();

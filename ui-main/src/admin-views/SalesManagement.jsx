@@ -251,6 +251,58 @@ function InvoiceEditModal({ invoice, onClose, onSaved }) {
   );
 }
 
+// ── No Birth Data Modal ───────────────────────────────────────────────────────
+function NoBirthDataModal({ invoice, onClose }) {
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
+
+  const sendLink = async () => {
+    setSending(true);
+    try {
+      const { data } = await adminApi.post(`/admin/sales/${invoice.uuid}/send-resubmit-link`);
+      toast.success(data.message || `Resubmit link sent to ${invoice.customer_email}`);
+      setSent(true);
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to send link');
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: '#111428', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 12, padding: '28px 28px 24px', width: '100%', maxWidth: 440 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <h2 style={{ color: '#F87171', fontFamily: 'Georgia,serif', fontSize: 17, fontWeight: 700, margin: 0 }}>⚠️ Birth Data Not Found</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(245,240,232,0.4)', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+        </div>
+
+        <p style={{ color: 'rgba(245,240,232,0.65)', fontSize: 13, lineHeight: 1.7, marginBottom: 18 }}>
+          Birth data not found for this customer. They may have purchased before birth data was stored. Send them a secure link to re-submit their details — the PDF will be generated and emailed to them automatically.
+        </p>
+
+        <div style={{ background: 'rgba(212,175,55,0.06)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: 7, padding: '10px 14px', marginBottom: 20 }}>
+          <p style={{ color: 'rgba(245,240,232,0.45)', fontSize: 11, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Customer</p>
+          <p style={{ color: '#F5F0E8', fontSize: 13, margin: 0 }}>{invoice.customer_name}</p>
+          <p style={{ color: 'rgba(245,240,232,0.5)', fontSize: 12, margin: '2px 0 0' }}>{invoice.customer_email}</p>
+        </div>
+
+        {sent ? (
+          <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: 7, padding: '12px 16px', textAlign: 'center' }}>
+            <p style={{ color: '#34D399', fontSize: 13, fontWeight: 600, margin: 0 }}>✓ Resubmit link sent! Customer will receive an email with a form to fill their birth details.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'transparent', color: 'rgba(245,240,232,0.5)', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={sendLink} disabled={sending} style={{ padding: '9px 22px', borderRadius: 6, border: 'none', background: 'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)', color: '#0B0D1A', fontWeight: 700, fontSize: 13, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
+              {sending ? 'Sending…' : '📧 Send Resubmit Link'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main view ────────────────────────────────────────────────────────────────
 export default function SalesManagement() {
   const [invoices, setInvoices] = useState([]);
@@ -262,6 +314,7 @@ export default function SalesManagement() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [editInvoice, setEditInvoice] = useState(null);
+  const [noDataInvoice, setNoDataInvoice] = useState(null);
   const [busy, setBusy] = useState({});
 
   const load = useCallback(() => {
@@ -309,8 +362,13 @@ export default function SalesManagement() {
     try {
       const { data } = await adminApi.post(`/admin/sales/${inv.uuid}/resend-remedy`);
       toast.success(data.message || `Remedy PDF sent to ${inv.customer_email}`);
-    } catch (e) { toast.error(e.response?.data?.message || 'Resend remedy failed'); }
-    finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
+    } catch (e) {
+      if (e.response?.status === 422) {
+        setNoDataInvoice(inv);
+      } else {
+        toast.error(e.response?.data?.message || 'Resend remedy failed');
+      }
+    } finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
   };
 
   const taxLabel = (inv) => {
@@ -325,6 +383,12 @@ export default function SalesManagement() {
           invoice={editInvoice}
           onClose={() => setEditInvoice(null)}
           onSaved={handleInvoiceSaved}
+        />
+      )}
+      {noDataInvoice && (
+        <NoBirthDataModal
+          invoice={noDataInvoice}
+          onClose={() => setNoDataInvoice(null)}
         />
       )}
 

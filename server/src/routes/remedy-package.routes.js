@@ -267,4 +267,93 @@ router.post('/set-password', async (req, res) => {
   }
 });
 
+// GET /api/remedy/resubmit-info?token=xxx — validate token, return user's name (for form pre-fill)
+router.get('/resubmit-info', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return fail(res, 'Missing token', 400);
+
+    const user = await db('users').where({ resubmit_token: token }).first();
+    if (!user) return fail(res, 'This link is invalid or has already been used.', 400);
+    if (user.resubmit_token_expires && new Date(user.resubmit_token_expires) < new Date()) {
+      return fail(res, 'This link has expired. Please contact support for a new one.', 400);
+    }
+
+    return ok(res, { name: user.name, email: user.email });
+  } catch (err) {
+    console.error('[remedy/resubmit-info]', err);
+    return fail(res, 'Failed to validate link.', 500);
+  }
+});
+
+// POST /api/remedy/resubmit — submit birth details, generate + email PDF, save to users.meta
+router.post('/resubmit', async (req, res) => {
+  try {
+    const {
+      token,
+      date_of_birth,
+      time_of_birth    = '12:00:00',
+      place_of_birth   = 'India',
+      latitude         = '20.5937',
+      longitude        = '78.9629',
+      timezone_offset  = '5.5',
+      lang             = 'en',
+    } = req.body;
+
+    if (!token)         return fail(res, 'Missing token', 400);
+    if (!date_of_birth) return fail(res, 'Date of birth is required', 400);
+
+    const user = await db('users').where({ resubmit_token: token }).first();
+    if (!user) return fail(res, 'This link is invalid or has already been used.', 400);
+    if (user.resubmit_token_expires && new Date(user.resubmit_token_expires) < new Date()) {
+      return fail(res, 'This link has expired. Please contact support for a new one.', 400);
+    }
+
+    // Save birth data to users.meta and clear token
+    const existingMeta = typeof user.meta === 'string'
+      ? (() => { try { return JSON.parse(user.meta); } catch (_) { return {}; } })()
+      : (user.meta || {});
+
+    await db('users').where({ id: user.id }).update({
+      preferred_language:     lang === 'hi' ? 'hi' : 'en',
+      resubmit_token:         null,
+      resubmit_token_expires: null,
+      meta: JSON.stringify({
+        ...existingMeta,
+        date_of_birth, time_of_birth, place_of_birth,
+        latitude, longitude, timezone_offset, lang,
+      }),
+    });
+
+    // Generate and email the PDF
+    const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
+    const [hr, mn, sc] = String(time_of_birth).split(':').map(Number);
+    const chart = calculateVedicChart({
+      year: yr, month: mo, day: dy,
+      hour: hr || 0, minute: mn || 0, second: sc || 0,
+      latitude:        parseFloat(latitude)        || 20.59,
+      longitude:       parseFloat(longitude)       || 78.96,
+      timezone_offset: parseFloat(timezone_offset) || 5.5,
+    });
+
+    const remedies  = await generatePersonalizedRemedies(chart, { lang });
+    const pdfBuffer = await buildRemedyPackagePdf({
+      name: user.name, date_of_birth, time_of_birth, place_of_birth, chart, remedies, lang,
+    });
+    const pdfName = `remedy-report-${user.name.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+
+    await sendEmail({
+      to:       user.email,
+      template: 'remedy_report',
+      data:     { name: user.name, lang },
+      attachments: [{ filename: pdfName, content: pdfBuffer, contentType: 'application/pdf' }],
+    });
+
+    return ok(res, {}, 'Your Vedic Remedy Report has been generated and sent to your email!');
+  } catch (err) {
+    console.error('[remedy/resubmit]', err);
+    return fail(res, 'Failed to process your details. Please try again.', 500);
+  }
+});
+
 module.exports = router;

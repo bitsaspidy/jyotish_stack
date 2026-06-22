@@ -73,6 +73,7 @@ const TEMPLATE_DEPARTMENT = {
   subscription_confirm: 'account',
   payment_success:      'account',
   remedy_report:        'account',
+  remedy_resubmit:      'account',
   account_setup:        'account',
   newsletter:           'team',
   custom:               'team',
@@ -289,6 +290,20 @@ const templates = {
         </div>
         <p>Your <strong style="color:#D4AF37;">Basic plan</strong> is now active. Check for a separate email with your account activation link — set your password to log in and explore your full Kundli &amp; predictions.</p>
         <p style="font-size:12px;color:#888;">The remedies in this report are for spiritual guidance only and are not a substitute for professional advice.</p>`, sig),
+  }),
+
+  remedy_resubmit: (data, sig) => ({
+    subject: `Action needed — Re-submit your birth details for your Remedy PDF`,
+    html: BRAND_SHELL(`
+        <p style="font-size:16px;">Namaste ${data.name},</p>
+        <p>We noticed that your birth details are not on file with us. To regenerate your personalised <strong style="color:#D4AF37;">Vedic Remedy Report</strong>, please re-submit your birth information using the link below.</p>
+        <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.3);border-radius:8px;padding:18px 22px;margin:20px 0;text-align:center;">
+          <p style="margin:0 0 14px;color:#D4AF37;font-weight:bold;">It only takes 30 seconds</p>
+          <a href="${data.resubmitUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:13px 32px;text-decoration:none;font-weight:bold;border-radius:4px;font-size:15px;">Submit My Birth Details →</a>
+          <p style="margin:14px 0 0;font-size:12px;color:#888;">This link expires in 72 hours.</p>
+        </div>
+        <p style="color:#c8c0b0;">Once submitted, your remedy PDF will be generated and emailed to you instantly.</p>
+        <p style="font-size:12px;color:#888;">If you did not request this, you can safely ignore this email.</p>`, sig),
   }),
 
   account_setup: (data, sig) => ({
