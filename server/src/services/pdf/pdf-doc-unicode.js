@@ -1,29 +1,54 @@
 'use strict';
-// Unicode-capable PDF writer using pdfkit + Noto Sans Devanagari.
-// Exposes the same API surface as pdf-doc.js so remedy-package-pdf.js
-// can swap it in without touching any drawing logic.
 const PDFDocument = require('pdfkit');
 const path        = require('path');
 
 const PAGE_W = 595;
 const PAGE_H = 842;
 
-const FONTS_DIR = path.join(__dirname, 'fonts');
-const FONT_REG  = path.join(FONTS_DIR, 'NotoSansDevanagari-Regular.ttf');
-const FONT_BOLD = path.join(FONTS_DIR, 'NotoSansDevanagari-Bold.ttf');
+const FONTS_DIR    = path.join(__dirname, 'fonts');
+const FONT_DEV_REG = path.join(FONTS_DIR, 'NotoSansDevanagari-Regular.ttf');
+const FONT_DEV_BOL = path.join(FONTS_DIR, 'NotoSansDevanagari-Bold.ttf');
+
+// Devanagari Unicode block U+0900–U+097F
+function _isDev(ch) {
+  const cp = ch.codePointAt(0);
+  return cp >= 0x0900 && cp <= 0x097F;
+}
+
+// Split a string into same-script segments: [{text, dev}]
+// Latin/numbers/punctuation → dev=false  → Helvetica
+// Devanagari characters     → dev=true   → Noto Sans Devanagari
+function splitSegs(str) {
+  const s = String(str ?? '');
+  if (!s) return [];
+  const segs = [];
+  let cur = s[0];
+  let curDev = _isDev(s[0]);
+  for (let i = 1; i < s.length; i++) {
+    const d = _isDev(s[i]);
+    if (d !== curDev) { segs.push({ text: cur, dev: curDev }); cur = s[i]; curDev = d; }
+    else cur += s[i];
+  }
+  segs.push({ text: cur, dev: curDev });
+  return segs;
+}
 
 class PdfDocUnicode {
   constructor() {
     this._doc = new PDFDocument({
-      size:          [PAGE_W, PAGE_H],
-      margin:        0,
-      autoFirstPage: false,
-      info:          { Creator: 'Jyotish Stack AI' },
+      size: [PAGE_W, PAGE_H], margin: 0, autoFirstPage: false,
+      info: { Creator: 'Jyotish Stack AI' },
     });
-    this._doc.registerFont('Reg',  FONT_REG);
-    this._doc.registerFont('Bold', FONT_BOLD);
+    this._doc.registerFont('DevReg', FONT_DEV_REG);
+    this._doc.registerFont('DevBol', FONT_DEV_BOL);
     this._chunks = [];
     this._doc.on('data', chunk => this._chunks.push(chunk));
+  }
+
+  // Resolve pdfkit font name for a segment
+  _fn(dev, bold) {
+    if (dev) return bold ? 'DevBol' : 'DevReg';
+    return bold ? 'Helvetica-Bold' : 'Helvetica';
   }
 
   addPage() {
@@ -31,9 +56,7 @@ class PdfDocUnicode {
     return this;
   }
 
-  _f(bold) { return bold ? 'Bold' : 'Reg'; }
-
-  // ── Graphics primitives ──────────────────────────────────────────────────────
+  // ── Graphics primitives ─────────────────────────────────────────────────────
 
   rect(x, y, w, h, color) {
     this._doc.save().fillColor(color).rect(x, y, w, h).fill().restore();
@@ -76,27 +99,49 @@ class PdfDocUnicode {
     return this;
   }
 
-  // ── Text ─────────────────────────────────────────────────────────────────────
+  // ── Text ────────────────────────────────────────────────────────────────────
 
+  // Measure a single segment with its correct font (no visible output)
+  _segW(text, size, bold, dev) {
+    this._doc.font(this._fn(dev, bold)).fontSize(size);
+    return this._doc.widthOfString(text);
+  }
+
+  // Total width of a (possibly mixed-script) string
+  textWidth(str, size, bold = false) {
+    if (!str) return 0;
+    return splitSegs(String(str))
+      .reduce((w, seg) => w + this._segW(seg.text, size, bold, seg.dev), 0);
+  }
+
+  // Render text with per-segment font switching.
+  // align='right'|'center' + width shifts the start x; renders left-to-right.
   text(x, y, str, opts = {}) {
     if (!str) return this;
-    const { size = 10, color = '#000000', bold = false, align = 'left', width = 0 } = opts;
+    const { size = 10, color = '#000000', bold = false, align = 'left', width: boxW = 0 } = opts;
+    const segs = splitSegs(String(str));
+    if (!segs.length) return this;
+
+    // Compute starting x for non-left alignment
+    let tx = x;
+    if (boxW && align !== 'left') {
+      const totalW = segs.reduce((w, s) => w + this._segW(s.text, size, bold, s.dev), 0);
+      if (align === 'right')  tx = x + boxW - totalW;
+      if (align === 'center') tx = x + (boxW - totalW) / 2;
+    }
+
     const d = this._doc;
-    d.save().font(this._f(bold)).fontSize(size).fillColor(color);
-    const tOpts = { lineBreak: false };
-    if (width && align !== 'left') { tOpts.width = width; tOpts.align = align; }
-    d.text(String(str), x, y, tOpts);
+    d.save().fillColor(color);
+    for (const seg of segs) {
+      const fn = this._fn(seg.dev, bold);
+      d.font(fn).fontSize(size).text(seg.text, tx, y, { lineBreak: false });
+      tx += this._segW(seg.text, size, bold, seg.dev);
+    }
     d.restore();
     return this;
   }
 
-  // Returns rendered string width using current font metrics (no side-effects on output).
-  textWidth(str, size, bold = false) {
-    this._doc.font(this._f(bold)).fontSize(size);
-    return this._doc.widthOfString(String(str));
-  }
-
-  // Splits str into lines that fit within maxWidth at the given size.
+  // Word-wrap str into lines that fit within maxWidth
   wrap(str, maxWidth, size, bold = false) {
     if (!str) return [''];
     const words = String(str).split(' ');
@@ -115,7 +160,7 @@ class PdfDocUnicode {
     return lines.length ? lines : [''];
   }
 
-  // Multi-line paragraph (matches pdf-doc.js para signature).
+  // Multi-line paragraph
   para(x, y, str, maxWidth, opts = {}) {
     const { size = 9, lineGap = 3.5 } = opts;
     const lines = this.wrap(str, maxWidth, size, opts.bold);
@@ -123,7 +168,7 @@ class PdfDocUnicode {
     return lines.length * (size + lineGap);
   }
 
-  // Returns Promise<Buffer> — use with await in async callers.
+  // Returns Promise<Buffer>
   build() {
     return new Promise((resolve, reject) => {
       this._doc.on('end',   () => resolve(Buffer.concat(this._chunks)));
