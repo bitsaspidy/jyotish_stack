@@ -158,6 +158,10 @@ router.post('/submit', async (req, res) => {
       razorpay_signature,
       starts_at,
       expires_at,
+      remedy_meta: JSON.stringify({
+        name, date_of_birth, time_of_birth, place_of_birth,
+        latitude, longitude, timezone_offset, lang,
+      }),
     });
 
     // 9. Generate invoice (non-fatal)

@@ -772,6 +772,57 @@ router.post('/sales/:uuid/resend', ah(async (req, res) => {
   return ok(res, {}, 'Invoice re-sent to customer');
 }));
 
+// POST /admin/sales/:uuid/resend-remedy — regenerate and re-email the remedy PDF
+router.post('/sales/:uuid/resend-remedy', ah(async (req, res) => {
+  const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();
+  if (!invoice) return fail(res, 'Invoice not found', 404);
+  if (!invoice.customer_email) return fail(res, 'Invoice has no customer email', 400);
+
+  // Find the subscription with remedy_meta
+  const sub = await db('user_subscriptions')
+    .where({ user_id: invoice.user_id })
+    .orderBy('created_at', 'desc')
+    .first();
+  if (!sub) return fail(res, 'Subscription not found', 404);
+
+  let meta = sub.remedy_meta;
+  if (typeof meta === 'string') {
+    try { meta = JSON.parse(meta); } catch (_) { meta = null; }
+  }
+  if (!meta || !meta.date_of_birth) {
+    return fail(res, 'Remedy birth data not available for this subscription (purchased before this feature was added). Contact customer for birth details to resend manually.', 422);
+  }
+
+  const { calculateVedicChart } = require('../services/vedic-calc.service');
+  const { generatePersonalizedRemedies } = require('../services/remedy-engine');
+  const { buildRemedyPackagePdf } = require('../services/pdf/remedy-package-pdf');
+
+  const { name, date_of_birth, time_of_birth, place_of_birth, latitude, longitude, timezone_offset, lang = 'en' } = meta;
+
+  const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
+  const [hr, mn, sc] = String(time_of_birth || '12:00:00').split(':').map(Number);
+  const chart = calculateVedicChart({
+    year: yr, month: mo, day: dy,
+    hour: hr || 0, minute: mn || 0, second: sc || 0,
+    latitude:        parseFloat(latitude)       || 20.59,
+    longitude:       parseFloat(longitude)      || 78.96,
+    timezone_offset: parseFloat(timezone_offset) || 5.5,
+  });
+
+  const remedies   = await generatePersonalizedRemedies(chart, { lang });
+  const pdfBuffer  = await buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place_of_birth, chart, remedies, lang });
+  const pdfName    = `remedy-report-${String(name).toLowerCase().replace(/\s+/g, '-')}.pdf`;
+
+  await sendEmail({
+    to:       invoice.customer_email,
+    template: 'remedy_report',
+    data:     { name, lang },
+    attachments: [{ filename: pdfName, content: pdfBuffer, contentType: 'application/pdf' }],
+  });
+
+  return ok(res, {}, `Remedy PDF re-sent to ${invoice.customer_email}`);
+}));
+
 // PATCH /admin/sales/:uuid — edit invoice tax type, customer state, GSTIN
 router.patch('/sales/:uuid', ah(async (req, res) => {
   const invoice = await db('invoices').where({ uuid: req.params.uuid }).first();

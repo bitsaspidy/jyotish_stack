@@ -56,12 +56,18 @@ class R {
   gap(h = 8) { this.y += h; }
 
   heading(title, sub = '') {
-    this.ensure(38);
-    this.d.rect(M, this.y, W, 26, CARD);
-    this.d.rect(M, this.y, 4, 26, GOLD);
-    this.d.text(M + 14, this.y + 7, title, { size: 10.5, bold: true, color: GOLD2 });
-    if (sub) this.d.text(M + 14, this.y + 20, sub, { size: 7.5, color: MUTED });
-    this.y += 34;
+    // Pre-wrap subtitle to determine box height
+    const subLines = sub ? this.d.wrap(sub, W - 18, 7.5) : [];
+    const boxH = sub ? (16 + subLines.length * 11 + 8) : 26;
+    this.ensure(boxH + 12);
+    this.d.rect(M, this.y, W, boxH, CARD);
+    this.d.rect(M, this.y, 4, boxH, GOLD);
+    this.d.text(M + 14, this.y + 9, title, { size: 10.5, bold: true, color: GOLD2 });
+    if (sub) {
+      let sy = this.y + 22;
+      subLines.forEach(line => { this.d.text(M + 14, sy, line, { size: 7.5, color: MUTED }); sy += 11; });
+    }
+    this.y += boxH + 10;
   }
 
   kv(label, value, color = IVORY) {
@@ -178,12 +184,23 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
       const dayStr = hi ? (rem.day_hi || rem.day_en || '') : (rem.day_en || '');
       const devata = hi ? (rem.ishta_devata_hi || rem.ishta_devata_en || '') : (rem.ishta_devata_en || '');
 
-      // Estimate card height
-      const whyH    = why    ? (r.d.wrap(why,    W - 28, 8.5).length * 13) : 0;
-      const dailyH  = daily  ? (r.d.wrap(daily,  W - 28, 8.5).length * 13) : 0;
-      const weeklyH = weekly ? (r.d.wrap(weekly, W - 28, 8.5).length * 13) : 0;
-      const mantraH = mantra ? (r.d.wrap(mantra, W - 28, 8).length  * 12) + 14 : 0;
-      const cardH   = 16 + 22 + whyH + dailyH + weeklyH + mantraH + (dayStr ? 18 : 0) + (devata ? 18 : 0) + 24;
+      // Pre-wrap with exact widths used in drawing code
+      const whyLines    = why    ? r.d.wrap(why,    W - 28, 8.5) : [];
+      const dailyLines  = daily  ? r.d.wrap(daily,  W - 28, 8.5) : [];
+      const weeklyLines = weekly ? r.d.wrap(weekly, W - 28, 8.5) : [];
+      const mantraLines = mantra ? r.d.wrap(mantra, W - 44, 8)   : [];
+
+      // cardH mirrors every iy += in the drawing code
+      let cardH = 12;  // iy = cy + 12
+      cardH += 14;     // iy += 14 (rank row)
+      cardH += 20;     // iy += 20 (planet name)
+      if (why)    cardH += 12 + whyLines.length    * 13 + 4;
+      if (daily)  cardH += 12 + dailyLines.length  * 13 + 4;
+      if (weekly) cardH += 12 + weeklyLines.length * 13 + 4;
+      if (mantra) cardH += 17 + mantraLines.length * 12 + 8;
+      if (dayStr) cardH += 14;
+      if (devata) cardH += 14;
+      cardH += 12;  // bottom padding
 
       r.ensure(cardH);
 
@@ -203,49 +220,37 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
       iy += 20;
 
       if (why) {
-        r.d.text(M + 14, iy, hi ? 'क्यों: ' : 'Why: ', { size: 8, bold: true, color: MUTED });
-        iy += 12;
-        r.d.wrap(why, W - 28, 8.5).forEach(line => {
-          r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13;
-        });
+        r.d.text(M + 14, iy, hi ? 'क्यों: ' : 'Why: ', { size: 8, bold: true, color: MUTED }); iy += 12;
+        whyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13; });
         iy += 4;
       }
 
       if (daily) {
-        r.d.text(M + 14, iy, hi ? 'दैनिक अभ्यास:' : 'Daily Practice:', { size: 8, bold: true, color: GOLD2 });
-        iy += 12;
-        r.d.wrap(daily, W - 28, 8.5).forEach(line => {
-          r.d.text(M + 14, iy, line, { size: 8.5, color: IVORY }); iy += 13;
-        });
+        r.d.text(M + 14, iy, hi ? 'दैनिक अभ्यास:' : 'Daily Practice:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
+        dailyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: IVORY }); iy += 13; });
         iy += 4;
       }
 
       if (weekly) {
-        r.d.text(M + 14, iy, hi ? 'साप्ताहिक:' : 'Weekly:', { size: 8, bold: true, color: GOLD2 });
-        iy += 12;
-        r.d.wrap(weekly, W - 28, 8.5).forEach(line => {
-          r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13;
-        });
+        r.d.text(M + 14, iy, hi ? 'साप्ताहिक:' : 'Weekly:', { size: 8, bold: true, color: GOLD2 }); iy += 12;
+        weeklyLines.forEach(line => { r.d.text(M + 14, iy, line, { size: 8.5, color: MUTED }); iy += 13; });
         iy += 4;
       }
 
       if (mantra) {
-        r.d.rect(M + 14, iy, W - 28, mantraH - 4, CARD2);
+        const mRectH = 17 + mantraLines.length * 12 + 4;
+        r.d.rect(M + 14, iy, W - 28, mRectH, CARD2);
         r.d.text(M + 22, iy + 5, hi ? 'मंत्र:' : 'Mantra:', { size: 7.5, bold: true, color: GOLD });
         iy += 17;
-        r.d.wrap(mantra, W - 44, 8).forEach(line => {
-          r.d.text(M + 22, iy, line, { size: 8, color: IVORY }); iy += 12;
-        });
+        mantraLines.forEach(line => { r.d.text(M + 22, iy, line, { size: 8, color: IVORY }); iy += 12; });
         iy += 8;
       }
 
       if (dayStr) {
-        r.d.text(M + 14, iy, (hi ? 'शुभ दिन: ' : 'Best day: ') + dayStr, { size: 8, color: AMBER });
-        iy += 14;
+        r.d.text(M + 14, iy, (hi ? 'शुभ दिन: ' : 'Best day: ') + dayStr, { size: 8, color: AMBER }); iy += 14;
       }
       if (devata) {
-        r.d.text(M + 14, iy, (hi ? 'इष्ट देवता: ' : 'Deity: ') + devata, { size: 8, color: BLUE });
-        iy += 14;
+        r.d.text(M + 14, iy, (hi ? 'इष्ट देवता: ' : 'Deity: ') + devata, { size: 8, color: BLUE }); iy += 14;
       }
 
       r.y = cy + cardH + 12;
@@ -263,8 +268,9 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
     r.heading(hi ? 'दैनिक पूजा क्रम' : 'Daily Puja Sequence', hi ? 'प्रत्येक दिन इस क्रम में करें' : 'Follow this sequence every day');
 
     puja.forEach((step, i) => {
-      const title = hi ? (step.title_hi || step.title_en || step.title || '') : (step.title_en || step.title || '');
-      const desc  = hi ? (step.desc_hi  || step.desc_en  || step.desc  || '') : (step.desc_en  || step.desc  || '');
+      // Step objects use label_en/label_hi and action_en/action_hi
+      const title = hi ? (step.label_hi || step.label_en || '') : (step.label_en || '');
+      const desc  = hi ? (step.action_hi || step.action_en || '') : (step.action_en || '');
 
       r.ensure(30);
       r.d.text(M, r.y, `${i + 1}.`, { size: 9, bold: true, color: GOLD });

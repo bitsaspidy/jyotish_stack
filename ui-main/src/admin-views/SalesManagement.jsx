@@ -304,6 +304,15 @@ export default function SalesManagement() {
     finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
   };
 
+  const resendRemedyPdf = async (inv) => {
+    setBusy((b) => ({ ...b, [inv.uuid]: 'remedy' }));
+    try {
+      const { data } = await adminApi.post(`/admin/sales/${inv.uuid}/resend-remedy`);
+      toast.success(data.message || `Remedy PDF sent to ${inv.customer_email}`);
+    } catch (e) { toast.error(e.response?.data?.message || 'Resend remedy failed'); }
+    finally { setBusy((b) => ({ ...b, [inv.uuid]: null })); }
+  };
+
   const taxLabel = (inv) => {
     if (Number(inv.total_tax) <= 0) return '—';
     return inv.is_interstate ? `IGST ${money(inv.igst)}` : `${money(Number(inv.cgst) + Number(inv.sgst))}`;
@@ -422,8 +431,12 @@ export default function SalesManagement() {
                       }}>{busy[inv.uuid] === 'send' ? '⏳' : '✉️'}</button>
                       <button onClick={() => setEditInvoice(inv)} title="Edit invoice tax / GST" style={{
                         padding: '4px 10px', borderRadius: 5, border: '1px solid rgba(167,139,250,0.4)', background: 'rgba(167,139,250,0.1)', color: '#A78BFA',
-                        fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer', marginRight: 6,
                       }}>✏️ Edit</button>
+                      <button onClick={() => resendRemedyPdf(inv)} disabled={!!busy[inv.uuid]} title="Re-send remedy PDF to customer" style={{
+                        padding: '4px 10px', borderRadius: 5, border: '1px solid rgba(52,211,153,0.4)', background: 'rgba(52,211,153,0.1)', color: '#34D399',
+                        fontSize: 11, fontWeight: 700, cursor: busy[inv.uuid] ? 'wait' : 'pointer',
+                      }}>{busy[inv.uuid] === 'remedy' ? '⏳' : '📄 Remedy'}</button>
                     </td>
                   </tr>
                 );
