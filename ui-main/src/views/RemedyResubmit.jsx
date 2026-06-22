@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -26,6 +26,117 @@ const labelStyle = {
   marginBottom: 6, textTransform: 'uppercase',
 };
 
+const PRESETS = [
+  { label: 'New Delhi',  place: 'New Delhi, Delhi, India',    lat: '28.613939', lon: '77.209023', tz: '5.5' },
+  { label: 'Mumbai',     place: 'Mumbai, Maharashtra, India',  lat: '19.076090', lon: '72.877426', tz: '5.5' },
+  { label: 'Bengaluru',  place: 'Bengaluru, Karnataka, India', lat: '12.971599', lon: '77.594566', tz: '5.5' },
+];
+
+// ── Place search component ────────────────────────────────────────────────────
+function PlaceSearch({ placeValue, latitude, onChange }) {
+  const [query,     setQuery]     = useState(placeValue || '');
+  const [results,   setResults]   = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef               = useRef(null);
+
+  const searchPlace = useCallback((q) => {
+    if (!q || q.length < 3) { setResults([]); return; }
+    setSearching(true);
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6`)
+      .then(r => r.json())
+      .then(items => setResults(items || []))
+      .catch(() => setResults([]))
+      .finally(() => setSearching(false));
+  }, []);
+
+  const onQueryChange = (v) => {
+    setQuery(v);
+    // Clear coords when user types again
+    onChange('place_of_birth', v);
+    onChange('latitude', '');
+    onChange('longitude', '');
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchPlace(v), 420);
+  };
+
+  const selectPlace = (r) => {
+    const lat  = parseFloat(r.lat).toFixed(6);
+    const lon  = parseFloat(r.lon).toFixed(6);
+    const latF = parseFloat(lat), lonF = parseFloat(lon);
+    let tz = Math.round((lonF / 15) * 2) / 2;
+    if (latF >= 6 && latF <= 37 && lonF >= 68 && lonF <= 98) tz = 5.5;
+    onChange('place_of_birth', r.display_name);
+    onChange('latitude', lat);
+    onChange('longitude', lon);
+    onChange('timezone_offset', String(tz));
+    setQuery(r.display_name);
+    setResults([]);
+  };
+
+  const selectPreset = (p) => {
+    onChange('place_of_birth', p.place);
+    onChange('latitude', p.lat);
+    onChange('longitude', p.lon);
+    onChange('timezone_offset', p.tz);
+    setQuery(p.place);
+    setResults([]);
+  };
+
+  return (
+    <div>
+      {/* Quick presets */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+        {PRESETS.map(p => (
+          <button key={p.label} type="button" onClick={() => selectPreset(p)} style={{
+            fontSize: 11, padding: '4px 10px', borderRadius: 20,
+            background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)',
+            color: GOLD, cursor: 'pointer',
+          }}>{p.label}</button>
+        ))}
+      </div>
+
+      {/* Search input + dropdown */}
+      <div style={{ position: 'relative' }}>
+        <input
+          style={inputStyle}
+          value={query}
+          placeholder="Search city, state, country…"
+          onChange={e => onQueryChange(e.target.value)}
+        />
+        {searching && (
+          <p style={{ fontSize: 11, color: DIM, marginTop: 4 }}>Searching…</p>
+        )}
+        {results.length > 0 && (
+          <div style={{
+            position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+            background: '#151829', border: `1px solid ${BORDER}`, borderRadius: 8,
+            maxHeight: 220, overflowY: 'auto', marginTop: 4,
+          }}>
+            {results.map((r, i) => (
+              <button key={i} type="button" onClick={() => selectPlace(r)} style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '9px 14px', background: 'none', border: 'none',
+                borderBottom: i < results.length - 1 ? `1px solid ${BORDER}` : 'none',
+                color: IVORY, fontSize: 13, cursor: 'pointer',
+              }}>
+                {r.display_name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation row */}
+      {latitude && (
+        <p style={{ fontSize: 11, color: DIM, marginTop: 6 }}>
+          ✓ {placeValue?.split(',')[0]}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Main view ─────────────────────────────────────────────────────────────────
 export default function RemedyResubmit() {
   const params = useSearchParams();
   const token  = params.get('token');
@@ -34,30 +145,48 @@ export default function RemedyResubmit() {
   const [userName, setUserName] = useState('');
   const [errMsg,   setErrMsg]   = useState('');
 
-  const [dob,   setDob]   = useState('');
-  const [tob,   setTob]   = useState('12:00');
-  const [place, setPlace] = useState('');
-  const [lang,  setLang]  = useState('en');
-  const [busy,  setBusy]  = useState(false);
+  const [form, setForm] = useState({
+    dob:              '',
+    tob:              '12:00',
+    place_of_birth:   '',
+    latitude:         '',
+    longitude:        '',
+    timezone_offset:  '5.5',
+    lang:             'en',
+  });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!token) { setStatus('error'); setErrMsg('No token found in this link. Please use the link from your email.'); return; }
+    if (!token) {
+      setStatus('error');
+      setErrMsg('No token found in this link. Please use the link from your email.');
+      return;
+    }
     api.get(`/remedy/resubmit-info?token=${encodeURIComponent(token)}`)
       .then(({ data }) => { setUserName(data.name || ''); setStatus('ready'); })
-      .catch((e) => { setStatus('error'); setErrMsg(e.response?.data?.message || 'This link is invalid or has expired.'); });
+      .catch((e) => {
+        setStatus('error');
+        setErrMsg(e.response?.data?.message || 'This link is invalid or has expired.');
+      });
   }, [token]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!dob) { toast.error('Please enter your date of birth'); return; }
+    if (!form.dob) { toast.error('Please enter your date of birth'); return; }
+    if (!form.latitude) { toast.error('Please select a birth location from the dropdown'); return; }
     setBusy(true);
     try {
       const { data } = await api.post('/remedy/resubmit', {
         token,
-        date_of_birth:  dob,
-        time_of_birth:  tob ? `${tob}:00` : '12:00:00',
-        place_of_birth: place || 'India',
-        lang,
+        date_of_birth:   form.dob,
+        time_of_birth:   form.tob ? `${form.tob}:00` : '12:00:00',
+        place_of_birth:  form.place_of_birth,
+        latitude:        form.latitude,
+        longitude:       form.longitude,
+        timezone_offset: form.timezone_offset,
+        lang:            form.lang,
       });
       toast.success(data.message || 'Report sent!');
       setStatus('success');
@@ -125,37 +254,49 @@ export default function RemedyResubmit() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
                 <div>
                   <label style={labelStyle}>Date of Birth <span style={{ color: '#EF4444' }}>*</span></label>
-                  <input type="date" required style={inputStyle} value={dob} onChange={(e) => setDob(e.target.value)} />
+                  <input
+                    type="date" required
+                    style={inputStyle}
+                    value={form.dob}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => set('dob', e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <label style={labelStyle}>
                     Time of Birth
-                    <span style={{ marginLeft: 8, fontSize: 10, color: DIM, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(leave as 12:00 if unknown)</span>
+                    <span style={{ marginLeft: 8, fontSize: 10, color: DIM, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                      (leave as 12:00 if unknown)
+                    </span>
                   </label>
-                  <input type="time" style={inputStyle} value={tob} onChange={(e) => setTob(e.target.value)} />
+                  <input type="time" style={inputStyle} value={form.tob} onChange={e => set('tob', e.target.value)} />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>Place of Birth</label>
-                  <input
-                    type="text"
-                    style={inputStyle}
-                    value={place}
-                    onChange={(e) => setPlace(e.target.value)}
-                    placeholder="City, State, Country"
+                  <label style={labelStyle}>Place of Birth <span style={{ color: '#EF4444' }}>*</span></label>
+                  <PlaceSearch
+                    placeValue={form.place_of_birth}
+                    latitude={form.latitude}
+                    onChange={set}
                   />
                 </div>
 
                 <div>
                   <label style={labelStyle}>Preferred Language</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={lang} onChange={(e) => setLang(e.target.value)}>
+                  <select
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                    value={form.lang}
+                    onChange={e => set('lang', e.target.value)}
+                  >
                     <option value="en">English</option>
                     <option value="hi">हिंदी (Hindi)</option>
                   </select>
                 </div>
+
               </div>
 
               <button
@@ -164,7 +305,9 @@ export default function RemedyResubmit() {
                 style={{
                   marginTop: 26, width: '100%',
                   padding: '14px 0', borderRadius: 8, border: 'none',
-                  background: busy ? 'rgba(212,175,55,0.4)' : `linear-gradient(135deg, ${GOLD}, #F0D060, #A88B20)`,
+                  background: busy
+                    ? 'rgba(212,175,55,0.4)'
+                    : `linear-gradient(135deg, ${GOLD}, #F0D060, #A88B20)`,
                   color: '#0B0D1A', fontWeight: 800, fontSize: 15,
                   cursor: busy ? 'not-allowed' : 'pointer',
                   fontFamily: 'Inter,sans-serif', letterSpacing: '0.02em',
@@ -178,6 +321,7 @@ export default function RemedyResubmit() {
               </p>
             </form>
           )}
+
         </div>
       </div>
     </div>
