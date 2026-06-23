@@ -35,6 +35,7 @@ import LifePortraitPanel    from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
 import JudgementPanel       from '../components/kundli/JudgementPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
+import MantrasPanel         from '../components/MantrasPanel';
 import VargaChartsPanel     from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard     from '../components/kundli/DrishtiHouseCard';
 import {
@@ -1249,6 +1250,11 @@ export default function KundliAdminDetail({ kundliUuid }) {
           <DashaJourneyPanel journey={kundli?.dasha_journey} antarNarratives={kundli?.antar_narratives} lang={lang} />
           <SadeSatiPanel journey={kundli?.sade_sati_journey} lang={lang} />
         </>
+      )}
+
+      {/* Ganesh Gayatri Mantra — visible on main kundli tab */}
+      {activeTab === 'kundli' && (
+        <MantrasPanel lang={lang} category="opening" />
       )}
 
       {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}

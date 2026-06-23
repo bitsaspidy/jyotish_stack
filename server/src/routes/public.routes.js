@@ -168,4 +168,20 @@ router.post('/contact', contactLimiter, async (req, res) => {
   }
 });
 
+// ─── Mantras ──────────────────────────────────────────────────────────────────
+
+// GET /api/public/mantras — active mantras, optionally filtered by category
+router.get('/mantras', async (req, res) => {
+  try {
+    const { category } = req.query;
+    let q = db('mantras').where('is_active', true).orderBy('display_order');
+    if (category) q = q.where('category', category);
+    const rows = await q;
+    return ok(res, { mantras: rows });
+  } catch (e) {
+    console.error('[public/mantras]', e.message);
+    return fail(res, 'Failed to load mantras', 500);
+  }
+});
+
 module.exports = router;

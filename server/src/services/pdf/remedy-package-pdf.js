@@ -263,6 +263,54 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
   // ────────────────────────────────────────────────────────────────────────────
   r.newPage(hi ? 'दैनिक अभ्यास' : 'Daily Practice & Disclaimer');
 
+  // ── Ganesh Gayatri Mantra card ────────────────────────────────────────────
+  {
+    const mantraTitle = hi ? 'गणेश गायत्री मंत्र' : 'Ganesh Gayatri Mantra — Opening Invocation';
+    const mantraDesc  = hi
+      ? 'एक अत्यंत शक्तिशाली और पवित्र मंत्र जो ज्ञान, बुद्धि और एकाग्रता प्रदान करता है। किसी भी नए कार्य की शुरुआत या ध्यान से पहले इसे जपना बहुत शुभ माना जाता है।'
+      : 'An extremely powerful and sacred mantra that bestows knowledge, wisdom, and concentration. Chant before beginning any new work or meditation.';
+    const mantraText  = hi
+      ? 'ॐ एकदन्ताय विद्महे, वक्रतुण्डाय धीमहि, तन्नो दन्तिः प्रचोदयात्॥'
+      : 'Om Ekadantaya Vidmahe Vakratundaya Dhimahi Tanno Dantih Prachodayat';
+    const mantraHint  = 'ॐ एकदंताय विद्महे वक्रतुंडाय धीमहि तन्नो दंतिः प्रचोदयात्॥';
+    const meaningText = hi
+      ? 'एकदंताय विद्महे: हम उस एकदंत ईश्वर का ध्यान करते हैं। वक्रतुंडाय धीमहि: हम घुमावदार सूंड वाले भगवान का ध्यान करते हैं। तन्नो दंतिः प्रचोदयात्: हे गणेश जी, हमें बुद्धि और ज्ञान के मार्ग पर प्रेरित करें।'
+      : 'Ekadantaya Vidmahe: We meditate on the one-tusked Lord. Vakratundaya Dhimahi: We meditate upon Him with the curved trunk. Tanno Dantih Prachodayat: May He enlighten our intellect on the path of wisdom.';
+    const benefitText = hi
+      ? 'यह जीवन से सभी प्रकार की बाधाओं और नकारात्मकता को दूर करता है। मन को शांति, स्पष्टता और एकाग्रता प्रदान करता है।'
+      : 'Removes all obstacles and negativity from life. Bestows peace of mind, mental clarity, and concentration.';
+
+    const descLines    = r.d.wrap(mantraDesc,    W - 28, 7.5);
+    const meaningLines = r.d.wrap(meaningText,   W - 28, 7.5);
+    const benefitLines = r.d.wrap(benefitText,   W - 28, 7.5);
+    const textLine     = r.d.wrap(mantraText,    W - 44, 9);
+    const hintLine     = hi ? [] : r.d.wrap(mantraHint, W - 44, 8);
+    const mCardH       = 17 + textLine.length * 13 + (hintLine.length ? hintLine.length * 11 + 4 : 0) + 10;
+    const totalH       = 14 + descLines.length * 11 + 8 + mCardH + 10
+                       + 12 + meaningLines.length * 11 + 8
+                       + 12 + benefitLines.length * 11 + 12;
+    r.ensure(totalH);
+    const gcy = r.y;
+    r.d.rect(M, gcy, W, totalH, CARD);
+    r.d.rect(M, gcy, 4, totalH, GOLD);
+    let gy = gcy + 12;
+    r.d.text(M + 14, gy, mantraTitle, { size: 10, bold: true, color: GOLD2 }); gy += 14;
+    descLines.forEach(ln => { r.d.text(M + 14, gy, ln, { size: 7.5, color: MUTED }); gy += 11; });
+    gy += 8;
+    r.d.rect(M + 14, gy, W - 28, mCardH, CARD2);
+    r.d.text(M + 22, gy + 5, hi ? 'मंत्र (× 9 बार):' : 'Mantra (× 9 times):', { size: 7.5, bold: true, color: GOLD });
+    gy += 17;
+    textLine.forEach(ln => { r.d.text(M + 22, gy, ln, { size: 9, bold: true, color: IVORY }); gy += 13; });
+    hintLine.forEach(ln => { r.d.text(M + 22, gy, ln, { size: 8, color: GOLD2 }); gy += 11; });
+    gy += 10;
+    r.d.text(M + 14, gy, hi ? 'अर्थ:' : 'Meaning:', { size: 8, bold: true, color: AMBER }); gy += 12;
+    meaningLines.forEach(ln => { r.d.text(M + 14, gy, ln, { size: 7.5, color: MUTED }); gy += 11; });
+    gy += 8;
+    r.d.text(M + 14, gy, hi ? 'लाभ:' : 'Benefits:', { size: 8, bold: true, color: GREEN }); gy += 12;
+    benefitLines.forEach(ln => { r.d.text(M + 14, gy, ln, { size: 7.5, color: MUTED }); gy += 11; });
+    r.y = gcy + totalH + 12;
+  }
+
   // Daily Puja
   const puja = remedies?.dailyPujaSequence || [];
   if (puja.length > 0) {

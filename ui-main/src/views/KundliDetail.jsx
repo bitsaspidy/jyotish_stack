@@ -54,6 +54,7 @@ import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
 import AIPredictionPanel    from '../components/AIPredictionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import JudgementPanel      from '../components/kundli/JudgementPanel';
+import MantrasPanel        from '../components/MantrasPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
 import KundliSummaryView  from '../components/kundli/KundliSummaryView';
@@ -1051,6 +1052,11 @@ export default function KundliDetail({ uuid }) {
               </div>
             </details>
           </div>
+        )}
+
+        {/* Ganesh Gayatri Mantra — visible on main kundli tab */}
+        {activeTab === 'kundli' && (
+          <MantrasPanel lang={lang} category="opening" />
         )}
 
         {/* ══ TAB: LIFE REPORT ════════════════════════════════════════════ */}
