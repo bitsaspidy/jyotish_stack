@@ -878,6 +878,67 @@ function buildKundliReport(profile, chart, extras = {}) {
   r.sub('Benefits');
   r.para('Removes all obstacles and negativity from life. Bestows peace of mind, mental clarity, and deep concentration. Ideal before starting any Vedic practice, study, or important task.', { size: 7.8, color: MUTED });
 
+  // ── Sun Upagrahas ─────────────────────────────────────────────────────────
+  {
+    const { computeUpagrahasInline } = require('../helpers/upagrahas');
+    const sunLon   = chart?.planets?.Sun?.longitude;
+    const lagnaNum = chart?.ascendant?.rashi_num;
+    if (sunLon && lagnaNum) {
+      const upagrahas = computeUpagrahasInline(sunLon, lagnaNum);
+      r.gap(12);
+      r.heading('Sun Upagrahas — Shadow Planets (BPHS)');
+      r.para('Five sensitive mathematical points derived from the Sun\'s sidereal longitude as prescribed in Brihat Parashara Hora Shastra. They modify and intensify the results of the houses and planets they occupy or conjoin.', { size: 7.8, color: MUTED });
+      r.gap(8);
+
+      const NATURE_MAP = {
+        dhuma:      'Saturn-like, Malefic',
+        vyatipata:  'Saturn-Rahu-like, Malefic',
+        parivesha:  'Venus-like, Benefic',
+        indrachapa: 'Jupiter-like, Benefic',
+        upaketu:    'Ketu/Mars-like, Malefic',
+      };
+      const SYMBOL_MAP = {
+        dhuma: 'Smoke — Confusion, hidden truths',
+        vyatipata: 'Calamity — Sudden reversal, instability',
+        parivesha: 'Halo — Fame, grace, recognition',
+        indrachapa: 'Rainbow — Hope, transient brilliance',
+        upaketu: 'Comet — Disruption, sudden detachment',
+      };
+
+      const colW = (W - 4) / 5;
+      // Header row
+      r.ensure(48);
+      const hdrY = r.y;
+      r.d.rect(M, hdrY, W, 14, '#1A2550');
+      ['Upagraha', 'Sign', 'Degree', 'House', 'Nature'].forEach((lbl, i) => {
+        r.d.text(M + i * colW + 4, hdrY + 4, lbl, { size: 7, bold: true, color: GOLD });
+      });
+      r.y += 14;
+
+      upagrahas.forEach((u, idx) => {
+        const rowH = 13;
+        const bg   = idx % 2 === 0 ? CARD2 : '#0E1226';
+        r.d.rect(M, r.y, W, rowH, bg);
+        const nameCell = `${u.name_en} (${u.name_hi})`;
+        const cells    = [nameCell, u.rashi_en, u.degree_dms, `H${u.house}`, NATURE_MAP[u.slug] || ''];
+        cells.forEach((cell, i) => {
+          const color = i === 4 ? (u.is_malefic ? '#EF4444' : '#22C55E') : IVORY;
+          r.d.text(M + i * colW + 4, r.y + 3, String(cell).slice(0, 28), { size: 7, color });
+        });
+        r.y += rowH;
+      });
+
+      r.gap(10);
+      r.sub('Symbolic Meanings', GOLD2);
+      upagrahas.forEach((u) => {
+        const sym = SYMBOL_MAP[u.slug];
+        if (sym) r.para(`${u.name_en}: ${sym}`, { size: 7.5, color: MUTED });
+      });
+      r.gap(4);
+      r.para('For detailed house interpretations and planetary conjunctions for each Upagraha, visit your Jyotish Stack dashboard — Upagrahas tab.', { size: 7.5, color: DIM });
+    }
+  }
+
   return r.d.build();
 }
 

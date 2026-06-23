@@ -770,6 +770,26 @@ router.get('/:id/guidance', async (req, res) => {
   }
 });
 
+// ── GET /api/kundli/:id/upagrahas — five Sun-based shadow planets ─────────────
+router.get('/:id/upagrahas', async (req, res) => {
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return fail(res, 'Kundli not found', 404);
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return fail(res, 'Unable to calculate chart', 500);
+
+    const { computeAndLookupUpagrahas } = require('../services/helpers/upagrahas');
+    const result = await computeAndLookupUpagrahas(chart);
+    return ok(res, result);
+  } catch (e) {
+    console.error('[Upagrahas] Error:', e.message);
+    return fail(res, 'Unable to compute upagrahas', 500);
+  }
+});
+
 // ── GET /api/kundli/:id/today — personal daily prediction (persisted) ─────────
 router.get('/:id/today', async (req, res) => {
   try {

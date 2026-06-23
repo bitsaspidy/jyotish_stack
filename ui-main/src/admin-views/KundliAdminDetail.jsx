@@ -36,6 +36,7 @@ import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
 import JudgementPanel       from '../components/kundli/JudgementPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import MantrasPanel         from '../components/MantrasPanel';
+import UpagrahasPanel       from '../components/UpagrahasPanel';
 import VargaChartsPanel     from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard     from '../components/kundli/DrishtiHouseCard';
 import {
@@ -1697,6 +1698,13 @@ export default function KundliAdminDetail({ kundliUuid }) {
             <GLine label="Key rules" text="Strength score 70+ = strongly positive chart; 50–69 = balanced; 35–49 = mixed; below 35 = challenging. Multiple active Raja Yogas elevate the score significantly." color="#FBBF24" />
           </AdminGuide>
           <KundliSynthesisPanel kundli={kundli} lang={lang} admin={true} />
+        </div>
+      )}
+
+      {/* ══ TAB: UPAGRAHAS ══════════════════════════════════════════════════ */}
+      {activeTab === 'upagrahas' && (
+        <div className="mt-4">
+          <UpagrahasPanel uuid={kundliUuid} lang={lang} admin />
         </div>
       )}
 

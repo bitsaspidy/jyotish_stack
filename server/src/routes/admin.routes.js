@@ -440,6 +440,17 @@ router.get('/kundlis/:uuid/guidance', ah(async (req, res) => {
   return ok(res, { report, daily, personalizedRemedies });
 }));
 
+// Sun-based shadow planets (Upagrahas)
+router.get('/kundlis/:uuid/upagrahas', ah(async (req, res) => {
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  const chart = await ensureCalculatedChart(profile);
+  if (!chart) return fail(res, 'Unable to calculate Kundli', 500);
+  const { computeAndLookupUpagrahas } = require('../services/helpers/upagrahas');
+  const result = await computeAndLookupUpagrahas(chart);
+  return ok(res, result);
+}));
+
 // Stored prediction history for one kundli (what the user has been shown)
 router.get('/kundlis/:uuid/predictions', ah(async (req, res) => {
   const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();

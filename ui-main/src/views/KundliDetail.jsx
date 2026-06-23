@@ -55,6 +55,7 @@ import AIPredictionPanel    from '../components/AIPredictionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import JudgementPanel      from '../components/kundli/JudgementPanel';
 import MantrasPanel        from '../components/MantrasPanel';
+import UpagrahasPanel      from '../components/UpagrahasPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
 import DrishtiHouseCard   from '../components/kundli/DrishtiHouseCard';
 import KundliSummaryView  from '../components/kundli/KundliSummaryView';
@@ -1422,6 +1423,13 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly) ════════════════════ */}
         {activeTab === 'life-guide' && (
           <GuidanceReport uuid={kundli?.uuid || uuid} name={kundli?.name} lang={lang} judgement={kundli?.judgement} />
+        )}
+
+        {/* ══ TAB: UPAGRAHAS ══════════════════════════════════════════════ */}
+        {activeTab === 'upagrahas' && (
+          <div className="mt-4">
+            <UpagrahasPanel uuid={kundli?.uuid || uuid} lang={lang} />
+          </div>
         )}
 
         {/* ══ TAB: JUDGEMENT SCORE ════════════════════════════════════════ */}
