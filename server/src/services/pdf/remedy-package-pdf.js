@@ -367,8 +367,8 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
     : 'Your Free Benefits & Membership';
 
   const memBody = hi
-    ? 'यह उपाय रिपोर्ट मात्र Rs. 250 में उपलब्ध है। बेसिक पंजीकरण मात्र Rs. 499 में — 3 कुंडली प्रोफाइल देख सकते हैं। अधिक कुंडली और विवाह मिलान के लिए वार्षिक सदस्यता योजना लें।'
-    : 'This remedy report is available at just Rs. 250. Complete your basic registration at Rs. 499 — view up to 3 kundli profiles. For unlimited kundlis and matchmaking, upgrade to our Yearly Membership Plan.';
+    ? 'यह आपकी व्यक्तिगत वैदिक उपाय पुस्तिका है — विशेष रूप से आपके लिए तैयार एक सशुल्क मार्गदर्शिका। बेसिक पंजीकरण Rs. 499 में — 3 कुंडली प्रोफाइल देखें। अधिक कुंडली और विवाह मिलान के लिए वार्षिक सदस्यता योजना लें।'
+    : 'This is your personalised Vedic Remedy Booklet — a premium paid guide crafted exclusively for you. Basic registration at Rs. 499 — view up to 3 kundli profiles. For unlimited kundlis and matchmaking, upgrade to our Yearly Membership Plan.';
 
   const discLines = r.d.wrap(discBody, W - 24, 7.5);
   const memLines  = r.d.wrap(memBody,  W - 24, 7.5);
