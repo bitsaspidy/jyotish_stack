@@ -305,25 +305,42 @@ async function buildRemedyPackagePdf({ name, date_of_birth, time_of_birth, place
     r.gap(8);
   }
 
-  // Disclaimer
-  r.ensure(90);
-  r.d.rect(M, r.y, W, 78, CARD2);
-  r.d.rect(M, r.y, W, 3, AMBER);
+  // Disclaimer + Membership
   const discTitle = hi
     ? '⚠ महत्वपूर्ण: उपाय पर ध्यान दें — भय पर नहीं'
     : '⚠ Important: Focus on Remedies — Not on Fear';
-  r.d.text(M + 12, r.y + 14, discTitle, { size: 9, bold: true, color: AMBER });
 
-  const discText = hi
-    ? 'यह रिपोर्ट आध्यात्मिक मार्गदर्शन के लिए है। ग्रह-स्थिति से कभी भयभीत न हों — उपाय आपकी सुरक्षा करते हैं। स्वास्थ्य, कानूनी या वित्तीय निर्णय के लिए उचित विशेषज्ञ से परामर्श लें।'
-    : 'This report is for spiritual guidance purposes only. Never be afraid of planetary placements — remedies are tools of empowerment, not prediction of fate. For health, legal, or financial decisions, always consult a qualified professional.';
+  const discBody = hi
+    ? 'यह रिपोर्ट AI तकनीक और वैदिक ज्योतिष के गहन अध्ययन एवं विश्लेषण द्वारा तैयार की गई है। सभी रिपोर्ट वैदिक पद्धति पर आधारित हैं। यदि आपको कोई संशय हो तो किसी अनुभवी वैदिक ज्योतिषी से पुष्टि करें। स्वास्थ्य, कानूनी या वित्तीय निर्णय के लिए उचित विशेषज्ञ से परामर्श लें।'
+    : 'This report is generated using AI technology combined with in-depth Vedic Jyotish study and analysis. All reports are Vedic-based. If you have any doubts, please confirm with a qualified Vedic Jyotish expert. For health, legal, or financial decisions, always consult a qualified professional.';
 
-  const discLines = r.d.wrap(discText, W - 24, 7.5);
-  let dy2 = r.y + 28;
-  discLines.forEach(line => { r.d.text(M + 12, dy2, line, { size: 7.5, color: MUTED }); dy2 += 11; });
-  r.y += 90;
+  const memTitle = hi
+    ? 'आपकी निःशुल्क सुविधाएँ एवं सदस्यता'
+    : 'Your Free Benefits & Membership';
 
-  r.gap(10);
+  const memBody = hi
+    ? 'यह उपाय रिपोर्ट आपको निःशुल्क प्रदान की गई है। बेसिक पंजीकरण मात्र Rs. 499 में — 3 कुंडली प्रोफाइल देख सकते हैं। अधिक कुंडली और विवाह मिलान के लिए वार्षिक सदस्यता योजना लें।'
+    : 'This remedy report is provided free of cost. Complete your basic registration at just Rs. 499 — view up to 3 kundli profiles. For unlimited kundlis and matchmaking, upgrade to our Yearly Membership Plan.';
+
+  const discLines = r.d.wrap(discBody, W - 24, 7.5);
+  const memLines  = r.d.wrap(memBody,  W - 24, 7.5);
+  const boxH = 69 + (discLines.length + memLines.length) * 11;
+  r.ensure(boxH + 10);
+  const bcy = r.y;
+  r.d.rect(M, bcy, W, boxH, CARD2);
+  r.d.rect(M, bcy, W, 3, AMBER);
+  let by = bcy + 12;
+  r.d.text(M + 12, by, discTitle, { size: 9, bold: true, color: AMBER });
+  by += 14;
+  discLines.forEach(ln => { r.d.text(M + 12, by, ln, { size: 7.5, color: MUTED }); by += 11; });
+  by += 8;
+  r.d.line(M + 12, by, PAGE_W - M - 12, by, LINE, 0.5);
+  by += 9;
+  r.d.text(M + 12, by, memTitle, { size: 9, bold: true, color: GOLD2 });
+  by += 14;
+  memLines.forEach(ln => { r.d.text(M + 12, by, ln, { size: 7.5, color: MUTED }); by += 11; });
+  r.y = bcy + boxH + 10;
+
   r.d.text(M, r.y, 'jyotishstack.com  |  Lahiri Ayanamsa  |  Whole-sign houses  |  VSOP87 ephemeris', { size: 7, color: DIM });
 
   return r.d.build();
