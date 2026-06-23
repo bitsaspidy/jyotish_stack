@@ -1,6 +1,32 @@
 'use client';
+import { useState } from 'react';
 import { t, planetName } from '../../lib/astroI18n';
 import { PLANET_META, RASHI_SHORT_EN, RASHI_SHORT_HI, SI_GRID } from './kundliConstants';
+
+// ─── Upagraha computation (Parashari BPHS formulae) ──────────────────────────
+
+const UPAGRAHA_META = [
+  { slug:'dhuma',      abbr_en:'Dh', abbr_hi:'धू',  color:'#FF8C42' },
+  { slug:'vyatipata',  abbr_en:'Vy', abbr_hi:'व्य', color:'#FF8C42' },
+  { slug:'parivesha',  abbr_en:'Pa', abbr_hi:'पा',   color:'#7FC97F' },
+  { slug:'indrachapa', abbr_en:'Ic', abbr_hi:'इच',  color:'#7FC97F' },
+  { slug:'upaketu',    abbr_en:'Uk', abbr_hi:'उक',  color:'#FF8C42' },
+];
+
+function computeUpagrahasForChart(sunLon, ascRashiNum) {
+  const mod360 = v => ((v % 360) + 360) % 360;
+  const dhuma      = mod360(sunLon + 133 + 20 / 60);
+  const vyatipata  = mod360(360 - dhuma);
+  const parivesha  = mod360(vyatipata + 180);
+  const indrachapa = mod360(360 - parivesha);
+  const upaketu    = mod360(indrachapa + 16 + 40 / 60);
+  const lons = [dhuma, vyatipata, parivesha, indrachapa, upaketu];
+  return UPAGRAHA_META.map((meta, i) => {
+    const rashiNum = Math.floor(lons[i] / 30) + 1;
+    const house    = ((rashiNum - ascRashiNum + 12) % 12) + 1;
+    return { ...meta, rashiNum, house };
+  });
+}
 
 // ─── Shared chart cell ────────────────────────────────────────────────────────
 
@@ -56,9 +82,19 @@ export function PlanetTokens({ names, lang = 'en' }) {
 // ─── South Indian Chart ───────────────────────────────────────────────────────
 
 export function SouthIndianChart({ chart, lang }) {
+  const [showUG, setShowUG] = useState(false);
+
   if (!chart) return <p style={{ color:'rgba(245,240,232,0.5)', fontSize:12, textAlign:'center', padding:24 }}>{t(lang, 'Calculating chart…', 'कुंडली बन रही है…')}</p>;
 
   const ascSign = chart.ascendant?.rashi_num || 1;
+  const sunLon  = chart.planets?.Sun?.longitude;
+
+  const ugByRashi = {};
+  if (showUG && sunLon != null) {
+    for (const u of computeUpagrahasForChart(sunLon, ascSign)) {
+      (ugByRashi[u.rashiNum] ??= []).push(u);
+    }
+  }
 
   return (
     <div>
@@ -71,6 +107,7 @@ export function SouthIndianChart({ chart, lang }) {
           const planetsIn = Object.entries(chart.planets || {})
             .filter(([,pd]) => pd.rashi_num === signNum)
             .map(([name]) => name);
+          const ugHere = ugByRashi[signNum] || [];
 
           return (
             <ChartCell key={i} highlight={isAsc}>
@@ -91,13 +128,38 @@ export function SouthIndianChart({ chart, lang }) {
                 </span>
               </div>
               <PlanetTokens names={planetsIn} lang={lang} />
+              {ugHere.length > 0 && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:1, marginTop:2, borderTop:'1px solid rgba(255,140,66,0.18)', paddingTop:2 }}>
+                  {ugHere.map(u => (
+                    <span key={u.slug} style={{
+                      fontSize:7, color:u.color, fontWeight:700, lineHeight:1,
+                      textShadow:'0 0 4px rgba(0,0,0,0.9)',
+                    }}>
+                      {lang==='hi' ? u.abbr_hi : u.abbr_en}
+                    </span>
+                  ))}
+                </div>
+              )}
             </ChartCell>
           );
         })}
       </div>
-      <p style={{ color:'rgba(245,240,232,0.50)', fontSize:10, textAlign:'center', marginTop:8 }}>
-        {t(lang, '↑ = Lagna · Signs fixed · Houses float', '↑ = लग्न · राशियां स्थिर · भाव चलते हैं')}
-      </p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
+        <p style={{ color:'rgba(245,240,232,0.50)', fontSize:10 }}>
+          {t(lang, '↑ = Lagna · Signs fixed · Houses float', '↑ = लग्न · राशियां स्थिर · भाव चलते हैं')}
+        </p>
+        {sunLon != null && (
+          <button onClick={() => setShowUG(v => !v)} style={{
+            fontSize:9, fontWeight:600, cursor:'pointer', padding:'3px 9px', borderRadius:12,
+            border:`1px solid ${showUG ? '#FF8C42' : 'rgba(255,140,66,0.25)'}`,
+            background: showUG ? 'rgba(255,140,66,0.12)' : 'transparent',
+            color: showUG ? '#FF8C42' : 'rgba(255,140,66,0.4)',
+            transition:'all 0.2s',
+          }}>
+            🪐 {t(lang, 'Upagrahas', 'उपग्रह')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -105,6 +167,8 @@ export function SouthIndianChart({ chart, lang }) {
 // ─── North Indian Chart (SVG — geometrically accurate) ───────────────────────
 
 export function NorthIndianChart({ chart, lang }) {
+  const [showUG, setShowUG] = useState(false);
+
   if (!chart) {
     return <p style={{ color:'rgba(245,240,232,0.68)', fontSize:12, textAlign:'center', padding:24 }}>{t(lang, 'Calculating chart…', 'कुंडली बन रही है…')}</p>;
   }
@@ -134,6 +198,16 @@ export function NorthIndianChart({ chart, lang }) {
   const cx = (verts) => verts.reduce((s,[x]) => s+x, 0) / verts.length;
   const cy = (verts) => verts.reduce((s,[,y]) => s+y, 0) / verts.length;
 
+  const ascRashiNum = chart.ascendant?.rashi_num || 1;
+  const sunLon      = chart.planets?.Sun?.longitude;
+
+  const ugByHouse = {};
+  if (showUG && sunLon != null) {
+    for (const u of computeUpagrahasForChart(sunLon, ascRashiNum)) {
+      (ugByHouse[u.house] ??= []).push(u);
+    }
+  }
+
   return (
     <div>
       <svg viewBox={`0 0 ${S} ${S}`} width="100%" style={{ maxWidth: 320, display:'block', margin:'0 auto' }}>
@@ -160,6 +234,17 @@ export function NorthIndianChart({ chart, lang }) {
             .map(p => (PLANET_META[p]?.icon || '') + planetName(p, lang).slice(0,2))
             .join(' ');
 
+          const ugHere = ugByHouse[h] || [];
+          const ugStr  = ugHere.map(u => lang==='hi' ? u.abbr_hi : u.abbr_en).join(' ');
+
+          // Compute y offsets based on how many text rows are rendered
+          const hasPlanets = planetsIn.length > 0;
+          const hasUg      = ugHere.length > 0;
+          const baseOffset = isKendra ? 10 : 6;
+          const signY      = pcy + (isKendra ? 5 : 4);
+          const planetsY   = pcy + (isKendra ? 18 : 15);
+          const ugY        = hasPlanets ? planetsY + (isKendra ? 10 : 9) : planetsY;
+
           return (
             <g key={h}>
               <polygon
@@ -174,26 +259,35 @@ export function NorthIndianChart({ chart, lang }) {
                   <line x1={v[1][0]} y1={v[1][1]} x2={v[3][0]} y2={v[3][1]} stroke="rgba(212,175,55,0.25)" strokeWidth="1" />
                 </>
               )}
-              <text x={pcx} y={pcy - (isKendra ? 10 : 6)} textAnchor="middle"
+              <text x={pcx} y={pcy - baseOffset} textAnchor="middle"
                 fill={isLagna ? '#FFE566' : '#D4AF37'}
                 fontSize={isLagna ? 12 : isKendra ? 9 : 8.5}
                 fontWeight="bold" fontFamily="Inter,sans-serif" filter="url(#ni-glow)">
                 {isLagna ? 'L' : h}
               </text>
               {signNum > 0 && (
-                <text x={pcx} y={pcy + (isKendra ? 5 : 4)} textAnchor="middle"
+                <text x={pcx} y={signY} textAnchor="middle"
                   fill={isLagna ? '#FFFFFF' : 'rgba(245,240,232,0.95)'}
                   fontSize={isKendra ? 9.5 : 8}
                   fontFamily="'Noto Sans Devanagari',Inter,sans-serif" filter="url(#ni-text-shadow)">
                   {lang === 'hi' ? RASHI_SHORT_HI[signNum] : RASHI_SHORT_EN[signNum]}
                 </text>
               )}
-              {planetsIn.length > 0 && (
-                <text x={pcx} y={pcy + (isKendra ? 18 : 15)} textAnchor="middle"
+              {hasPlanets && (
+                <text x={pcx} y={planetsY} textAnchor="middle"
                   fill="rgba(245,240,232,0.98)"
                   fontSize={isKendra ? 8.5 : 7.5}
                   fontFamily="Inter,sans-serif" filter="url(#ni-text-shadow)">
                   {planetStr}
+                </text>
+              )}
+              {hasUg && (
+                <text x={pcx} y={ugY} textAnchor="middle"
+                  fill="#FF8C42"
+                  fontSize={isKendra ? 7.5 : 6.5}
+                  fontWeight="bold" fontFamily="'Noto Sans Devanagari',Inter,sans-serif" filter="url(#ni-text-shadow)"
+                  opacity="0.90">
+                  {ugStr}
                 </text>
               )}
             </g>
@@ -203,9 +297,22 @@ export function NorthIndianChart({ chart, lang }) {
         <rect width={S} height={S} fill="none" stroke="rgba(212,175,55,0.65)" strokeWidth="1.5" rx="2" />
       </svg>
 
-      <p style={{ color:'rgba(245,240,232,0.52)', fontSize:10, textAlign:'center', marginTop:8 }}>
-        {t(lang, 'L = Lagna (H1) · Houses fixed · Signs float · H1/4/7/10 = Kendra', 'L = लग्न (भाव 1) · भाव स्थिर · राशियां चलती हैं · भाव 1/4/7/10 = केंद्र')}
-      </p>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:8 }}>
+        <p style={{ color:'rgba(245,240,232,0.52)', fontSize:10 }}>
+          {t(lang, 'L = Lagna (H1) · Houses fixed · Signs float · H1/4/7/10 = Kendra', 'L = लग्न (भाव 1) · भाव स्थिर · राशियां चलती हैं · भाव 1/4/7/10 = केंद्र')}
+        </p>
+        {sunLon != null && (
+          <button onClick={() => setShowUG(v => !v)} style={{
+            fontSize:9, fontWeight:600, cursor:'pointer', padding:'3px 9px', borderRadius:12,
+            border:`1px solid ${showUG ? '#FF8C42' : 'rgba(255,140,66,0.25)'}`,
+            background: showUG ? 'rgba(255,140,66,0.12)' : 'transparent',
+            color: showUG ? '#FF8C42' : 'rgba(255,140,66,0.4)',
+            transition:'all 0.2s',
+          }}>
+            🪐 {t(lang, 'Upagrahas', 'उपग्रह')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
