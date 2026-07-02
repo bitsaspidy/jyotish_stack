@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { t as translate } from '../../lib/astroI18n';
 
 export const emptyBirthForm = {
   name: '', gender: 'male',
@@ -20,7 +21,7 @@ const MUTED = 'rgba(245,240,232,0.55)';
 // Parent owns `form` state; this component only renders + updates it.
 export default function BirthFields({ form, onChange, lang, showName = true, showGender = false }) {
   const hi = lang === 'hi';
-  const t = (en, h) => (hi ? h : en);
+  const t = (en, h) => translate(lang, en, h);
 
   const [locQuery, setLocQuery]     = useState('');
   const [locResults, setLocResults] = useState([]);

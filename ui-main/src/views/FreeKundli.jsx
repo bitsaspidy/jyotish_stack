@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+import { t as translate } from '../lib/astroI18n';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { ChartToggle, SouthIndianChart, NorthIndianChart } from '../components/kundli/KundliChart';
@@ -187,7 +188,7 @@ export default function FreeKundli() {
   const { lang } = useLang();
   const { user } = useAuth();
   const hi = lang === 'hi';
-  const t = (en, h) => (hi ? h : en);
+  const t = (en, h) => translate(lang, en, h);
 
   const [form, setForm]       = useState(emptyForm);
   const [loading, setLoading] = useState(false);

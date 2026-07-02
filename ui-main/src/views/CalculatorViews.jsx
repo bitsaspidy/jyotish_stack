@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+import { t as translate } from '../lib/astroI18n';
 import api from '../lib/api';
 import BirthFields, { emptyBirthForm } from '../components/calculators/BirthFields';
 
@@ -80,7 +81,7 @@ function SingleBirthCalculator({ type, submitLabelEn, submitLabelHi, renderResul
   const [form, setForm]     = useState(emptyBirthForm);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const t = (en, h) => (hi ? h : en);
+  const t = (en, h) => translate(lang, en, h);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -299,7 +300,7 @@ export function MahadashaCalc() {
 export function KundliMilanCalc() {
   const { lang } = useLang();
   const hi = lang === 'hi';
-  const t = (en, h) => (hi ? h : en);
+  const t = (en, h) => translate(lang, en, h);
 
   const [boy, setBoy]       = useState({ ...emptyBirthForm, gender: 'male' });
   const [girl, setGirl]     = useState({ ...emptyBirthForm, gender: 'female' });

@@ -10,8 +10,14 @@ export const PLANET_HI = {
   Ketu: 'केतु',
 };
 
+import { DICTS } from './i18nDicts';
+
 export function t(lang, en, hi) {
-  return lang === 'hi' && hi ? hi : en;
+  if (lang === 'hi') return hi || en;
+  if (!lang || lang === 'en') return en;
+  // Regional languages: dictionary lookup keyed by the English string,
+  // graceful English fallback for anything untranslated.
+  return DICTS[lang]?.[en] || en;
 }
 
 export function planetName(name, lang) {

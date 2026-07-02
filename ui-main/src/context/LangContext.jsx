@@ -1,17 +1,32 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
+import { LANGS } from '../lib/i18nDicts';
 
-export const LangContext = createContext({ lang: 'en', toggleLang: () => {} });
+const VALID = new Set(LANGS.map((l) => l.code));
+
+export const LangContext = createContext({ lang: 'en', setLang: () => {}, toggleLang: () => {}, langs: LANGS });
 
 export const LangProvider = ({ children }) => {
-  const [lang, setLang] = useState('en');
-  useEffect(() => { setLang(localStorage.getItem('lang') || 'en'); }, []);
-  const toggleLang = () => {
-    const next = lang === 'en' ? 'hi' : 'en';
-    setLang(next);
-    localStorage.setItem('lang', next);
+  const [lang, setLangState] = useState('en');
+  useEffect(() => {
+    const saved = localStorage.getItem('lang');
+    if (saved && VALID.has(saved)) setLangState(saved);
+  }, []);
+
+  const setLang = (code) => {
+    if (!VALID.has(code)) return;
+    setLangState(code);
+    localStorage.setItem('lang', code);
   };
-  return <LangContext.Provider value={{ lang, toggleLang }}>{children}</LangContext.Provider>;
+
+  // Backward-compatible EN↔HI toggle (existing callers)
+  const toggleLang = () => setLang(lang === 'en' ? 'hi' : 'en');
+
+  return (
+    <LangContext.Provider value={{ lang, setLang, toggleLang, langs: LANGS }}>
+      {children}
+    </LangContext.Provider>
+  );
 };
 
 export const useLang = () => useContext(LangContext);

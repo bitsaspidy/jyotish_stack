@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+import { t as translate } from '../lib/astroI18n';
 import api from '../lib/api';
 
 const GOLD  = '#D4AF37';
@@ -25,7 +26,7 @@ export const OCCASION_LIST = [
 export default function MuhuratOccasion({ occasion }) {
   const { lang } = useLang();
   const hi = lang === 'hi';
-  const t = (en, h) => (hi ? h : en);
+  const t = (en, h) => translate(lang, en, h);
   const year = new Date().getFullYear();
 
   const [data, setData]     = useState(null);

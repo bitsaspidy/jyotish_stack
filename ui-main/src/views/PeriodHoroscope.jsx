@@ -5,6 +5,7 @@ import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
 import PeriodTabs from '../components/horoscope/PeriodTabs';
+import PushOptIn from '../components/PushOptIn';
 
 const GOLD  = '#D4AF37';
 const AMBER = '#F59E0B';
@@ -12,7 +13,7 @@ const GREEN = '#22C55E';
 const RED   = '#EF4444';
 const MUTED = 'rgba(245,240,232,0.55)';
 
-const t = (lang, en, hi) => (lang === 'hi' ? hi : en);
+import { t } from '../lib/astroI18n';
 const SCORE_COLOR = { 1:'#EF4444', 2:'#F97316', 3:'#F59E0B', 4:'#22C55E', 5:'#10B981' };
 const PLANET_HI = { Sun:'सूर्य', Moon:'चंद्र', Mars:'मंगल', Mercury:'बुध', Jupiter:'गुरु', Venus:'शुक्र', Saturn:'शनि', Rahu:'राहु', Ketu:'केतु' };
 const TONE_META = {
@@ -95,6 +96,7 @@ export default function PeriodHoroscope({ period }) {
           {subtitle && <p style={{ color:MUTED, fontSize:13 }}>{subtitle}</p>}
         </motion.div>
 
+        <PushOptIn />
         <PeriodTabs />
 
         {!data ? (

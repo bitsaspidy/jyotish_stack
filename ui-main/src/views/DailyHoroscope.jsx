@@ -6,9 +6,10 @@ import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import PeriodTabs from '../components/horoscope/PeriodTabs';
+import PushOptIn from '../components/PushOptIn';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const t = (lang, en, hi) => (lang === 'hi' ? hi : en);
+import { t } from '../lib/astroI18n';
 
 const PLANET_ICON = { Sun:'☉', Moon:'☽', Mars:'♂', Mercury:'☿', Jupiter:'♃', Venus:'♀', Saturn:'♄', Rahu:'☊', Ketu:'☋' };
 const PLANET_COLOR = { Sun:'#FBBF24', Moon:'#94A3B8', Mars:'#EF4444', Mercury:'#10B981', Jupiter:'#F97316', Venus:'#F472B6', Saturn:'#818CF8', Rahu:'#A78BFA', Ketu:'#6B7280' };
@@ -462,6 +463,9 @@ export default function DailyHoroscope() {
             )}
           </p>
         </motion.div>
+
+        {/* ── Push opt-in ── */}
+        <PushOptIn defaultRashi={userRashi || 1} />
 
         {/* ── Period tabs + day chips ── */}
         <PeriodTabs />

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo from './Logo';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
+import { t } from '../lib/astroI18n';
 
 const NAV = [
   { href: '/',            en: 'Home',        hi: 'होम'        },
@@ -17,7 +18,7 @@ const NAV = [
   { href: '/varshphal',        en: 'Varshphal',   hi: 'वर्षफल'  },
   { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
   { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },
-  { href: '/remedy',      en: 'Remedies',    hi: 'उपाय'       },
+  { href: '/remedies',    en: 'Remedies',    hi: 'उपाय'       },
   { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'      },
 ];
 
@@ -25,7 +26,7 @@ export default function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const { user, logout } = useAuth();
-  const { lang, toggleLang } = useLang();
+  const { lang, setLang, langs } = useLang();
   const pathname = usePathname();
   const router   = useRouter();
 
@@ -69,7 +70,7 @@ export default function Navbar() {
                 className={`relative px-4 py-2 text-sm font-medium rounded-sm transition-colors duration-200 ${
                   active ? 'text-gold' : 'text-ivory/65 hover:text-ivory'
                 }`}>
-                {lang === 'hi' ? l.hi : l.en}
+                {t(lang, l.en, l.hi)}
                 {active && (
                   <motion.span layoutId="nav-underline"
                     className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-gold rounded-full" />
@@ -81,11 +82,16 @@ export default function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2.5">
-          {/* Lang toggle */}
-          <button onClick={toggleLang}
-            className="hidden sm:flex text-[11px] border border-gold/35 text-gold/80 hover:text-gold hover:border-gold px-3 py-1.5 rounded-sm transition-colors font-devanagari">
-            {lang === 'en' ? 'हिन्दी' : 'EN'}
-          </button>
+          {/* Language picker */}
+          <select value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language"
+            className="hidden sm:block text-[11px] border border-gold/35 text-gold/80 hover:text-gold hover:border-gold px-2 py-1.5 rounded-sm transition-colors font-devanagari bg-transparent cursor-pointer"
+            style={{ background: 'transparent' }}>
+            {langs.map((l) => (
+              <option key={l.code} value={l.code} style={{ background: '#111428', color: '#F5F0E8' }}>
+                {l.native}
+              </option>
+            ))}
+          </select>
 
           {user ? (
             <div className="hidden md:flex items-center gap-2">
@@ -142,15 +148,21 @@ export default function Navbar() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-colors ${
                     pathname === l.href ? 'text-gold bg-gold/8' : 'text-ivory/65 hover:text-ivory'
                   }`}>
-                  {lang === 'hi' ? l.hi : l.en}
+                  {t(lang, l.en, l.hi)}
                 </Link>
               ))}
 
               <div className="pt-3 border-t border-gold/10 flex flex-col gap-2">
-                <button onClick={toggleLang}
-                  className="text-xs border border-gold/35 text-gold px-4 py-2 rounded-sm w-full">
-                  {lang === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
-                </button>
+                <div className="grid grid-cols-3 gap-2">
+                  {langs.map((l) => (
+                    <button key={l.code} onClick={() => setLang(l.code)}
+                      className={`text-xs border px-2 py-2 rounded-sm font-devanagari transition-colors ${
+                        lang === l.code ? 'border-gold text-gold bg-gold/10' : 'border-gold/25 text-ivory/60 hover:text-gold'
+                      }`}>
+                      {l.native}
+                    </button>
+                  ))}
+                </div>
                 {user ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
