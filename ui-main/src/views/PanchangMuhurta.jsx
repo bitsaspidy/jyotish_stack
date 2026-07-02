@@ -302,6 +302,21 @@ export default function PanchangMuhurta() {
         <p className="text-ivory/40 text-sm">
           {T('Daily Vedic almanac · Tithi · Nakshatra · Yoga · Chaughadiya · Hora', 'दैनिक वैदिक पंचांग · तिथि · नक्षत्र · योग · चौघड़िया · होरा')}
         </p>
+        {/* Occasion muhurat quick links */}
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {[
+            { href:'/muhurat/marriage',         icon:'💍', en:'Marriage',       hi:'विवाह' },
+            { href:'/muhurat/griha-pravesh',    icon:'🏠', en:'Griha Pravesh',  hi:'गृह प्रवेश' },
+            { href:'/muhurat/naamkaran',        icon:'👶', en:'Naamkaran',      hi:'नामकरण' },
+            { href:'/muhurat/mundan',           icon:'✂️', en:'Mundan',         hi:'मुंडन' },
+            { href:'/muhurat/vehicle-purchase', icon:'🚗', en:'Vehicle',        hi:'वाहन' },
+          ].map((o) => (
+            <a key={o.href} href={o.href}
+              className="text-xs text-gold/70 border border-gold/25 rounded-full px-3 py-1.5 hover:bg-gold/10 transition-colors no-underline">
+              {o.icon} {T(`${o.en} Muhurat ${new Date().getFullYear()}`, `${o.hi} मुहूर्त ${new Date().getFullYear()}`)}
+            </a>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4">
