@@ -21,7 +21,9 @@ export function t(lang, en, hi) {
 }
 
 export function planetName(name, lang) {
-  return lang === 'hi' ? (PLANET_HI[name] || name) : name;
+  if (lang === 'hi') return PLANET_HI[name] || name;
+  if (!lang || lang === 'en') return name;
+  return DICTS[lang]?.[name] || name;
 }
 
 export function planetList(names = [], lang) {
