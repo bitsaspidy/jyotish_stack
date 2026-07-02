@@ -196,32 +196,39 @@ const DOSHA_AREA_HINTS = [
   [/amavasya/i,               { en: 'Vitality & Confidence',    hi: 'ऊर्जा और आत्मविश्वास' }],
 ];
 
-router.post('/free-kundli', freeKundliLimiter, async (req, res) => {
-  try {
-    const { name, gender, date_of_birth, time_of_birth, place_of_birth,
-            latitude, longitude, timezone_offset } = req.body || {};
-
-    // ── Validation ──
-    if (!name?.trim())          return fail(res, 'Name is required', 400);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date_of_birth || '')))
-      return fail(res, 'Valid date of birth (YYYY-MM-DD) is required', 400);
-    if (!/^\d{2}:\d{2}/.test(String(time_of_birth || '')))
-      return fail(res, 'Valid time of birth (HH:MM) is required', 400);
-    const lat = parseFloat(latitude), lon = parseFloat(longitude);
-    const tz  = parseFloat(timezone_offset);
-    if (!Number.isFinite(lat) || lat < -90  || lat > 90)  return fail(res, 'Valid latitude is required', 400);
-    if (!Number.isFinite(lon) || lon < -180 || lon > 180) return fail(res, 'Valid longitude is required', 400);
-    if (!Number.isFinite(tz)  || tz  < -12  || tz  > 14)  return fail(res, 'Valid timezone offset is required', 400);
-
-    const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
-    const [hr, mn]     = String(time_of_birth).split(':').map(Number);
-    if (yr < 1900 || yr > new Date().getFullYear()) return fail(res, 'Year of birth out of range', 400);
-
-    const { calculateVedicChart } = require('../services/vedic-calc.service');
-    const chart = calculateVedicChart({
+// Validates public birth-detail input. Returns { error } or { params } for calculateVedicChart.
+function parseBirthInput(body, { requireName = true } = {}) {
+  const { name, date_of_birth, time_of_birth, latitude, longitude, timezone_offset } = body || {};
+  if (requireName && !name?.trim()) return { error: 'Name is required' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date_of_birth || '')))
+    return { error: 'Valid date of birth (YYYY-MM-DD) is required' };
+  if (!/^\d{2}:\d{2}/.test(String(time_of_birth || '')))
+    return { error: 'Valid time of birth (HH:MM) is required' };
+  const lat = parseFloat(latitude), lon = parseFloat(longitude);
+  const tz  = parseFloat(timezone_offset);
+  if (!Number.isFinite(lat) || lat < -90  || lat > 90)  return { error: 'Valid latitude is required' };
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180) return { error: 'Valid longitude is required' };
+  if (!Number.isFinite(tz)  || tz  < -12  || tz  > 14)  return { error: 'Valid timezone offset is required' };
+  const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
+  const [hr, mn]     = String(time_of_birth).split(':').map(Number);
+  if (yr < 1900 || yr > new Date().getFullYear()) return { error: 'Year of birth out of range' };
+  return {
+    params: {
       year: yr, month: mo, day: dy, hour: hr || 0, minute: mn || 0, second: 0,
       timezone: tz, latitude: lat, longitude: lon,
-    });
+    },
+  };
+}
+
+router.post('/free-kundli', freeKundliLimiter, async (req, res) => {
+  try {
+    const { name, gender, date_of_birth, time_of_birth, place_of_birth } = req.body || {};
+
+    const parsed = parseBirthInput(req.body);
+    if (parsed.error) return fail(res, parsed.error, 400);
+
+    const { calculateVedicChart } = require('../services/vedic-calc.service');
+    const chart = calculateVedicChart(parsed.params);
 
     // ── Whitelisted free payload ──
     const asc  = chart.ascendant || {};
@@ -315,6 +322,101 @@ router.post('/free-kundli', freeKundliLimiter, async (req, res) => {
   } catch (e) {
     console.error('[public/free-kundli]', e.message);
     return fail(res, 'Unable to calculate kundli. Please check the birth details.', 500);
+  }
+});
+
+// ─── Free calculators (SEO lead magnets — gated results, nothing persisted) ──
+//
+// Each calculator answers its ONE headline question for free; depth
+// (severity, cancellations, timelines, breakdowns, remedies) stays locked.
+
+router.post('/calculator/:type', freeKundliLimiter, async (req, res) => {
+  const type = req.params.type;
+  try {
+    const { calculateVedicChart } = require('../services/vedic-calc.service');
+
+    // ── Kundli Milan takes two birth inputs ──
+    if (type === 'kundli-milan') {
+      const boyIn  = parseBirthInput(req.body?.boy  || {});
+      const girlIn = parseBirthInput(req.body?.girl || {});
+      if (boyIn.error)  return fail(res, `Boy: ${boyIn.error}`, 400);
+      if (girlIn.error) return fail(res, `Girl: ${girlIn.error}`, 400);
+
+      const { calculateAshtakoot } = require('../services/helpers/ashtakoot');
+      const boyChart  = calculateVedicChart(boyIn.params);
+      const girlChart = calculateVedicChart(girlIn.params);
+      const milan = calculateAshtakoot(boyChart, girlChart);
+
+      // FREE: score + verdict. LOCKED: koota breakdown, rajju/vedha, mangal comparison.
+      return ok(res, {
+        boy_name:  (req.body?.boy?.name  || '').trim() || null,
+        girl_name: (req.body?.girl?.name || '').trim() || null,
+        total: milan.total, max: milan.max, percentage: milan.percentage,
+        verdict: milan.verdict, verdict_en: milan.verdict_en, verdict_hi: milan.verdict_hi,
+        koota_count: Array.isArray(milan.kootas) ? milan.kootas.length : 8,
+        issues_detected: (milan.active_dosha_count || 0) + (milan.mangal_compatible ? 0 : 1),
+        locked: ['koota_breakdown', 'rajju_vedha', 'mangal_comparison', 'dosha_details', 'remedies', 'full_summary'],
+      });
+    }
+
+    // ── Single-chart calculators ──
+    const parsed = parseBirthInput(req.body, { requireName: false });
+    if (parsed.error) return fail(res, parsed.error, 400);
+    const chart = calculateVedicChart(parsed.params);
+
+    if (type === 'mangal-dosha') {
+      const md = chart.mangal_dosha || {};
+      // FREE: yes/no + type. LOCKED: severity, triggers, cancellations, remedies.
+      return ok(res, {
+        has_dosha:       !!md.has_dosha,
+        manglik_type:    md.manglik_type    || null,
+        manglik_type_hi: md.manglik_type_hi || null,
+        cancellations_found: Array.isArray(md.cancellations) ? md.cancellations.length : 0,
+        locked: ['severity', 'house_triggers', 'cancellation_details', 'remedies', 'marriage_guidance'],
+      });
+    }
+
+    if (type === 'sade-sati') {
+      const { computeSadeSatiJourney } = require('../services/helpers/cosmic-insights');
+      const ss = computeSadeSatiJourney(chart, { date_of_birth: req.body.date_of_birth });
+      if (!ss) return fail(res, 'Unable to compute Sade Sati', 500);
+      // FREE: active now? current phase + end date. LOCKED: full journey + meanings + remedies.
+      return ok(res, {
+        active: ss.active,
+        moon_rashi_en: ss.moon_rashi_en, moon_rashi_hi: ss.moon_rashi_hi,
+        current: ss.current ? {
+          phase_en: ss.current.phase_en, phase_hi: ss.current.phase_hi,
+          start: ss.current.start, end: ss.current.end,
+        } : null,
+        next_start: !ss.active
+          ? (ss.phases.find((p) => !p.is_past && !p.is_current)?.start || null)
+          : null,
+        lifetime_phase_count: ss.phases.length,
+        locked: ['full_timeline', 'phase_meanings', 'peak_periods', 'remedies'],
+      });
+    }
+
+    if (type === 'mahadasha') {
+      const seq = Array.isArray(chart.dasha) ? chart.dasha : [];
+      const cur = seq.find((d) => d.is_current) || null;
+      const curAntar = Array.isArray(cur?.antardasha)
+        ? (cur.antardasha.find((a) => a.is_current) || null) : null;
+      const idx  = cur ? seq.indexOf(cur) : -1;
+      const next = idx >= 0 ? (seq[idx + 1] || null) : null;
+      // FREE: current maha + antar + next lord. LOCKED: full timeline + interpretations.
+      return ok(res, {
+        current_mahadasha:  cur      ? { lord: cur.lord, start: cur.start, end: cur.end } : null,
+        current_antardasha: curAntar ? { lord: curAntar.lord, end: curAntar.end } : null,
+        next_mahadasha:     next     ? { lord: next.lord, start: next.start } : null,
+        total_periods: seq.length,
+        locked: ['full_timeline', 'period_interpretations', 'antardasha_details', 'favorable_periods', 'remedies'],
+      });
+    }
+
+    return fail(res, 'Unknown calculator', 404);
+  } catch (e) {
+    console.error(`[public/calculator/${type}]`, e.message);
+    return fail(res, 'Unable to calculate. Please check the birth details.', 500);
   }
 });
 
