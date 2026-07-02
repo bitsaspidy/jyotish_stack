@@ -49,4 +49,70 @@ router.get('/daily', (req, res) => {
   }
 });
 
+// ─── Weekly / Monthly / Yearly ────────────────────────────────────────────────
+const { generateWeeklyHoroscope, generateMonthlyHoroscope, generateYearlyHoroscope } =
+  require('../services/helpers/period-horoscope');
+
+// Separate cache for period horoscopes (they're heavier to compute)
+const periodCache = new Map();
+function cachedPeriod(key, ttlMs, compute) {
+  const entry = periodCache.get(key);
+  if (entry && Date.now() - entry.cachedAt < ttlMs) return entry.data;
+  const data = compute();
+  if (periodCache.size > 8) periodCache.clear();
+  periodCache.set(key, { data, cachedAt: Date.now() });
+  return data;
+}
+
+function filterRashi(req, res, data) {
+  const rashiParam = parseInt(req.query.rashi, 10);
+  if (rashiParam >= 1 && rashiParam <= 12) {
+    const single = data.rashis.find((r) => r.rashi_num === rashiParam);
+    return ok(res, { ...data, rashis: undefined, rashi: single || null });
+  }
+  return ok(res, data);
+}
+
+// GET /api/horoscope/weekly  (current week, Mon–Sun) — optional ?rashi=1-12
+router.get('/weekly', (req, res) => {
+  try {
+    const data = cachedPeriod(`weekly:${new Date().toISOString().slice(0, 10)}`, 6 * 3600e3,
+      () => generateWeeklyHoroscope(new Date()));
+    if (!data) return fail(res, 'Unable to generate weekly horoscope', 500);
+    return filterRashi(req, res, data);
+  } catch (e) {
+    console.error('[HoroscopeRoute:weekly]', e.message);
+    return fail(res, 'Unable to generate weekly horoscope', 500);
+  }
+});
+
+// GET /api/horoscope/monthly (current month) — optional ?rashi=1-12
+router.get('/monthly', (req, res) => {
+  try {
+    const now = new Date();
+    const data = cachedPeriod(`monthly:${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`, 12 * 3600e3,
+      () => generateMonthlyHoroscope(now));
+    if (!data) return fail(res, 'Unable to generate monthly horoscope', 500);
+    return filterRashi(req, res, data);
+  } catch (e) {
+    console.error('[HoroscopeRoute:monthly]', e.message);
+    return fail(res, 'Unable to generate monthly horoscope', 500);
+  }
+});
+
+// GET /api/horoscope/yearly  (current year, or ?year=YYYY) — optional ?rashi=1-12
+router.get('/yearly', (req, res) => {
+  try {
+    const now = new Date();
+    let year = parseInt(req.query.year, 10);
+    if (!(year >= now.getUTCFullYear() - 1 && year <= now.getUTCFullYear() + 1)) year = now.getUTCFullYear();
+    const data = cachedPeriod(`yearly:${year}`, 24 * 3600e3, () => generateYearlyHoroscope(year));
+    if (!data) return fail(res, 'Unable to generate yearly horoscope', 500);
+    return filterRashi(req, res, data);
+  } catch (e) {
+    console.error('[HoroscopeRoute:yearly]', e.message);
+    return fail(res, 'Unable to generate yearly horoscope', 500);
+  }
+});
+
 module.exports = router;

@@ -5,6 +5,7 @@ import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
+import PeriodTabs from '../components/horoscope/PeriodTabs';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const t = (lang, en, hi) => (lang === 'hi' ? hi : en);
@@ -369,16 +370,24 @@ export default function DailyHoroscope() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [userRashi, setUserRashi] = useState(null);
+  const [dayOffset, setDayOffset] = useState(0); // -1 yesterday, 0 today, +1 tomorrow
 
-  // Load today's horoscope
+  // Load horoscope for the selected day
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/horoscope/daily');
+        let url = '/horoscope/daily';
+        if (dayOffset !== 0) {
+          const d = new Date(Date.now() + dayOffset * 86400e3);
+          url += `?date=${d.toISOString().slice(0, 10)}`;
+        }
+        const res = await api.get(url);
         setData(res.data);
-        // Default: select user's Moon rashi if available
-        setSelected(res.data.rashis?.[0] || null);
+        setSelected((prev) => {
+          const keep = prev && res.data.rashis?.find((r) => r.rashi_num === prev.rashi_num);
+          return keep || res.data.rashis?.[0] || null;
+        });
       } catch (e) {
         console.error('Horoscope load error', e);
       } finally {
@@ -386,7 +395,7 @@ export default function DailyHoroscope() {
       }
     };
     load();
-  }, []);
+  }, [dayOffset]);
 
   // If logged in, load user's primary kundli to find their Moon rashi
   useEffect(() => {
@@ -453,6 +462,27 @@ export default function DailyHoroscope() {
             )}
           </p>
         </motion.div>
+
+        {/* ── Period tabs + day chips ── */}
+        <PeriodTabs />
+        <div style={{ display:'flex', gap:6, marginBottom:20, marginTop:-8 }}>
+          {[
+            { off:-1, en:'Yesterday', hi:'कल (बीता)' },
+            { off:0,  en:'Today',     hi:'आज'        },
+            { off:1,  en:'Tomorrow',  hi:'कल (आगामी)' },
+          ].map((d) => (
+            <button key={d.off} onClick={() => setDayOffset(d.off)} style={{
+              fontSize:11, fontWeight:600, cursor:'pointer',
+              padding:'5px 14px', borderRadius:16,
+              border:`1px solid ${dayOffset === d.off ? 'rgba(148,163,184,0.7)' : 'rgba(148,163,184,0.2)'}`,
+              background: dayOffset === d.off ? 'rgba(148,163,184,0.15)' : 'transparent',
+              color: dayOffset === d.off ? '#F1F5F9' : 'rgba(245,240,232,0.45)',
+              transition:'all 0.2s',
+            }}>
+              {t(lang, d.en, d.hi)}
+            </button>
+          ))}
+        </div>
 
         {/* ── Today's Moon ── */}
         {data?.moon_sign && (

@@ -177,6 +177,19 @@ function computeTransitPlanets(atDate = new Date()) {
   return { JD, planets };
 }
 
+// ── Day score for one rashi (1–5) — shared with weekly/monthly engines ───────
+function computeDayScore(rashiNum, transitPlanets) {
+  const h = (planet) => houseFromSign(rashiNum, transitPlanets[planet].rashi_num);
+  const rawScore = 3
+    + (MOON_THEME[h('Moon')]?.score || 0)
+    + (JUP_SCORE[h('Jupiter')]  || 0)
+    + (SAT_SCORE[h('Saturn')]   || 0)
+    + (MARS_SCORE[h('Mars')]    || 0) * 0.4
+    + (VEN_SCORE[h('Venus')]    || 0) * 0.4
+    + (SUN_SCORE[h('Sun')]      || 0) * 0.3;
+  return Math.max(1, Math.min(5, Math.round(rawScore)));
+}
+
 // ── Generate horoscope for one rashi ─────────────────────────────────────────
 function generateRashiHoroscope(rashiNum, transitPlanets, dateStr) {
   const rashi = RASHIS[rashiNum];
@@ -191,15 +204,7 @@ function generateRashiHoroscope(rashiNum, transitPlanets, dateStr) {
   const merH  = h('Mercury');
   const rahuH = h('Rahu');
 
-  // Score (1–5 stars)
-  const rawScore = 3
-    + (MOON_THEME[moonH]?.score || 0)
-    + (JUP_SCORE[jupH]  || 0)
-    + (SAT_SCORE[satH]  || 0)
-    + (MARS_SCORE[marsH]|| 0) * 0.4
-    + (VEN_SCORE[venH]  || 0) * 0.4
-    + (SUN_SCORE[sunH]  || 0) * 0.3;
-  const score = Math.max(1, Math.min(5, Math.round(rawScore)));
+  const score = computeDayScore(rashiNum, transitPlanets);
   const stars = '★'.repeat(score) + '☆'.repeat(5 - score);
 
   const moonTheme = MOON_THEME[moonH];
@@ -346,4 +351,4 @@ function generateDailyHoroscope(atDate = new Date()) {
   }
 }
 
-module.exports = { generateDailyHoroscope };
+module.exports = { generateDailyHoroscope, computeTransitPlanets, computeDayScore, RASHIS, LUCKY };
