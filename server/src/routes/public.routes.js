@@ -420,6 +420,48 @@ router.post('/calculator/:type', freeKundliLimiter, async (req, res) => {
   }
 });
 
+// ─── Web push (PWA notifications) ────────────────────────────────────────────
+
+const pushLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+});
+
+// GET /api/public/push/vapid-key — public VAPID key for client subscribe
+router.get('/push/vapid-key', (_req, res) => {
+  const { publicKey } = require('../services/push.service');
+  const key = publicKey();
+  if (!key) return fail(res, 'Push notifications not configured', 503);
+  return ok(res, { key });
+});
+
+// POST /api/public/push/subscribe — { subscription, rashi_num?, lang? }
+router.post('/push/subscribe', pushLimiter, async (req, res) => {
+  try {
+    const { saveSubscription } = require('../services/push.service');
+    await saveSubscription({
+      subscription: req.body?.subscription,
+      rashi_num: parseInt(req.body?.rashi_num, 10) || null,
+      lang: req.body?.lang,
+      user_id: null,
+    });
+    return ok(res, {}, 'Subscribed to daily horoscope notifications');
+  } catch (e) {
+    return fail(res, e.message === 'Invalid subscription' ? e.message : 'Unable to subscribe', 400);
+  }
+});
+
+// POST /api/public/push/unsubscribe — { endpoint }
+router.post('/push/unsubscribe', pushLimiter, async (req, res) => {
+  try {
+    const { removeSubscription } = require('../services/push.service');
+    await removeSubscription(req.body?.endpoint);
+    return ok(res, {}, 'Unsubscribed');
+  } catch {
+    return fail(res, 'Unable to unsubscribe', 400);
+  }
+});
+
 // ─── Mantras ──────────────────────────────────────────────────────────────────
 
 // GET /api/public/mantras — active mantras, optionally filtered by category

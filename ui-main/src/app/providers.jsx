@@ -7,6 +7,7 @@ import { LangProvider, useLang } from '../context/LangContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ComingSoon from '../views/ComingSoon';
+import PwaSetup from '../components/PwaSetup';
 import api from '../lib/api';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ export default function Providers({ children }) {
   return (
     <LangProvider>
       <AuthProvider>
+        <PwaSetup />
         <AppRouter>{children}</AppRouter>
         <Toaster
           position="top-right"

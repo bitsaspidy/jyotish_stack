@@ -1243,4 +1243,32 @@ router.post('/jobs/daily-digest', ah(async (req, res) => {
   return ok(res, { message: 'Daily digest job started in background' });
 }));
 
+// ─── Web push ─────────────────────────────────────────────────────────────────
+// POST /api/admin/push/daily — manually trigger the daily horoscope push run
+router.post('/push/daily', ah(async (_req, res) => {
+  const { sendDailyHoroscopePush } = require('../services/push.service');
+  sendDailyHoroscopePush()
+    .then((summary) => console.log('[Admin] Manual daily push done:', summary))
+    .catch((err) => console.error('[Admin] Manual daily push error:', err.message));
+  return ok(res, { message: 'Daily push job started in background' });
+}));
+
+// POST /api/admin/push/blast — { title, body, url? } to all active subscriptions
+router.post('/push/blast', ah(async (req, res) => {
+  const { title, body, url } = req.body || {};
+  if (!title?.trim() || !body?.trim()) return fail(res, 'title and body are required', 400);
+  const { sendBlast } = require('../services/push.service');
+  const result = await sendBlast({ title: title.trim(), body: body.trim(), url });
+  return ok(res, result, result.skipped ? 'Push not configured (VAPID keys missing)' : 'Push blast sent');
+}));
+
+// GET /api/admin/push/stats — subscription counts
+router.get('/push/stats', ah(async (_req, res) => {
+  const [{ total }]  = await db('push_subscriptions').count('id as total');
+  const [{ active }] = await db('push_subscriptions').where({ is_active: true }).count('id as active');
+  const byRashi = await db('push_subscriptions').where({ is_active: true })
+    .select('rashi_num').count('id as count').groupBy('rashi_num');
+  return ok(res, { total: Number(total), active: Number(active), by_rashi: byRashi });
+}));
+
 module.exports = router;
