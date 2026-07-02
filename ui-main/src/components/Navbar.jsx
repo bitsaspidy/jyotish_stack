@@ -9,6 +9,7 @@ import { useLang } from '../context/LangContext';
 
 const NAV = [
   { href: '/',            en: 'Home',        hi: 'होम'        },
+  { href: '/free-kundli', en: 'Free Kundli', hi: 'फ्री कुंडली' },
   { href: '/kundli',      en: 'Kundli',      hi: 'कुंडली'     },
   { href: '/horoscope',        en: 'Horoscope',   hi: 'राशिफल'  },
   { href: '/panchang-muhurat', en: 'Muhurta',     hi: 'मुहूर्त'  },

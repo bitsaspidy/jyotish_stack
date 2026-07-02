@@ -168,6 +168,156 @@ router.post('/contact', contactLimiter, async (req, res) => {
   }
 });
 
+// ─── Free Kundli (lead-magnet, no auth, nothing persisted) ───────────────────
+//
+// Returns a deliberately whitelisted payload: basic details, D1 chart and
+// current dasha are free; dosha names/details are NEVER sent — only counts,
+// severities and life-area hints, so the teaser cannot be bypassed from the
+// browser network tab. Full analysis requires an account / remedy purchase.
+
+const freeKundliLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, max: 10,
+  message: { success: false, message: 'Too many kundli requests. Please try again in an hour.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+
+// Maps detected dosha names to vague life-area hints (suspense without disclosure)
+const DOSHA_AREA_HINTS = [
+  [/manglik|mangal dosha/i,   { en: 'Marriage & Relationships', hi: 'विवाह और रिश्ते' }],
+  [/kaal ?sarp/i,             { en: 'Career Growth & Delays',   hi: 'करियर और विलंब' }],
+  [/pitru|pitra/i,            { en: 'Family & Ancestral Karma', hi: 'परिवार और पितृ कर्म' }],
+  [/vish dosha/i,             { en: 'Health & Mental Peace',    hi: 'स्वास्थ्य और मानसिक शांति' }],
+  [/angarak/i,                { en: 'Temper & Sudden Events',   hi: 'क्रोध और आकस्मिक घटनाएँ' }],
+  [/shaapit/i,                { en: 'Obstacles & Delays',       hi: 'बाधाएँ और विलंब' }],
+  [/chandaal/i,               { en: 'Wisdom & Reputation',      hi: 'बुद्धि और प्रतिष्ठा' }],
+  [/grahan/i,                 { en: 'Mind & Emotions',          hi: 'मन और भावनाएँ' }],
+  [/kemdrum/i,                { en: 'Wealth & Support',         hi: 'धन और सहयोग' }],
+  [/kartari/i,                { en: 'Core Life Pillars',        hi: 'जीवन के मुख्य स्तंभ' }],
+  [/amavasya/i,               { en: 'Vitality & Confidence',    hi: 'ऊर्जा और आत्मविश्वास' }],
+];
+
+router.post('/free-kundli', freeKundliLimiter, async (req, res) => {
+  try {
+    const { name, gender, date_of_birth, time_of_birth, place_of_birth,
+            latitude, longitude, timezone_offset } = req.body || {};
+
+    // ── Validation ──
+    if (!name?.trim())          return fail(res, 'Name is required', 400);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date_of_birth || '')))
+      return fail(res, 'Valid date of birth (YYYY-MM-DD) is required', 400);
+    if (!/^\d{2}:\d{2}/.test(String(time_of_birth || '')))
+      return fail(res, 'Valid time of birth (HH:MM) is required', 400);
+    const lat = parseFloat(latitude), lon = parseFloat(longitude);
+    const tz  = parseFloat(timezone_offset);
+    if (!Number.isFinite(lat) || lat < -90  || lat > 90)  return fail(res, 'Valid latitude is required', 400);
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) return fail(res, 'Valid longitude is required', 400);
+    if (!Number.isFinite(tz)  || tz  < -12  || tz  > 14)  return fail(res, 'Valid timezone offset is required', 400);
+
+    const [yr, mo, dy] = String(date_of_birth).split('-').map(Number);
+    const [hr, mn]     = String(time_of_birth).split(':').map(Number);
+    if (yr < 1900 || yr > new Date().getFullYear()) return fail(res, 'Year of birth out of range', 400);
+
+    const { calculateVedicChart } = require('../services/vedic-calc.service');
+    const chart = calculateVedicChart({
+      year: yr, month: mo, day: dy, hour: hr || 0, minute: mn || 0, second: 0,
+      timezone: tz, latitude: lat, longitude: lon,
+    });
+
+    // ── Whitelisted free payload ──
+    const asc  = chart.ascendant || {};
+    const moon = chart.planets?.Moon || {};
+    const sun  = chart.planets?.Sun || {};
+
+    const planets = {};
+    for (const [pName, pd] of Object.entries(chart.planets || {})) {
+      planets[pName] = {
+        rashi_num: pd.rashi_num, rashi_en: pd.rashi_en, rashi_hi: pd.rashi_hi,
+        degree_in_sign_dms: pd.degree_in_sign_dms,
+        house: ((pd.rashi_num - asc.rashi_num + 12) % 12) + 1,
+        nakshatra_en: pd.nakshatra_en, nakshatra_hi: pd.nakshatra_hi,
+        is_retrograde: !!pd.is_retrograde, is_combust: !!pd.is_combust,
+      };
+    }
+    const houses = {};
+    for (const [hNum, hd] of Object.entries(chart.houses || {})) {
+      houses[hNum] = { rashi_num: hd.rashi_num, planets: hd.planets || [] };
+    }
+
+    const currentMaha  = Array.isArray(chart.dasha)
+      ? (chart.dasha.find((d) => d.is_current) || null) : null;
+    const currentAntar = Array.isArray(currentMaha?.antardasha)
+      ? (currentMaha.antardasha.find((a) => a.is_current) || null) : null;
+
+    // ── Yogas: 2 free highlights, rest counted but locked ──
+    const allYogas = chart.yogas_doshas?.yogas || [];
+    const yogaHighlights = allYogas.slice(0, 2).map((y) => ({ name: y.name, name_hi: y.name_hi }));
+
+    // ── Doshas: counts + hints ONLY. Names and details never leave the server. ──
+    const doshaList = [...(chart.yogas_doshas?.doshas || [])];
+    if (chart.mangal_dosha?.has_dosha && !doshaList.some((d) => /mangal|manglik/i.test(d.name))) {
+      doshaList.push({ name: 'Manglik Dosha', severity: chart.mangal_dosha.severity || 'moderate' });
+    }
+    const areaHints = [];
+    for (const d of doshaList) {
+      const hit = DOSHA_AREA_HINTS.find(([re]) => re.test(d.name || ''));
+      if (hit && !areaHints.some((a) => a.en === hit[1].en)) areaHints.push(hit[1]);
+    }
+
+    return ok(res, {
+      name: name.trim(),
+      gender: gender || null,
+      birth: {
+        date: date_of_birth, time: time_of_birth,
+        place: (place_of_birth || '').trim() || null,
+      },
+      basic: {
+        lagna: {
+          rashi_num: asc.rashi_num, rashi_en: asc.rashi_en, rashi_hi: asc.rashi_hi,
+          degree_in_sign_dms: asc.degree_in_sign_dms, rashi_lord: asc.rashi_lord,
+        },
+        moon_sign: { rashi_en: moon.rashi_en, rashi_hi: moon.rashi_hi, rashi_num: moon.rashi_num },
+        sun_sign:  { rashi_en: sun.rashi_en,  rashi_hi: sun.rashi_hi,  rashi_num: sun.rashi_num },
+        nakshatra: {
+          en: chart.nakshatra?.en, hi: chart.nakshatra?.hi,
+          lord: chart.nakshatra?.lord, pada: chart.nakshatra?.pada,
+        },
+        panchang: {
+          tithi_en:  chart.panchang?.tithi?.display_en || null,
+          tithi_hi:  chart.panchang?.tithi?.display_hi || null,
+          vara_en:   chart.panchang?.vara?.day_en || null,
+          vara_hi:   chart.panchang?.vara?.day_hi || null,
+          yoga:      chart.panchang?.yoga?.name || null,
+          karana:    chart.panchang?.karana?.name || null,
+        },
+      },
+      chart: { ascendant: { rashi_num: asc.rashi_num, rashi_en: asc.rashi_en, rashi_hi: asc.rashi_hi }, planets, houses },
+      dasha: {
+        current_mahadasha:  currentMaha  ? { lord: currentMaha.lord,  end: currentMaha.end }  : null,
+        current_antardasha: currentAntar ? { lord: currentAntar.lord, end: currentAntar.end } : null,
+      },
+      yogas: {
+        total: allYogas.length,
+        highlights: yogaHighlights,
+        locked: Math.max(0, allYogas.length - yogaHighlights.length),
+      },
+      doshas: {
+        detected: doshaList.length,
+        strong:   doshaList.filter((d) => d.severity === 'strong').length,
+        moderate: doshaList.filter((d) => d.severity === 'moderate').length,
+        mild:     doshaList.filter((d) => d.severity === 'mild').length,
+        area_hints: areaHints.slice(0, 4),
+      },
+      locked_features: [
+        'dosha_details', 'remedies', 'judgement', 'life_report', 'strength',
+        'varshphal', 'upagrahas', 'drishti', 'varga', 'ai_reading', 'pdf_report',
+      ],
+    });
+  } catch (e) {
+    console.error('[public/free-kundli]', e.message);
+    return fail(res, 'Unable to calculate kundli. Please check the birth details.', 500);
+  }
+});
+
 // ─── Mantras ──────────────────────────────────────────────────────────────────
 
 // GET /api/public/mantras — active mantras, optionally filtered by category
