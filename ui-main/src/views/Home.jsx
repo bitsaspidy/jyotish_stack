@@ -6,6 +6,7 @@ import { motion, useInView } from 'framer-motion';
 import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
+import { t as translate } from '../lib/astroI18n';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 
@@ -25,7 +26,7 @@ const T = {
   price_s:  ['Choose the plan that fits your journey','अपनी यात्रा के अनुसार योजना चुनें'],
   popular:  ['Most Popular','सबसे लोकप्रिय'],
 };
-const t = (key, lang) => T[key]?.[lang === 'hi' ? 1 : 0] || '';
+const t = (key, lang) => translate(lang, T[key]?.[0] || '', T[key]?.[1]);
 
 const FEATURES = [
   { icon:'🪐', en:'Kundli Chart',      hi:'कुंडली चार्ट',    de:'Vedic birth chart with 12 houses, planets & Navamsha.', dh:'12 भावों और नवांश के साथ वैदिक जन्म कुंडली।', href:'/kundli' },
@@ -203,10 +204,10 @@ function HowItWorksSection({ lang }) {
                     style={{ color:'rgba(212,175,55,0.5)', fontFamily:'Georgia,serif' }}>{s.step}</span>
                 </div>
                 <h3 className="font-serif font-semibold mb-3" style={{ color:GOLD, fontSize:15 }}>
-                  {hi ? s.hi : s.en}
+                  {translate(lang, s.en, s.hi)}
                 </h3>
                 <p className="font-devanagari text-sm leading-relaxed" style={{ color:DIM }}>
-                  {hi ? s.dh : s.de}
+                  {translate(lang, s.de, s.dh)}
                 </p>
               </div>
             </motion.div>
@@ -230,8 +231,8 @@ function TestimonialsSection({ lang }) {
     <section className="relative z-10 py-24 px-6">
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
         <SectionHead
-          title={hi ? 'हमारे उपयोगकर्ता क्या कहते हैं' : 'What Our Users Say'}
-          sub={hi ? 'हजारों संतुष्ट उपयोगकर्ताओं का विश्वास' : 'Trusted by thousands of satisfied users'}
+          title={translate(lang, 'What Our Users Say', 'हमारे उपयोगकर्ता क्या कहते हैं')}
+          sub={translate(lang, 'Trusted by thousands of satisfied users', 'हजारों संतुष्ट उपयोगकर्ताओं का विश्वास')}
         />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
           style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:20 }}>
@@ -285,8 +286,8 @@ function TeamSection({ lang }) {
     <section className="relative z-10 py-20 px-6">
       <div style={{ maxWidth:1100, margin:'0 auto' }}>
         <SectionHead
-          title={hi ? 'हमारी टीम' : 'Our Team'}
-          sub={hi ? 'अनुभवी ज्योतिषी और AI विशेषज्ञ' : 'Experienced astrologers and AI specialists'}
+          title={translate(lang, 'Our Team', 'हमारी टीम')}
+          sub={translate(lang, 'Experienced astrologers and AI specialists', 'अनुभवी ज्योतिषी और AI विशेषज्ञ')}
         />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={stag}
           style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
@@ -356,8 +357,8 @@ function ContactSection({ lang }) {
     <section className="relative z-10 py-20 px-6">
       <div style={{ maxWidth:640, margin:'0 auto' }}>
         <SectionHead
-          title={hi ? 'संपर्क करें' : 'Contact Us'}
-          sub={hi ? 'हम आपकी सहायता के लिए यहाँ हैं' : "We're here to help"}
+          title={translate(lang, 'Contact Us', 'संपर्क करें')}
+          sub={translate(lang, "We're here to help", 'हम आपकी सहायता के लिए यहाँ हैं')}
         />
         <motion.div initial="hidden" whileInView="show" viewport={{ once:true }} variants={fadeUp}
           style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.14)',
@@ -366,58 +367,58 @@ function ContactSection({ lang }) {
             <div style={{ textAlign:'center', padding:'20px 0' }}>
               <p style={{ fontSize:52, marginBottom:14 }}>✅</p>
               <h3 style={{ color:GOLD, fontFamily:'Georgia,serif', fontSize:20, marginBottom:8 }}>
-                {hi ? 'संदेश भेजा गया!' : 'Message Sent!'}
+                {translate(lang, 'Message Sent!', 'संदेश भेजा गया!')}
               </h3>
               <p style={{ color:DIM, fontSize:13, marginBottom:20 }}>
-                {hi ? 'हम जल्द ही आपसे संपर्क करेंगे।' : "We'll get back to you soon."}
+                {translate(lang, "We'll get back to you soon.", 'हम जल्द ही आपसे संपर्क करेंगे।')}
               </p>
               <button onClick={() => setStatus('idle')} style={{
                 background:'transparent', border:`1px solid ${GOLD}40`, color:GOLD,
                 borderRadius:8, fontSize:13, padding:'8px 20px', cursor:'pointer',
               }}>
-                {hi ? 'नया संदेश' : 'Send another'}
+                {translate(lang, 'Send another', 'नया संदेश')}
               </button>
             </div>
           ) : (
             <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'नाम *' : 'Name *'}</label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Name *', 'नाम *')}</label>
                   <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
-                    required placeholder={hi ? 'आपका नाम' : 'Your name'} style={inp} />
+                    required placeholder={translate(lang, 'Your name', 'आपका नाम')} style={inp} />
                 </div>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'ईमेल *' : 'Email *'}</label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Email *', 'ईमेल *')}</label>
                   <input type="email" value={form.email} onChange={e => setForm(f=>({...f,email:e.target.value}))}
                     required placeholder="you@example.com" style={inp} />
                 </div>
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'विषय श्रेणी' : 'Topic'}</label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Topic', 'विषय श्रेणी')}</label>
                   <select value={form.department} onChange={e => setForm(f=>({...f,department:e.target.value}))}
                     style={{ ...inp, appearance:'auto', cursor:'pointer' }}>
                     {DEPARTMENTS.map(d => (
                       <option key={d.value} value={d.value} style={{ background:'#0B0D1A', color:IVORY }}>
-                        {hi ? d.hi : d.en}
+                        {translate(lang, d.en, d.hi)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'विषय' : 'Subject'}</label>
+                  <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Subject', 'विषय')}</label>
                   <input value={form.subject} onChange={e => setForm(f=>({...f,subject:e.target.value}))}
-                    placeholder={hi ? 'विषय लिखें' : 'Subject'} style={inp} />
+                    placeholder={translate(lang, 'Subject', 'विषय लिखें')} style={inp} />
                 </div>
               </div>
               <div>
-                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{hi ? 'संदेश *' : 'Message *'}</label>
+                <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Message *', 'संदेश *')}</label>
                 <textarea value={form.message} onChange={e => setForm(f=>({...f,message:e.target.value}))}
-                  required rows={5} placeholder={hi ? 'अपना संदेश लिखें…' : 'Write your message…'}
+                  required rows={5} placeholder={translate(lang, 'Write your message…', 'अपना संदेश लिखें…')}
                   style={{ ...inp, resize:'vertical' }} />
               </div>
               {status === 'error' && (
-                <p style={{ color:'#EF4444', fontSize:12 }}>⚠ {errMsg || (hi ? 'त्रुटि हुई।' : 'Something went wrong.')}</p>
+                <p style={{ color:'#EF4444', fontSize:12 }}>⚠ {errMsg || (translate(lang, 'Something went wrong.', 'त्रुटि हुई।'))}</p>
               )}
               <button type="submit" disabled={status === 'sending'} style={{
                 background:`linear-gradient(135deg, #B8952A, ${GOLD})`,
@@ -425,7 +426,7 @@ function ContactSection({ lang }) {
                 fontSize:14, padding:'13px 24px', cursor:status==='sending'?'not-allowed':'pointer',
                 opacity:status==='sending'?0.7:1,
               }}>
-                {status==='sending' ? (hi?'भेजा जा रहा है…':'Sending…') : (hi?'संदेश भेजें ✦':'Send Message ✦')}
+                {status==='sending' ? (translate(lang, 'Sending…', 'भेजा जा रहा है…')) : (translate(lang, 'Send Message ✦', 'संदेश भेजें ✦'))}
               </button>
             </form>
           )}
@@ -595,7 +596,7 @@ export default function Home({ scrollTo }) {
               <motion.div key={s.value} variants={fadeUp} className="text-center">
                 <p className="font-serif text-3xl font-bold text-gradient-gold">{s.value}</p>
                 <p className="text-ivory/40 text-xs mt-1 tracking-wide font-devanagari">
-                  {lang === 'hi' ? s.hi : s.en}
+                  {translate(lang, s.en, s.hi)}
                 </p>
               </motion.div>
             ))}
@@ -626,13 +627,13 @@ export default function Home({ scrollTo }) {
                     style={{ background:'radial-gradient(circle at 30% 30%, rgba(212,175,55,0.06), transparent 60%)' }} />
                   <span className="text-4xl mb-4 block group-hover:scale-110 transition-transform duration-300">{f.icon}</span>
                   <h3 className="font-serif text-gold text-lg font-semibold mb-2">
-                    {lang === 'hi' ? f.hi : f.en}
+                    {translate(lang, f.en, f.hi)}
                   </h3>
                   <p className="text-ivory/55 text-sm leading-relaxed flex-1 font-devanagari">
-                    {lang === 'hi' ? f.dh : f.de}
+                    {translate(lang, f.de, f.dh)}
                   </p>
                   <p className="text-gold/40 group-hover:text-gold text-xs mt-4 transition-colors">
-                    {lang === 'hi' ? 'अधिक जानें →' : 'Learn more →'}
+                    {translate(lang, 'Learn more →', 'अधिक जानें →')}
                   </p>
                 </Link>
               </motion.div>
@@ -665,16 +666,16 @@ export default function Home({ scrollTo }) {
                     {t('popular', lang)}
                   </span>
                 )}
-                <p className="font-serif text-ivory text-xl font-semibold mb-1">{lang === 'hi' ? p.hi : p.en}</p>
+                <p className="font-serif text-ivory text-xl font-semibold mb-1">{translate(lang, p.en, p.hi)}</p>
                 <div className="flex items-baseline gap-1 my-4">
                   <span className={`font-serif text-4xl font-bold ${p.hot ? 'text-gradient-gold' : 'text-ivory'}`}>{p.price}</span>
-                  <span className="text-ivory/40 text-sm">{lang === 'hi' ? p.ph : p.pe}</span>
+                  <span className="text-ivory/40 text-sm">{translate(lang, p.pe, p.ph)}</span>
                 </div>
                 <ul className="space-y-2.5 text-sm text-ivory/65 flex-1 mb-8">
                   {p.feats.map(f => (
                     <li key={f.en} className="flex items-start gap-2">
                       <span className="text-gold text-xs mt-0.5 shrink-0">✦</span>
-                      <span className="font-devanagari">{lang === 'hi' ? f.hi : f.en}</span>
+                      <span className="font-devanagari">{translate(lang, f.en, f.hi)}</span>
                     </li>
                   ))}
                 </ul>
@@ -687,8 +688,8 @@ export default function Home({ scrollTo }) {
                   {paying === p.tier
                     ? '⏳ Processing…'
                     : (user
-                        ? (lang === 'hi' ? p.cta_hi : p.cta_en)
-                        : (lang === 'hi' ? 'अभी शुरू करें' : 'Get Started')
+                        ? (translate(lang, p.cta_en, p.cta_hi))
+                        : (translate(lang, 'Get Started', 'अभी शुरू करें'))
                       )}
                 </button>
               </motion.div>
@@ -698,15 +699,13 @@ export default function Home({ scrollTo }) {
           {/* Legal note under pricing */}
           <motion.p initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }}
             className="text-center text-ivory/25 text-xs mt-8 font-devanagari">
-            {lang === 'hi'
-              ? 'सभी मूल्य GST सहित हैं • '
-              : 'All prices inclusive of GST • '}
+            {translate(lang, 'All prices inclusive of GST • ', 'सभी मूल्य GST सहित हैं • ')}
             <Link href="/refund-policy" className="underline hover:text-gold transition-colors">
-              {lang === 'hi' ? 'धनवापसी नीति' : 'Refund Policy'}
+              {translate(lang, 'Refund Policy', 'धनवापसी नीति')}
             </Link>
             {' • '}
             <Link href="/disclaimer" className="underline hover:text-gold transition-colors">
-              {lang === 'hi' ? 'अस्वीकरण' : 'Disclaimer'}
+              {translate(lang, 'Disclaimer', 'अस्वीकरण')}
             </Link>
           </motion.p>
         </div>
@@ -730,16 +729,14 @@ export default function Home({ scrollTo }) {
             style={{ background:'radial-gradient(circle at 50% 0%, rgba(212,175,55,0.07), transparent 60%)' }} />
           <p className="text-5xl mb-5 relative z-10">🔱</p>
           <h3 className="font-serif text-2xl md:text-3xl text-gradient-gold font-bold mb-4 relative z-10">
-            {lang === 'hi' ? 'अपनी ब्रह्मांडीय यात्रा शुरू करें' : 'Begin Your Cosmic Journey'}
+            {translate(lang, 'Begin Your Cosmic Journey', 'अपनी ब्रह्मांडीय यात्रा शुरू करें')}
           </h3>
           <p className="text-ivory/55 mb-8 font-devanagari relative z-10">
-            {lang === 'hi'
-              ? 'आज ही निःशुल्क खाता बनाएं और अपनी पहली कुंडली देखें।'
-              : 'Create your free account today and discover your Vedic birth chart.'}
+            {translate(lang, 'Create your free account today and discover your Vedic birth chart.', 'आज ही निःशुल्क खाता बनाएं और अपनी पहली कुंडली देखें।')}
           </p>
           <Link href="/register"
             className="btn-gold text-base px-10 py-4 inline-block shadow-gold font-semibold relative z-10">
-            {lang === 'hi' ? 'अभी शुरू करें — निःशुल्क' : "Get Started — It's Free"}
+            {translate(lang, "Get Started — It's Free", 'अभी शुरू करें — निःशुल्क')}
           </Link>
         </motion.div>
       </section>

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Logo from './Logo';
 import { useLang } from '../context/LangContext';
+import { t as translate } from '../lib/astroI18n';
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 
@@ -17,7 +18,7 @@ export default function Footer() {
     setLoading(true);
     try {
       await api.post('/newsletter/subscribe', { email });
-      toast.success(lang === 'hi' ? 'सफलतापूर्वक सदस्यता ली!' : 'Subscribed successfully!');
+      toast.success(translate(lang, 'Subscribed successfully!', 'सफलतापूर्वक सदस्यता ली!'));
       setEmail('');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to subscribe');
@@ -40,16 +41,14 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-ivory/60 text-sm leading-relaxed mb-6 max-w-sm font-devanagari">
-              {lang === 'hi'
-                ? 'प्राचीन वैदिक ज्योतिष और आधुनिक AI तकनीक का संगम।'
-                : 'The confluence of ancient Vedic astrology and modern AI intelligence.'}
+              {translate(lang, 'The confluence of ancient Vedic astrology and modern AI intelligence.', 'प्राचीन वैदिक ज्योतिष और आधुनिक AI तकनीक का संगम।')}
             </p>
             <form onSubmit={handleSubscribe} className="flex gap-2 max-w-sm">
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder={lang === 'hi' ? 'आपका ईमेल' : 'Your email'}
+                placeholder={translate(lang, 'Your email', 'आपका ईमेल')}
                 className="input-royal flex-1 text-sm py-2" />
               <button type="submit" disabled={loading} className="btn-gold text-xs px-4 py-2 whitespace-nowrap">
-                {loading ? '...' : (lang === 'hi' ? 'सदस्य बनें' : 'Subscribe')}
+                {loading ? '...' : (translate(lang, 'Subscribe', 'सदस्य बनें'))}
               </button>
             </form>
           </div>
@@ -57,7 +56,7 @@ export default function Footer() {
           {/* Services */}
           <div>
             <h4 className="text-gold font-semibold mb-4 text-sm uppercase tracking-wider">
-              {lang === 'hi' ? 'सेवाएं' : 'Services'}
+              {translate(lang, 'Services', 'सेवाएं')}
             </h4>
             <ul className="space-y-2 text-sm text-ivory/60">
               {[
@@ -68,7 +67,7 @@ export default function Footer() {
               ].map(([href, en, hi]) => (
                 <li key={en}>
                   <Link href={href} className="hover:text-gold transition-colors">
-                    {lang === 'hi' ? hi : en}
+                    {translate(lang, en, hi)}
                   </Link>
                 </li>
               ))}
@@ -78,7 +77,7 @@ export default function Footer() {
           {/* Company */}
           <div>
             <h4 className="text-gold font-semibold mb-4 text-sm uppercase tracking-wider">
-              {lang === 'hi' ? 'कंपनी' : 'Company'}
+              {translate(lang, 'Company', 'कंपनी')}
             </h4>
             <ul className="space-y-2 text-sm text-ivory/60">
               {[
@@ -90,7 +89,7 @@ export default function Footer() {
               ].map(([href, en, hi]) => (
                 <li key={en}>
                   <Link href={href} className="hover:text-gold transition-colors">
-                    {lang === 'hi' ? hi : en}
+                    {translate(lang, en, hi)}
                   </Link>
                 </li>
               ))}

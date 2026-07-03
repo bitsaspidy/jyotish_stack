@@ -104,18 +104,18 @@ export default function Navbar() {
               </Link>
               <button onClick={handleLogout}
                 className="text-xs border border-gold/40 text-gold/80 hover:text-gold hover:border-gold px-4 py-2 rounded-sm transition-colors">
-                {lang === 'hi' ? 'बाहर' : 'Logout'}
+                {t(lang, 'Logout', 'बाहर')}
               </button>
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-2">
               <Link href="/login"
                 className="text-sm text-ivory/65 hover:text-ivory transition-colors px-3 py-2">
-                {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                {t(lang, 'Login', 'लॉगिन')}
               </Link>
               <Link href="/register"
                 className="btn-gold text-xs px-5 py-2.5 font-semibold">
-                {lang === 'hi' ? 'शुरू करें' : 'Get Started'}
+                {t(lang, 'Get Started', 'शुरू करें')}
               </Link>
             </div>
           )}
@@ -168,27 +168,27 @@ export default function Navbar() {
                     <div className="grid grid-cols-2 gap-2">
                       <Link href="/dashboard" onClick={() => setMenuOpen(false)}
                         className="text-xs border border-gold/25 text-ivory/70 hover:text-gold px-3 py-2.5 rounded-sm text-center transition-colors">
-                        {lang === 'hi' ? 'डैशबोर्ड' : 'Dashboard'}
+                        {t(lang, 'Dashboard', 'डैशबोर्ड')}
                       </Link>
                       <Link href="/account" onClick={() => setMenuOpen(false)}
                         className="text-xs border border-gold/35 text-gold/80 hover:text-gold px-3 py-2.5 rounded-sm text-center transition-colors">
-                        {lang === 'hi' ? 'प्रोफाइल' : 'My Account'}
+                        {t(lang, 'My Account', 'प्रोफाइल')}
                       </Link>
                     </div>
                     <button onClick={handleLogout}
                       className="btn-outline-gold text-xs py-2.5 w-full text-center">
-                      {lang === 'hi' ? 'बाहर' : 'Logout'}
+                      {t(lang, 'Logout', 'बाहर')}
                     </button>
                   </>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <Link href="/login" onClick={() => setMenuOpen(false)}
                       className="btn-outline-gold text-xs text-center py-2.5">
-                      {lang === 'hi' ? 'लॉगिन' : 'Login'}
+                      {t(lang, 'Login', 'लॉगिन')}
                     </Link>
                     <Link href="/register" onClick={() => setMenuOpen(false)}
                       className="btn-gold text-xs text-center py-2.5 font-semibold">
-                      {lang === 'hi' ? 'शुरू करें' : 'Get Started'}
+                      {t(lang, 'Get Started', 'शुरू करें')}
                     </Link>
                   </div>
                 )}
