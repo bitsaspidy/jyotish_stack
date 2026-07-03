@@ -60,11 +60,14 @@ export default function PeriodHoroscope({ period }) {
 
   const selected = data?.rashis?.find((r) => r.rashi_num === selectedNum) || null;
 
+  // Pick localized text from a server-provided language map ({en, hi, ta, ...})
+  const L = (o) => (o ? (o[lang] ?? (hi ? o.hi : o.en) ?? o.en) : '');
+
   const heading = period === 'weekly'
     ? t(lang, 'Weekly Horoscope', 'साप्ताहिक राशिफल')
     : period === 'monthly'
       ? t(lang, 'Monthly Horoscope', 'मासिक राशिफल')
-      : t(lang, `Yearly Horoscope ${data?.year || ''}`, `वार्षिक राशिफल ${data?.year || ''}`);
+      : `${t(lang, 'Yearly Horoscope', 'वार्षिक राशिफल')} ${data?.year || ''}`;
 
   const subtitle = period === 'weekly' && data
     ? `${data.week_start} → ${data.week_end}`
@@ -142,7 +145,7 @@ export default function PeriodHoroscope({ period }) {
 
                 {/* Overview */}
                 <p style={{ fontSize:13, color:'rgba(245,240,232,0.85)', lineHeight:1.8, fontFamily:'var(--font-devanagari),sans-serif' }}>
-                  {hi ? selected.overview?.hi : selected.overview?.en}
+                  {L(selected.overview)}
                 </p>
 
                 {selected.sade_sati?.active && (
@@ -164,19 +167,19 @@ export default function PeriodHoroscope({ period }) {
                           background:'rgba(255,255,255,0.04)', borderRadius:8,
                           border:`1px solid ${d.score >= 4 ? 'rgba(34,197,94,0.35)' : d.score <= 2 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.08)'}`,
                         }}>
-                          <p style={{ fontSize:9, color:MUTED }}>{(hi ? d.weekday_hi : d.weekday_en).slice(0, 3)}</p>
+                          <p style={{ fontSize:9, color:MUTED }}>{t(lang, d.weekday_en, d.weekday_hi).slice(0, 3)}</p>
                           <p style={{ fontSize:11, color:SCORE_COLOR[d.score], fontWeight:700 }}>{'★'.repeat(d.score)}</p>
                         </div>
                       ))}
                     </div>
                     {selected.best_days?.length > 0 && (
                       <p style={{ fontSize:11, color:GREEN, marginTop:8 }}>
-                        ✓ {t(lang, 'Best days', 'श्रेष्ठ दिन')}: {selected.best_days.map((d) => (hi ? d.weekday_hi : d.weekday_en)).join(', ')}
+                        ✓ {t(lang, 'Best days', 'श्रेष्ठ दिन')}: {selected.best_days.map((d) => t(lang, d.weekday_en, d.weekday_hi)).join(', ')}
                       </p>
                     )}
                     {selected.caution_days?.length > 0 && (
                       <p style={{ fontSize:11, color:RED, marginTop:3 }}>
-                        ⚠ {t(lang, 'Caution days', 'सावधानी के दिन')}: {selected.caution_days.map((d) => (hi ? d.weekday_hi : d.weekday_en)).join(', ')}
+                        ⚠ {t(lang, 'Caution days', 'सावधानी के दिन')}: {selected.caution_days.map((d) => t(lang, d.weekday_en, d.weekday_hi)).join(', ')}
                       </p>
                     )}
                   </div>
@@ -234,10 +237,10 @@ export default function PeriodHoroscope({ period }) {
                       {selected.jupiter_phases?.map((p, i) => (
                         <div key={i} style={{ background:'rgba(251,191,36,0.05)', border:'1px solid rgba(251,191,36,0.15)', borderRadius:8, padding:'8px 12px', marginBottom:6 }}>
                           <p style={{ fontSize:10, color:AMBER, fontWeight:700 }}>
-                            {p.from} → {p.to} · {hi ? p.sign_hi : p.sign_en} ({t(lang, 'House', 'भाव')} {p.house})
+                            {p.from} → {p.to} · {t(lang, p.sign_en, p.sign_hi)} ({t(lang, 'House', 'भाव')} {p.house})
                           </p>
                           <p style={{ fontSize:11, color:MUTED, lineHeight:1.6, marginTop:3, fontFamily:'var(--font-devanagari),sans-serif' }}>
-                            {hi ? p.text_hi : p.text_en}
+                            {L(p.text) || (hi ? p.text_hi : p.text_en)}
                           </p>
                         </div>
                       ))}
@@ -249,11 +252,11 @@ export default function PeriodHoroscope({ period }) {
                       {selected.saturn_phases?.map((p, i) => (
                         <div key={i} style={{ background:'rgba(129,140,248,0.05)', border:'1px solid rgba(129,140,248,0.18)', borderRadius:8, padding:'8px 12px', marginBottom:6 }}>
                           <p style={{ fontSize:10, color:'#818CF8', fontWeight:700 }}>
-                            {p.from} → {p.to} · {hi ? p.sign_hi : p.sign_en} ({t(lang, 'House', 'भाव')} {p.house})
+                            {p.from} → {p.to} · {t(lang, p.sign_en, p.sign_hi)} ({t(lang, 'House', 'भाव')} {p.house})
                             {p.sade_sati && <span style={{ color:AMBER, marginLeft:8 }}>· {t(lang, `Sade Sati (${p.sade_sati})`, 'साढ़े साती')}</span>}
                           </p>
                           <p style={{ fontSize:11, color:MUTED, lineHeight:1.6, marginTop:3, fontFamily:'var(--font-devanagari),sans-serif' }}>
-                            {hi ? p.text_hi : p.text_en}
+                            {L(p.text) || (hi ? p.text_hi : p.text_en)}
                           </p>
                         </div>
                       ))}
@@ -263,16 +266,16 @@ export default function PeriodHoroscope({ period }) {
 
                 {/* Life-area sections */}
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }} className="max-sm:!grid-cols-1">
-                  <Section icon="💼" title={t(lang, 'Career', 'करियर')}  text={hi ? selected.career?.hi  : selected.career?.en} />
-                  <Section icon="❤️" title={t(lang, 'Love', 'प्रेम')}     text={hi ? selected.love?.hi    : selected.love?.en} />
-                  <Section icon="💰" title={t(lang, 'Finance', 'धन')}     text={hi ? selected.finance?.hi : selected.finance?.en} />
-                  <Section icon="🌿" title={t(lang, 'Health', 'स्वास्थ्य')} text={hi ? selected.health?.hi  : selected.health?.en} />
+                  <Section icon="💼" title={t(lang, 'Career', 'करियर')}  text={L(selected.career)} />
+                  <Section icon="❤️" title={t(lang, 'Love', 'प्रेम')}     text={L(selected.love)} />
+                  <Section icon="💰" title={t(lang, 'Finance', 'धन')}     text={L(selected.finance)} />
+                  <Section icon="🌿" title={t(lang, 'Health', 'स्वास्थ्य')} text={L(selected.health)} />
                 </div>
 
                 {/* Lucky */}
                 {selected.lucky && (
                   <p style={{ fontSize:11, color:MUTED }}>
-                    🍀 {t(lang, 'Lucky', 'शुभ')}: {selected.lucky.numbers?.join(', ')} · {selected.lucky.colors?.join(', ')} · {selected.lucky.gemstone} · {selected.lucky.day}
+                    🍀 {t(lang, 'Lucky', 'शुभ')}: {selected.lucky.numbers?.join(', ')} · {selected.lucky.colors?.join(', ')} · {selected.lucky.gemstone} · {t(lang, selected.lucky.day || '', selected.lucky.day)}
                   </p>
                 )}
               </motion.div>

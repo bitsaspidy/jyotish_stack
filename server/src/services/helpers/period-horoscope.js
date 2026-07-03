@@ -9,6 +9,44 @@
  */
 const { computeTransitPlanets, computeDayScore, RASHIS, LUCKY } = require('./daily-horoscope');
 const { houseFromSign } = require('./core-helpers');
+const {
+  REGIONAL_LANGS, JUP_I18N, SAT_I18N, SUN_MONTH_I18N, GENERIC_I18N,
+  SS_NOTE_I18N, SS_YEAR_NOTE_I18N, LOVE_VENUS_I18N, HEALTH_MARS_I18N, HEALTH_SAT_I18N,
+} = require('./period-horoscope-i18n');
+
+const ALL_LANGS = ['en', 'hi', ...REGIONAL_LANGS];
+
+// {en, hi} table entry + house-indexed regional table → full 8-language map
+function textMap(table, i18nTable, idx) {
+  const out = { en: table[idx].en, hi: table[idx].hi };
+  for (const l of REGIONAL_LANGS) out[l] = i18nTable[idx]?.[l] || table[idx].en;
+  return out;
+}
+
+function ssNoteFor(lang, phase) {
+  if (lang === 'en') return ` (Sade Sati ${phase} phase.)`;
+  if (lang === 'hi') {
+    return phase === 'peak' ? ' (साढ़े साती चरम — अधिकतम धैर्य रखें।)'
+      : phase === 'rising' ? ' (साढ़े साती आरोही — धैर्य ही साथी।)'
+      : ' (साढ़े साती अवरोही — बोझ धीरे-धीरे घटेगा।)';
+  }
+  return SS_NOTE_I18N[phase]?.[lang] || '';
+}
+
+// GENERIC[area][band] {en,hi} + GENERIC_I18N → full 8-language map
+function genericMap(area, band) {
+  const base = GENERIC[area][band];
+  const out = { en: base.en, hi: base.hi };
+  for (const l of REGIONAL_LANGS) out[l] = GENERIC_I18N[area]?.[band]?.[l] || base.en;
+  return out;
+}
+
+// Append a per-language suffix map to a text map
+function appendMap(map, extra) {
+  const out = {};
+  for (const l of ALL_LANGS) out[l] = (map[l] ?? map.en) + (extra?.[l] ?? extra?.en ?? '');
+  return out;
+}
 
 const DAY_MS = 86400e3;
 const WEEKDAYS_EN = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -133,25 +171,27 @@ function generateWeeklyHoroscope(atDate = new Date()) {
     const cautionDays = scored.filter((x) => x.score <= 2).slice(0, 2);
 
     const loveExtra = venH === 5 || venH === 7
-      ? { en:' Venus strongly supports romance this week.', hi:' शुक्र इस सप्ताह प्रेम को विशेष बल देता है।' }
-      : { en:'', hi:'' };
+      ? { en:' Venus strongly supports romance this week.', hi:' शुक्र इस सप्ताह प्रेम को विशेष बल देता है।', ...LOVE_VENUS_I18N }
+      : null;
     const healthExtra = marsH === 6
-      ? { en:' Mars boosts physical stamina — great week for workouts.', hi:' मंगल शारीरिक बल बढ़ाता है — व्यायाम के लिए उत्तम सप्ताह।' }
+      ? { en:' Mars boosts physical stamina — great week for workouts.', hi:' मंगल शारीरिक बल बढ़ाता है — व्यायाम के लिए उत्तम सप्ताह।', ...HEALTH_MARS_I18N }
       : satH === 1
-      ? { en:' Saturn on your sign — do not skimp on rest.', hi:' शनि आपकी राशि पर — विश्राम में कटौती न करें।' }
-      : { en:'', hi:'' };
+      ? { en:' Saturn on your sign — do not skimp on rest.', hi:' शनि आपकी राशि पर — विश्राम में कटौती न करें।', ...HEALTH_SAT_I18N }
+      : null;
+
+    const jupT = textMap(JUP_PERIOD, JUP_I18N, jupH);
+    const satT = textMap(SAT_PERIOD, SAT_I18N, satH);
+    const overview = {};
+    for (const l of ALL_LANGS) overview[l] = `${jupT[l]} ${satT[l]}${ss ? ssNoteFor(l, ss) : ''}`;
 
     rashis.push({
       rashi_num: rn, rashi_en: meta.en, rashi_hi: meta.hi, symbol: meta.symbol, color: meta.color,
       score,
-      overview: {
-        en: `${JUP_PERIOD[jupH].en} ${SAT_PERIOD[satH].en}${ss ? ` (Sade Sati ${ss} phase.)` : ''}`,
-        hi: `${JUP_PERIOD[jupH].hi} ${SAT_PERIOD[satH].hi}`,
-      },
-      career:  { en: GENERIC.career[b].en,  hi: GENERIC.career[b].hi },
-      love:    { en: GENERIC.love[b].en + loveExtra.en, hi: GENERIC.love[b].hi + loveExtra.hi },
-      finance: { en: GENERIC.finance[b].en, hi: GENERIC.finance[b].hi },
-      health:  { en: GENERIC.health[b].en + healthExtra.en, hi: GENERIC.health[b].hi + healthExtra.hi },
+      overview,
+      career:  genericMap('career', b),
+      love:    loveExtra ? appendMap(genericMap('love', b), loveExtra) : genericMap('love', b),
+      finance: genericMap('finance', b),
+      health:  healthExtra ? appendMap(genericMap('health', b), healthExtra) : genericMap('health', b),
       day_scores: scored,
       best_days: bestDays,
       caution_days: cautionDays,
@@ -212,17 +252,19 @@ function generateMonthlyHoroscope(atDate = new Date()) {
     const ss    = sadeSatiFromSatHouse(satH);
     const b     = band(score);
 
+    const sunT = textMap(SUN_MONTH, SUN_MONTH_I18N, sunH);
+    const jupT = textMap(JUP_PERIOD, JUP_I18N, jupH);
+    const overview = {};
+    for (const l of ALL_LANGS) overview[l] = `${sunT[l]} ${jupT[l]}${ss ? ssNoteFor(l, ss) : ''}`;
+
     rashis.push({
       rashi_num: rn, rashi_en: meta.en, rashi_hi: meta.hi, symbol: meta.symbol, color: meta.color,
       score,
-      overview: {
-        en: `${SUN_MONTH[sunH].en} ${JUP_PERIOD[jupH].en}${ss ? ` Saturn continues its Sade Sati ${ss} phase — patience remains your ally.` : ''}`,
-        hi: `${SUN_MONTH[sunH].hi} ${JUP_PERIOD[jupH].hi}${ss ? ' साढ़े साती जारी है — धैर्य ही सहयोगी है।' : ''}`,
-      },
-      career:  { en: GENERIC.career[b].en,  hi: GENERIC.career[b].hi },
-      love:    { en: GENERIC.love[b].en,    hi: GENERIC.love[b].hi },
-      finance: { en: GENERIC.finance[b].en, hi: GENERIC.finance[b].hi },
-      health:  { en: GENERIC.health[b].en,  hi: GENERIC.health[b].hi },
+      overview,
+      career:  genericMap('career', b),
+      love:    genericMap('love', b),
+      finance: genericMap('finance', b),
+      health:  genericMap('health', b),
       lucky_dates: luckyDates,
       caution_dates: cautionDates,
       sade_sati: ss ? { active: true, phase: ss } : { active: false },
@@ -282,14 +324,16 @@ function generateYearlyHoroscope(year = new Date().getUTCFullYear()) {
 
     const jupPhases = jupSegs.map((s) => {
       const h = houseFromSign(rn, s.rashi_num);
+      const text = textMap(JUP_PERIOD, JUP_I18N, h);
       return { from: s.from, to: s.to, sign_en: s.rashi_en, sign_hi: s.rashi_hi, house: h,
-               text_en: JUP_PERIOD[h].en, text_hi: JUP_PERIOD[h].hi };
+               text, text_en: text.en, text_hi: text.hi };
     });
     const satPhases = satSegs.map((s) => {
       const h = houseFromSign(rn, s.rashi_num);
       const ss = sadeSatiFromSatHouse(h);
+      const text = textMap(SAT_PERIOD, SAT_I18N, h);
       return { from: s.from, to: s.to, sign_en: s.rashi_en, sign_hi: s.rashi_hi, house: h,
-               sade_sati: ss, text_en: SAT_PERIOD[h].en, text_hi: SAT_PERIOD[h].hi };
+               sade_sati: ss, text, text_en: text.en, text_hi: text.hi };
     });
 
     // Duration-weighted yearly score from slow planets
@@ -315,14 +359,23 @@ function generateYearlyHoroscope(year = new Date().getUTCFullYear()) {
     rashis.push({
       rashi_num: rn, rashi_en: meta.en, rashi_hi: meta.hi, symbol: meta.symbol, color: meta.color,
       score,
-      overview: {
-        en: `${year} for ${meta.en}: ${jupPhases[0].text_en} ${satPhases[0].text_en}${sadeSatiActive ? ' Sade Sati influences part of this year — discipline converts pressure into long-term strength.' : ''}`,
-        hi: `${meta.hi} के लिए ${year}: ${jupPhases[0].text_hi} ${satPhases[0].text_hi}${sadeSatiActive ? ' इस वर्ष साढ़े साती का प्रभाव — अनुशासन ही शक्ति है।' : ''}`,
-      },
-      career:  { en: GENERIC.career[b].en,  hi: GENERIC.career[b].hi },
-      love:    { en: GENERIC.love[b].en,    hi: GENERIC.love[b].hi },
-      finance: { en: GENERIC.finance[b].en, hi: GENERIC.finance[b].hi },
-      health:  { en: GENERIC.health[b].en,  hi: GENERIC.health[b].hi },
+      overview: (() => {
+        const yearNote = {
+          en: ' Sade Sati influences part of this year — discipline converts pressure into long-term strength.',
+          hi: ' इस वर्ष साढ़े साती का प्रभाव — अनुशासन ही शक्ति है।',
+          ...SS_YEAR_NOTE_I18N,
+        };
+        const prefix = { en: `${year} for ${meta.en}: `, hi: `${meta.hi} के लिए ${year}: ` };
+        const out = {};
+        for (const l of ALL_LANGS) {
+          out[l] = `${prefix[l] || `${year}: `}${jupPhases[0].text[l] || jupPhases[0].text.en} ${satPhases[0].text[l] || satPhases[0].text.en}${sadeSatiActive ? (yearNote[l] || yearNote.en) : ''}`;
+        }
+        return out;
+      })(),
+      career:  genericMap('career', b),
+      love:    genericMap('love', b),
+      finance: genericMap('finance', b),
+      health:  genericMap('health', b),
       jupiter_phases: jupPhases,
       saturn_phases:  satPhases,
       rahu_house: rahuH,

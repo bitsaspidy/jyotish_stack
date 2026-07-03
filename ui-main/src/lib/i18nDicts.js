@@ -25,6 +25,10 @@ export const LANGS = [
 export const DICTS = {
   // ═══════════════════════════ TAMIL ═══════════════════════════
   ta: {
+    'Yearly Horoscope':'வருடாந்திர ராசிபலன்',
+    'Sunday':'ஞாயிறு','Monday':'திங்கள்','Tuesday':'செவ்வாய்','Wednesday':'புதன்','Thursday':'வியாழன்','Friday':'வெள்ளி','Saturday':'சனிக்கிழமை',
+    'Sade Sati rising phase is running':'சடே சதி ஏறுநிலை நடைபெறுகிறது','Sade Sati peak phase is running':'சடே சதி உச்சநிலை நடைபெறுகிறது','Sade Sati setting phase is running':'சடே சதி இறங்குநிலை நடைபெறுகிறது',
+    'Favorable':'சாதகம்','Moderate':'மிதமானது','Challenging':'சவாலானது',
     'Dashboard':'டாஷ்போர்டு','Logout':'வெளியேறு','My Account':'என் கணக்கு',
     // Nav / chrome
     'Home': 'முகப்பு', 'Free Kundli': 'இலவச ஜாதகம்', 'Calculators': 'கணிப்பான்கள்',
@@ -168,6 +172,10 @@ export const DICTS = {
 
   // ═══════════════════════════ TELUGU ═══════════════════════════
   te: {
+    'Yearly Horoscope':'వార్షిక రాశి ఫలాలు',
+    'Sunday':'ఆదివారం','Monday':'సోమవారం','Tuesday':'మంగళవారం','Wednesday':'బుధవారం','Thursday':'గురువారం','Friday':'శుక్రవారం','Saturday':'శనివారం',
+    'Sade Sati rising phase is running':'సాడేసతి ఆరోహణ దశ నడుస్తోంది','Sade Sati peak phase is running':'సాడేసతి శిఖర దశ నడుస్తోంది','Sade Sati setting phase is running':'సాడేసతి అవరోహణ దశ నడుస్తోంది',
+    'Favorable':'అనుకూలం','Moderate':'మధ్యస్థం','Challenging':'సవాలుగా',
     'Dashboard':'డాష్‌బోర్డ్','Logout':'లాగ్అవుట్','My Account':'నా ఖాతా',
     'Home': 'హోమ్', 'Free Kundli': 'ఉచిత జాతకం', 'Calculators': 'క్యాలిక్యులేటర్లు',
     'Kundli': 'జాతకం', 'Horoscope': 'రాశి ఫలాలు', 'Muhurta': 'ముహూర్తం',
@@ -299,6 +307,10 @@ export const DICTS = {
 
   // ═══════════════════════════ BENGALI ═══════════════════════════
   bn: {
+    'Yearly Horoscope':'বার্ষিক রাশিফল',
+    'Sunday':'রবিবার','Monday':'সোমবার','Tuesday':'মঙ্গলবার','Wednesday':'বুধবার','Thursday':'বৃহস্পতিবার','Friday':'শুক্রবার','Saturday':'শনিবার',
+    'Sade Sati rising phase is running':'সাড়ে সাতি আরোহ পর্যায় চলছে','Sade Sati peak phase is running':'সাড়ে সাতি শিখর পর্যায় চলছে','Sade Sati setting phase is running':'সাড়ে সাতি অবরোহ পর্যায় চলছে',
+    'Favorable':'অনুকূল','Moderate':'মাঝারি','Challenging':'চ্যালেঞ্জিং',
     'Dashboard':'ড্যাশবোর্ড','Logout':'লগআউট','My Account':'আমার অ্যাকাউন্ট',
     'Home': 'হোম', 'Free Kundli': 'বিনামূল্যে কুষ্ঠি', 'Calculators': 'ক্যালকুলেটর',
     'Kundli': 'কুষ্ঠি', 'Horoscope': 'রাশিফল', 'Muhurta': 'মুহূর্ত',
@@ -430,6 +442,10 @@ export const DICTS = {
 
   // ═══════════════════════════ MARATHI ═══════════════════════════
   mr: {
+    'Yearly Horoscope':'वार्षिक राशिभविष्य',
+    'Sunday':'रविवार','Monday':'सोमवार','Tuesday':'मंगळवार','Wednesday':'बुधवार','Thursday':'गुरुवार','Friday':'शुक्रवार','Saturday':'शनिवार',
+    'Sade Sati rising phase is running':'साडेसाती चढती अवस्था सुरू आहे','Sade Sati peak phase is running':'साडेसाती कळस अवस्था सुरू आहे','Sade Sati setting phase is running':'साडेसाती उतरती अवस्था सुरू आहे',
+    'Favorable':'अनुकूल','Moderate':'मध्यम','Challenging':'आव्हानात्मक',
     'Dashboard':'डॅशबोर्ड','Logout':'लॉगआउट','My Account':'माझे खाते',
     'Home': 'मुख्यपृष्ठ', 'Free Kundli': 'मोफत कुंडली', 'Calculators': 'कॅल्क्युलेटर',
     'Kundli': 'कुंडली', 'Horoscope': 'राशिभविष्य', 'Muhurta': 'मुहूर्त',
@@ -561,6 +577,10 @@ export const DICTS = {
 
   // ═══════════════════════════ PUNJABI ═══════════════════════════
   pa: {
+    'Yearly Horoscope':'ਸਾਲਾਨਾ ਰਾਸ਼ੀਫਲ',
+    'Sunday':'ਐਤਵਾਰ','Monday':'ਸੋਮਵਾਰ','Tuesday':'ਮੰਗਲਵਾਰ','Wednesday':'ਬੁੱਧਵਾਰ','Thursday':'ਵੀਰਵਾਰ','Friday':'ਸ਼ੁੱਕਰਵਾਰ','Saturday':'ਸ਼ਨੀਵਾਰ',
+    'Sade Sati rising phase is running':'ਸਾਢੇ ਸਾਤੀ ਚੜ੍ਹਦੀ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ','Sade Sati peak phase is running':'ਸਾਢੇ ਸਾਤੀ ਸਿਖਰ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ','Sade Sati setting phase is running':'ਸਾਢੇ ਸਾਤੀ ਉਤਰਦੀ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ',
+    'Favorable':'ਅਨੁਕੂਲ','Moderate':'ਦਰਮਿਆਨਾ','Challenging':'ਚੁਣੌਤੀਪੂਰਨ',
     'Dashboard':'ਡੈਸ਼ਬੋਰਡ','Logout':'ਲੌਗਆਊਟ','My Account':'ਮੇਰਾ ਖਾਤਾ',
     // Nav / chrome
     'Home':'ਹੋਮ','Free Kundli':'ਮੁਫ਼ਤ ਕੁੰਡਲੀ','Calculators':'ਕੈਲਕੁਲੇਟਰ',
@@ -704,6 +724,10 @@ export const DICTS = {
 
   // ═══════════════════════════ GUJARATI ═══════════════════════════
   gu: {
+    'Yearly Horoscope':'વાર્ષિક રાશિફળ',
+    'Sunday':'રવિવાર','Monday':'સોમવાર','Tuesday':'મંગળવાર','Wednesday':'બુધવાર','Thursday':'ગુરુવાર','Friday':'શુક્રવાર','Saturday':'શનિવાર',
+    'Sade Sati rising phase is running':'સાડાસાતી ચઢતી અવસ્થા ચાલી રહી છે','Sade Sati peak phase is running':'સાડાસાતી ટોચની અવસ્થા ચાલી રહી છે','Sade Sati setting phase is running':'સાડાસાતી ઉતરતી અવસ્થા ચાલી રહી છે',
+    'Favorable':'અનુકૂળ','Moderate':'મધ્યમ','Challenging':'પડકારજનક',
     'Dashboard':'ડેશબોર્ડ','Logout':'લૉગઆઉટ','My Account':'મારું ખાતું',
     // Nav / chrome
     'Home':'હોમ','Free Kundli':'મફત કુંડળી','Calculators':'કેલ્ક્યુલેટર',
