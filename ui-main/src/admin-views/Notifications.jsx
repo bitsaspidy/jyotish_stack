@@ -29,6 +29,44 @@ export default function Notifications() {
   const [form,    setForm]    = useState({ title:'', body:'', type:'info', user_id:'' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  // ── Web push (PWA) state ──
+  const [pushStats, setPushStats] = useState(null);
+  const [pushForm,  setPushForm]  = useState({ title:'', body:'', url:'/horoscope' });
+  const [pushBusy,  setPushBusy]  = useState(false);
+  const setP = (k, v) => setPushForm(f => ({ ...f, [k]: v }));
+
+  const fetchPushStats = () => {
+    adminApi.get('/admin/push/stats')
+      .then(({ data }) => setPushStats(data))
+      .catch(() => setPushStats({ total: 0, active: 0, by_rashi: [], unavailable: true }));
+  };
+  useEffect(() => { fetchPushStats(); }, []);
+
+  const triggerDailyPush = async () => {
+    if (!confirm('Send today\'s horoscope push to all active subscribers now?')) return;
+    setPushBusy(true);
+    try {
+      const { data } = await adminApi.post('/admin/push/daily');
+      toast.success(data?.message || 'Daily push started');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to trigger daily push');
+    } finally { setPushBusy(false); }
+  };
+
+  const sendPushBlast = async (e) => {
+    e.preventDefault();
+    if (!pushForm.title || !pushForm.body) return toast.error('Push title and body required');
+    if (!confirm(`Send this push notification to ${pushStats?.active ?? 'all'} subscribers?`)) return;
+    setPushBusy(true);
+    try {
+      const { data } = await adminApi.post('/admin/push/blast', pushForm);
+      toast.success(data?.skipped ? 'Push not configured (VAPID keys missing)' : `Push sent: ${data?.sent ?? 0} delivered, ${data?.failed ?? 0} failed`);
+      setPushForm({ title:'', body:'', url:'/horoscope' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send push');
+    } finally { setPushBusy(false); }
+  };
+
   const fetchNotifs = () => {
     setLoading(true);
     adminApi.get('/admin/notifications', { params: { page } })
@@ -184,6 +222,79 @@ export default function Notifications() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ── Web Push (PWA daily horoscope notifications) ──────────────────── */}
+      <div style={{ marginTop:28 }}>
+        <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:18, fontWeight:700, marginBottom:3 }}>📲 Web Push (PWA)</h2>
+        <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13, marginBottom:16 }}>
+          Browser push notifications to visitors who opted in. The daily horoscope push runs automatically at 07:00 IST.
+        </p>
+
+        <div style={{ display:'grid', gridTemplateColumns:'420px 1fr', gap:16, alignItems:'start' }}>
+          {/* Blast form */}
+          <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px' }}>
+            <h3 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700, marginBottom:18 }}>📢 Send Push Blast</h3>
+            <form onSubmit={sendPushBlast} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div>
+                <label style={{ display:'block', color:'rgba(245,240,232,0.45)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Push Title</label>
+                <input value={pushForm.title} onChange={e => setP('title', e.target.value)} placeholder="🔯 Notification title…"
+                  style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'8px 12px', fontSize:13, outline:'none' }} />
+              </div>
+              <div>
+                <label style={{ display:'block', color:'rgba(245,240,232,0.45)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>Body</label>
+                <textarea value={pushForm.body} onChange={e => setP('body', e.target.value)} rows={3} placeholder="Push message…"
+                  style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'8px 12px', fontSize:13, outline:'none', resize:'vertical', lineHeight:1.6 }} />
+              </div>
+              <div>
+                <label style={{ display:'block', color:'rgba(245,240,232,0.45)', fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:5 }}>
+                  Click URL <span style={{ color:'rgba(245,240,232,0.25)', textTransform:'none', fontWeight:400 }}>(where the notification opens)</span>
+                </label>
+                <input value={pushForm.url} onChange={e => setP('url', e.target.value)} placeholder="/horoscope"
+                  style={{ width:'100%', boxSizing:'border-box', background:'#0D0F1E', border:'1px solid rgba(212,175,55,0.18)', borderRadius:6, color:'#F5F0E8', padding:'8px 12px', fontSize:13, outline:'none' }} />
+              </div>
+              <button type="submit" disabled={pushBusy}
+                style={{ padding:'10px', borderRadius:6, border:'none', background:'linear-gradient(135deg,#D4AF37,#F0D060,#A88B20)', color:'#0B0D1A', fontWeight:700, fontSize:13, cursor: pushBusy ? 'not-allowed' : 'pointer', opacity: pushBusy ? 0.7 : 1 }}>
+                {pushBusy ? '⏳ Working…' : '📢 Send Push to All Subscribers'}
+              </button>
+            </form>
+          </div>
+
+          {/* Stats + daily trigger */}
+          <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18 }}>
+              <h3 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700 }}>Subscribers</h3>
+              <button onClick={fetchPushStats} style={{ padding:'4px 10px', borderRadius:5, border:'1px solid rgba(212,175,55,0.2)', background:'transparent', color:'#D4AF37', cursor:'pointer', fontSize:11 }}>↻ Refresh</button>
+            </div>
+
+            {pushStats?.unavailable ? (
+              <p style={{ color:'#FBBF24', fontSize:13 }}>⚠️ Push endpoint unavailable — is the API deployed with migration 042?</p>
+            ) : !pushStats ? (
+              <p style={{ color:'rgba(245,240,232,0.35)', fontSize:13 }}>Loading…</p>
+            ) : (
+              <>
+                <div style={{ display:'flex', gap:12, marginBottom:18 }}>
+                  <div style={{ flex:1, background:'rgba(212,175,55,0.07)', border:'1px solid rgba(212,175,55,0.2)', borderRadius:8, padding:'14px 16px' }}>
+                    <p style={{ color:'rgba(245,240,232,0.45)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Active</p>
+                    <p style={{ color:'#34D399', fontSize:26, fontWeight:800 }}>{pushStats.active}</p>
+                  </div>
+                  <div style={{ flex:1, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:8, padding:'14px 16px' }}>
+                    <p style={{ color:'rgba(245,240,232,0.45)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.08em' }}>Total ever</p>
+                    <p style={{ color:'#F5F0E8', fontSize:26, fontWeight:800 }}>{pushStats.total}</p>
+                  </div>
+                </div>
+
+                <button onClick={triggerDailyPush} disabled={pushBusy || !pushStats.active}
+                  style={{ width:'100%', padding:'10px', borderRadius:6, border:'1px solid rgba(52,211,153,0.35)', background:'rgba(52,211,153,0.1)', color:'#34D399', fontWeight:700, fontSize:13, cursor: (pushBusy||!pushStats.active) ? 'not-allowed' : 'pointer', opacity:(pushBusy||!pushStats.active)?0.6:1 }}>
+                  🌅 Trigger Daily Horoscope Push Now
+                </button>
+                <p style={{ color:'rgba(245,240,232,0.3)', fontSize:11, marginTop:8, lineHeight:1.5 }}>
+                  Sends each subscriber their moon-sign horoscope. Runs automatically every day at 07:00 IST — use this only to re-send or test.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
