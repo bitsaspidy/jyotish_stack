@@ -15,6 +15,7 @@ const NAV = [
   { href: '/kundli',      en: 'Kundli',      hi: 'कुंडली'     },
   { href: '/horoscope',        en: 'Horoscope',   hi: 'राशिफल'  },
   { href: '/panchang-muhurat', en: 'Muhurta',     hi: 'मुहूर्त'  },
+  { href: '/festivals',        en: 'Festivals',   hi: 'त्योहार'  },
   { href: '/varshphal',        en: 'Varshphal',   hi: 'वर्षफल'  },
   { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
   { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },

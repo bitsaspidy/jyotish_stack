@@ -17,6 +17,7 @@ const STATIC_ROUTES = [
   { path: '/calculators/kundli-milan', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/remedies', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/panchang-muhurat', priority: 0.8, changeFrequency: 'daily' },
+  { path: '/festivals', priority: 0.85, changeFrequency: 'weekly' },
   { path: '/muhurat/marriage', priority: 0.75, changeFrequency: 'weekly' },
   { path: '/muhurat/griha-pravesh', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/muhurat/naamkaran', priority: 0.7, changeFrequency: 'weekly' },

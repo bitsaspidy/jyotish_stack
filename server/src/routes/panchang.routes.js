@@ -59,4 +59,21 @@ router.get('/muhurat/:occasion', (req, res) => {
   }
 });
 
+// ─── Festival calendar ────────────────────────────────────────────────────────
+const { computeFestivals, availableYears } = require('../services/helpers/festival-finder');
+
+// GET /api/panchang/festivals?year=YYYY (defaults to current year). Public.
+router.get('/festivals', (req, res) => {
+  try {
+    const years = availableYears();
+    let year = parseInt(req.query.year, 10);
+    if (!years.includes(year)) year = years.includes(new Date().getUTCFullYear()) ? new Date().getUTCFullYear() : years[0];
+    const data = computeFestivals(year);
+    return ok(res, { ...data, available_years: years });
+  } catch (e) {
+    console.error('[PanchangRoute:festivals]', e.message);
+    return fail(res, 'Unable to load festivals', 500);
+  }
+});
+
 module.exports = router;
