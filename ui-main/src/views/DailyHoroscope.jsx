@@ -5,8 +5,10 @@ import StarField from '../components/StarField';
 import { useLang } from '../context/LangContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
+import Link from 'next/link';
 import PeriodTabs from '../components/horoscope/PeriodTabs';
 import PushOptIn from '../components/PushOptIn';
+import { SIGNS } from '../lib/rashiSigns';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 import { t } from '../lib/astroI18n';
@@ -582,6 +584,25 @@ export default function DailyHoroscope() {
             </div>
           </motion.div>
         )}
+
+        {/* ── Browse by sign (dedicated SEO landing pages) ── */}
+        <div style={{ marginTop:24, padding:'16px 20px', background:'rgba(17,20,40,0.6)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:14 }}>
+          <p style={{ fontSize:10, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:12 }}>
+            {t(lang,'Full Horoscope by Sign','राशि अनुसार पूर्ण राशिफल')}
+          </p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
+            {SIGNS.map((s) => (
+              <Link key={s.slug} href={`/horoscope/${s.slug}`} style={{
+                display:'flex', alignItems:'center', gap:6, padding:'6px 12px', textDecoration:'none',
+                background:'rgba(255,255,255,0.03)', border:'1px solid rgba(212,175,55,0.18)',
+                borderRadius:20, color:'#CBD5E1', fontSize:11,
+              }}>
+                <span style={{ fontSize:14 }}>{s.symbol}</span>
+                {t(lang, s.en, s.hi)}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
