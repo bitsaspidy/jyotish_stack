@@ -1,6 +1,13 @@
 'use strict';
 const eph = require('../ephemeris.service');
 const { siderealLongitudeForPlanet, rashiFromDeg, houseFromSign, isRetrogradePlanet } = require('./core-helpers');
+const {
+  M_TITLE_I18N, M_GENERAL_I18N, ADVICE_I18N, CAUTION_I18N,
+  M_CAREER_I18N, M_LOVE_I18N, M_HEALTH_I18N, M_FINANCE_I18N,
+} = require('./daily-horoscope-i18n');
+const { SS_NOTE_I18N } = require('./period-horoscope-i18n');
+
+const REGIONAL = ['ta', 'te', 'bn', 'mr', 'pa', 'gu'];
 
 // ── Rashi metadata ────────────────────────────────────────────────────────────
 const RASHIS = [
@@ -273,6 +280,44 @@ function generateRashiHoroscope(rashiNum, transitPlanets, dateStr) {
 
   const lucky = LUCKY[rashiNum] || {};
 
+  // ── Multilingual text maps (en + hi + 6 regional) ──────────────────────────
+  const description_hi = moonTheme.general_hi + (satCaution ? ` ${satCaution}` : '') + (ssPhase ? ` साढ़ेसाती (${ssPhase === 'peak' ? 'चरम' : ssPhase === 'rising' ? 'आरोही' : 'अवरोही'}) चल रही है — धैर्य रखें।` : '');
+
+  const title = { en: moonTheme.title_en, hi: moonTheme.title_hi, ...(M_TITLE_I18N[moonH] || {}) };
+
+  const description = { en: description_en, hi: description_hi };
+  for (const l of REGIONAL) {
+    description[l] = (M_GENERAL_I18N[moonH]?.[l] || description_en)
+      + (ssPhase ? (SS_NOTE_I18N[ssPhase]?.[l] || '') : '');
+  }
+
+  // Sections: EN keeps the composed text (base + planet modifiers); hi/regional
+  // use the per-house tables (fixes the legacy bug where hi carried English).
+  const mkSection = (enText, tbl) => {
+    const m = { en: enText, hi: tbl[moonH]?.hi || enText };
+    for (const l of REGIONAL) m[l] = tbl[moonH]?.[l] || enText;
+    return m;
+  };
+  const careerMap  = mkSection(career_en, M_CAREER_I18N);
+  const loveMap    = mkSection(love_en + love_extra, M_LOVE_I18N);
+  const healthMap  = mkSection(health_en + health_extra, M_HEALTH_I18N);
+  const financeMap = mkSection(finance_full, M_FINANCE_I18N);
+
+  const band = score >= 4 ? 'high' : score === 3 ? 'mid' : 'low';
+  const advice = {
+    en: advice_en,
+    hi: score >= 4 ? 'आज सकारात्मक ऊर्जा है — महत्वपूर्ण कार्य आगे बढ़ाएं।' : score === 3 ? 'संतुलित दिन — नियमित कार्य में स्थिरता रखें।' : 'आज सावधानी और धैर्य का दिन है। बड़े निर्णय टालें।',
+    ...(ADVICE_I18N[band] || {}),
+  };
+
+  const cautionKey = satH === 8 ? 'sat8' : moonH === 8 ? 'moon8' : ssPhase === 'peak' ? 'sspeak' : marsH === 7 ? 'mars7' : 'general';
+  const caution = {
+    en: caution_en,
+    hi: CAUTION_I18N[cautionKey]?.hi
+      || (ssPhase === 'peak' ? 'साढ़ेसाती चरम — अधिकतम धैर्य रखें।' : 'सामान्य सावधानी — अति-प्रतिबद्धता से बचें।'),
+  };
+  for (const l of REGIONAL) caution[l] = CAUTION_I18N[cautionKey]?.[l] || caution_en;
+
   return {
     rashi_num:    rashiNum,
     rashi_en:     rashi.en,
@@ -284,16 +329,18 @@ function generateRashiHoroscope(rashiNum, transitPlanets, dateStr) {
     date:         dateStr,
     score,
     stars,
+    title,
     title_en:     moonTheme.title_en,
     title_hi:     moonTheme.title_hi,
+    description,
     description_en,
-    description_hi: moonTheme.general_hi + (satCaution ? ` ${satCaution}` : '') + (ssPhase ? ` साढ़ेसाती (${ssPhase === 'peak' ? 'चरम' : ssPhase === 'rising' ? 'आरोही' : 'अवरोही'}) चल रही है — धैर्य रखें।` : ''),
-    career:  { en: career_en,   hi: `${MOON_CAREER[moonH]||''}` },
-    love:    { en: love_en + love_extra, hi: MOON_LOVE[moonH]   || '' },
-    health:  { en: health_en + health_extra, hi: MOON_HEALTH[moonH] || '' },
-    finance: { en: finance_full, hi: MOON_FINANCE[moonH] || '' },
-    advice:  { en: advice_en, hi: score >= 4 ? 'आज सकारात्मक ऊर्जा है — महत्वपूर्ण कार्य आगे बढ़ाएं।' : score === 3 ? 'संतुलित दिन — नियमित कार्य में स्थिरता रखें।' : 'आज सावधानी और धैर्य का दिन है। बड़े निर्णय टालें।' },
-    caution: { en: caution_en, hi: ssPhase === 'peak' ? 'साढ़ेसाती चरम — अधिकतम धैर्य रखें।' : 'सामान्य सावधानी — अति-प्रतिबद्धता से बचें।' },
+    description_hi,
+    career:  careerMap,
+    love:    loveMap,
+    health:  healthMap,
+    finance: financeMap,
+    advice,
+    caution,
     lucky: {
       numbers:  lucky.numbers  || [1, 3],
       colors:   lucky.colors   || ['Gold', 'White'],

@@ -25,6 +25,7 @@ export const LANGS = [
 export const DICTS = {
   // ═══════════════════════════ TAMIL ═══════════════════════════
   ta: {
+    'Excellent':'சிறப்பு','Difficult':'கடினம்',
     'Yearly Horoscope':'வருடாந்திர ராசிபலன்',
     'Sunday':'ஞாயிறு','Monday':'திங்கள்','Tuesday':'செவ்வாய்','Wednesday':'புதன்','Thursday':'வியாழன்','Friday':'வெள்ளி','Saturday':'சனிக்கிழமை',
     'Sade Sati rising phase is running':'சடே சதி ஏறுநிலை நடைபெறுகிறது','Sade Sati peak phase is running':'சடே சதி உச்சநிலை நடைபெறுகிறது','Sade Sati setting phase is running':'சடே சதி இறங்குநிலை நடைபெறுகிறது',
@@ -172,6 +173,7 @@ export const DICTS = {
 
   // ═══════════════════════════ TELUGU ═══════════════════════════
   te: {
+    'Excellent':'అద్భుతం','Difficult':'కష్టం',
     'Yearly Horoscope':'వార్షిక రాశి ఫలాలు',
     'Sunday':'ఆదివారం','Monday':'సోమవారం','Tuesday':'మంగళవారం','Wednesday':'బుధవారం','Thursday':'గురువారం','Friday':'శుక్రవారం','Saturday':'శనివారం',
     'Sade Sati rising phase is running':'సాడేసతి ఆరోహణ దశ నడుస్తోంది','Sade Sati peak phase is running':'సాడేసతి శిఖర దశ నడుస్తోంది','Sade Sati setting phase is running':'సాడేసతి అవరోహణ దశ నడుస్తోంది',
@@ -307,6 +309,7 @@ export const DICTS = {
 
   // ═══════════════════════════ BENGALI ═══════════════════════════
   bn: {
+    'Excellent':'চমৎকার','Difficult':'কঠিন',
     'Yearly Horoscope':'বার্ষিক রাশিফল',
     'Sunday':'রবিবার','Monday':'সোমবার','Tuesday':'মঙ্গলবার','Wednesday':'বুধবার','Thursday':'বৃহস্পতিবার','Friday':'শুক্রবার','Saturday':'শনিবার',
     'Sade Sati rising phase is running':'সাড়ে সাতি আরোহ পর্যায় চলছে','Sade Sati peak phase is running':'সাড়ে সাতি শিখর পর্যায় চলছে','Sade Sati setting phase is running':'সাড়ে সাতি অবরোহ পর্যায় চলছে',
@@ -442,6 +445,7 @@ export const DICTS = {
 
   // ═══════════════════════════ MARATHI ═══════════════════════════
   mr: {
+    'Excellent':'उत्कृष्ट','Difficult':'कठीण',
     'Yearly Horoscope':'वार्षिक राशिभविष्य',
     'Sunday':'रविवार','Monday':'सोमवार','Tuesday':'मंगळवार','Wednesday':'बुधवार','Thursday':'गुरुवार','Friday':'शुक्रवार','Saturday':'शनिवार',
     'Sade Sati rising phase is running':'साडेसाती चढती अवस्था सुरू आहे','Sade Sati peak phase is running':'साडेसाती कळस अवस्था सुरू आहे','Sade Sati setting phase is running':'साडेसाती उतरती अवस्था सुरू आहे',
@@ -577,6 +581,7 @@ export const DICTS = {
 
   // ═══════════════════════════ PUNJABI ═══════════════════════════
   pa: {
+    'Excellent':'ਸ਼ਾਨਦਾਰ','Difficult':'ਔਖਾ',
     'Yearly Horoscope':'ਸਾਲਾਨਾ ਰਾਸ਼ੀਫਲ',
     'Sunday':'ਐਤਵਾਰ','Monday':'ਸੋਮਵਾਰ','Tuesday':'ਮੰਗਲਵਾਰ','Wednesday':'ਬੁੱਧਵਾਰ','Thursday':'ਵੀਰਵਾਰ','Friday':'ਸ਼ੁੱਕਰਵਾਰ','Saturday':'ਸ਼ਨੀਵਾਰ',
     'Sade Sati rising phase is running':'ਸਾਢੇ ਸਾਤੀ ਚੜ੍ਹਦੀ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ','Sade Sati peak phase is running':'ਸਾਢੇ ਸਾਤੀ ਸਿਖਰ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ','Sade Sati setting phase is running':'ਸਾਢੇ ਸਾਤੀ ਉਤਰਦੀ ਅਵਸਥਾ ਚੱਲ ਰਹੀ ਹੈ',
@@ -724,6 +729,7 @@ export const DICTS = {
 
   // ═══════════════════════════ GUJARATI ═══════════════════════════
   gu: {
+    'Excellent':'ઉત્તમ','Difficult':'કઠિન',
     'Yearly Horoscope':'વાર્ષિક રાશિફળ',
     'Sunday':'રવિવાર','Monday':'સોમવાર','Tuesday':'મંગળવાર','Wednesday':'બુધવાર','Thursday':'ગુરુવાર','Friday':'શુક્રવાર','Saturday':'શનિવાર',
     'Sade Sati rising phase is running':'સાડાસાતી ચઢતી અવસ્થા ચાલી રહી છે','Sade Sati peak phase is running':'સાડાસાતી ટોચની અવસ્થા ચાલી રહી છે','Sade Sati setting phase is running':'સાડાસાતી ઉતરતી અવસ્થા ચાલી રહી છે',

@@ -50,10 +50,10 @@ function TransitStrip({ summary, lang }) {
         }}>
           <span style={{ fontSize:13, color: PLANET_COLOR[name] || '#D4AF37' }}>{PLANET_ICON[name]}</span>
           <span style={{ fontSize:10, color:'#CBD5E1' }}>
-            {lang==='hi' ? PLANET_NAME_HI[name] : name}
+            {t(lang, name, PLANET_NAME_HI[name])}
           </span>
           <span style={{ fontSize:10, color:'#94A3B8' }}>
-            {lang==='hi' ? data.rashi_hi : data.rashi_en}
+            {t(lang, data.rashi_en, data.rashi_hi)}
           </span>
           {data.is_retrograde && <span style={{ fontSize:9, color:'#F59E0B' }}>℞</span>}
         </div>
@@ -132,7 +132,11 @@ function RashiDetail({ rashi, lang }) {
   const [tab, setTab] = useState('overview');
   if (!rashi) return null;
   const scoreColor = SCORE_COLOR[rashi.score];
-  const scoreLabel = lang==='hi' ? SCORE_LABEL_HI[rashi.score] : SCORE_LABEL[rashi.score];
+  const scoreLabel = t(lang, SCORE_LABEL[rashi.score], SCORE_LABEL_HI[rashi.score]);
+
+  // Pick localized text from a server language map ({en, hi, ta, ...});
+  // falls back to the legacy en/hi pair for older cached payloads.
+  const L = (map, en, hi) => (map && map[lang]) || t(lang, en ?? map?.en, hi ?? map?.hi);
 
   const rashiLord  = RASHI_LORD_MAP[rashi.rashi_num];
   const remedy     = PLANET_REMEDY[rashiLord] || {};
@@ -176,7 +180,7 @@ function RashiDetail({ rashi, lang }) {
             <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:5 }}>
               <StarRating score={rashi.score} />
               <span style={{ fontSize:11, color:'#64748B' }}>
-                {t(lang, rashi.title_en, rashi.title_hi)}
+                {L(rashi.title, rashi.title_en, rashi.title_hi)}
               </span>
             </div>
           </div>
@@ -203,7 +207,7 @@ function RashiDetail({ rashi, lang }) {
         {tab === 'overview' && (
           <div>
             <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, marginBottom:16 }}>
-              {t(lang, rashi.description_en, rashi.description_hi)}
+              {L(rashi.description, rashi.description_en, rashi.description_hi)}
             </p>
 
             {/* Advice + Caution */}
@@ -212,13 +216,13 @@ function RashiDetail({ rashi, lang }) {
                 <div style={{ fontSize:10, fontWeight:700, color:'#22C55E', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
                   ✓ {t(lang,'Today\'s Guidance','आज का मार्गदर्शन')}
                 </div>
-                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.7, margin:0 }}>{t(lang, rashi.advice.en, rashi.advice.hi)}</p>
+                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.7, margin:0 }}>{L(rashi.advice)}</p>
               </div>
               <div style={{ padding:'12px 14px', background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'#F59E0B', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
                   ⚠ {t(lang,'Caution','सावधानी')}
                 </div>
-                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.7, margin:0 }}>{t(lang, rashi.caution.en, rashi.caution.hi)}</p>
+                <p style={{ fontSize:12, color:'#CBD5E1', lineHeight:1.7, margin:0 }}>{L(rashi.caution)}</p>
               </div>
             </div>
 
@@ -228,7 +232,7 @@ function RashiDetail({ rashi, lang }) {
                 { label: t(lang,'Lucky Numbers','शुभ अंक'), value: rashi.lucky.numbers.join(', ') },
                 { label: t(lang,'Lucky Colors','शुभ रंग'),  value: rashi.lucky.colors.join(', ')  },
                 { label: t(lang,'Gemstone','रत्न'),         value: rashi.lucky.gemstone             },
-                { label: t(lang,'Best Day','शुभ दिन'),      value: rashi.lucky.day                  },
+                { label: t(lang,'Best Day','शुभ दिन'),      value: t(lang, rashi.lucky.day || '', rashi.lucky.day) },
               ].map(({ label, value }) => (
                 <div key={label} style={{ padding:'8px 12px', background:'rgba(212,175,55,0.06)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:8 }}>
                   <div style={{ fontSize:9, color:'#D4AF37', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:3 }}>{label}</div>
@@ -262,23 +266,23 @@ function RashiDetail({ rashi, lang }) {
         {tab === 'career' && (
           <div>
             <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, margin:'0 0 12px' }}>
-              {t(lang, rashi.career.en, rashi.career.hi)}
+              {L(rashi.career)}
             </p>
           </div>
         )}
         {tab === 'love' && (
           <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, margin:0 }}>
-            {t(lang, rashi.love.en, rashi.love.hi)}
+            {L(rashi.love)}
           </p>
         )}
         {tab === 'health' && (
           <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, margin:0 }}>
-            {t(lang, rashi.health.en, rashi.health.hi)}
+            {L(rashi.health)}
           </p>
         )}
         {tab === 'finance' && (
           <p style={{ fontSize:13, color:'rgba(245,240,232,0.82)', lineHeight:1.85, margin:0 }}>
-            {t(lang, rashi.finance.en, rashi.finance.hi)}
+            {L(rashi.finance)}
           </p>
         )}
 
