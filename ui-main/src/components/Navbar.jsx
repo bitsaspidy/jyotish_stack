@@ -116,7 +116,12 @@ export default function Navbar() {
                 {/* pt-2 forms a hover bridge so the panel doesn't close between button and menu */}
                 <div className="absolute left-0 top-full pt-2 min-w-[210px] invisible opacity-0 translate-y-1
                                 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
-                  <div className="rounded-lg border border-gold/20 bg-cosmos-900/98 backdrop-blur-xl shadow-cosmos py-2 overflow-hidden">
+                  <div
+                    className="rounded-xl border border-gold/30 py-2 overflow-hidden"
+                    style={{
+                      background:'linear-gradient(145deg, #171B34 0%, #0B0D1A 72%, #080A16 100%)',
+                      boxShadow:'0 22px 50px rgba(0,0,0,0.62), 0 0 0 1px rgba(212,175,55,0.05) inset',
+                    }}>
                     {item.children.map((c) => (
                       <Link key={c.href} href={c.href}
                         className={`block px-4 py-2 text-sm transition-colors ${
@@ -192,7 +197,8 @@ export default function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="md:hidden overflow-hidden border-t border-gold/15 bg-cosmos-900/98 backdrop-blur-xl">
+            className="md:hidden overflow-hidden border-t border-gold/15"
+            style={{ background:'linear-gradient(180deg, #111428 0%, #090B19 100%)' }}>
             <div className="px-5 py-4 space-y-1 max-h-[75vh] overflow-y-auto">
               {NAV.map((item) => {
                 if (!item.children) {
