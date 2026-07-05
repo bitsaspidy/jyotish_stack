@@ -76,4 +76,31 @@ router.get('/festivals', (req, res) => {
   }
 });
 
+// ─── Daily planetary positions (Grah Gochar) ─────────────────────────────────
+const { computePlanetPositions } = require('../services/helpers/planet-positions');
+const ppCache = new Map();
+
+// GET /api/panchang/planet-positions?date=YYYY-MM-DD (defaults today IST). Public.
+router.get('/planet-positions', (req, res) => {
+  try {
+    let date = String(req.query.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      date = new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10); // today IST
+    }
+    const [y] = date.split('-').map(Number);
+    if (y < 1900 || y > 2100) return fail(res, 'Date out of range', 400);
+
+    let data = ppCache.get(date);
+    if (!data) {
+      data = computePlanetPositions(date);
+      if (ppCache.size > 60) ppCache.clear();
+      ppCache.set(date, data);
+    }
+    return ok(res, data);
+  } catch (e) {
+    console.error('[PanchangRoute:planet-positions]', e.message);
+    return fail(res, 'Unable to compute planetary positions', 500);
+  }
+});
+
 module.exports = router;

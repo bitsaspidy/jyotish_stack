@@ -104,6 +104,9 @@ export default function FestivalCalendar() {
                         <p style={{ fontSize:11.5, color:MUTED, lineHeight:1.6, marginTop:3, fontFamily:'var(--font-devanagari),sans-serif' }}>
                           {t(lang, f.desc_en, f.desc_hi)}
                         </p>
+                        <Link href={`/planetary-positions?date=${f.date}`} style={{ fontSize:10.5, color:GOLD, textDecoration:'none', marginTop:4, display:'inline-block' }}>
+                          🌌 {t(lang, 'Planet positions this day →', 'इस दिन ग्रह स्थिति →')}
+                        </Link>
                       </div>
                     </div>
                   );
