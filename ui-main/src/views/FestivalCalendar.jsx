@@ -25,7 +25,7 @@ export default function FestivalCalendar() {
   const [data, setData]     = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const year = 2026;
+  const [year, setYear] = useState(2026);
 
   useEffect(() => {
     setLoading(true);
@@ -34,6 +34,8 @@ export default function FestivalCalendar() {
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [year]);
+
+  const availableYears = data?.available_years || [2026];
 
   const festivals = (data?.festivals || []).filter((f) => filter === 'all' || f.category === filter);
   const byMonth = {};
@@ -55,10 +57,24 @@ export default function FestivalCalendar() {
           </h1>
           <p style={{ color:MUTED, fontSize:13, marginTop:8, maxWidth:600, margin:'8px auto 0', lineHeight:1.7 }}>
             {t(lang,
-              'Complete list of major Hindu festivals and vrat dates in 2026 — with day, tithi significance and category.',
-              '2026 के प्रमुख हिंदू त्योहार एवं व्रत तिथियां — वार, महत्त्व एवं श्रेणी सहित।')}
+              `Complete list of major Hindu festivals and vrat dates in ${year} — with day, tithi significance and category.`,
+              `${year} के प्रमुख हिंदू त्योहार एवं व्रत तिथियां — वार, महत्त्व एवं श्रेणी सहित।`)}
           </p>
         </motion.div>
+
+        {/* Year selector */}
+        {availableYears.length > 1 && (
+          <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:14 }}>
+            {availableYears.map((y) => (
+              <button key={y} onClick={() => setYear(y)} style={{
+                fontSize:13, fontWeight:700, cursor:'pointer', padding:'6px 20px', borderRadius:10,
+                border:`1px solid ${year === y ? GOLD : 'rgba(212,175,55,0.25)'}`,
+                background: year === y ? 'rgba(212,175,55,0.14)' : 'transparent',
+                color: year === y ? GOLD : 'rgba(245,240,232,0.6)',
+              }}>{y}</button>
+            ))}
+          </div>
+        )}
 
         {/* Category filter */}
         <div style={{ display:'flex', gap:6, flexWrap:'wrap', justifyContent:'center', marginBottom:22 }}>
