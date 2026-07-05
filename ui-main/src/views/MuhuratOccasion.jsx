@@ -50,7 +50,7 @@ export default function MuhuratOccasion({ occasion }) {
   return (
     <div className="min-h-screen relative" style={{ background:'linear-gradient(180deg, #0B0E23 0%, #141838 100%)' }}>
       <StarField />
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-10">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 pt-24 pb-12">
 
         <motion.div initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }} className="text-center mb-6">
           <h1 className="font-serif text-gold" style={{ fontSize:28, fontWeight:800 }}>

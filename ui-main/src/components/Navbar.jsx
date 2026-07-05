@@ -8,21 +8,43 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { t } from '../lib/astroI18n';
 
+// Grouped navigation — direct links + dropdown groups (keeps the bar compact).
 const NAV = [
-  { href: '/',            en: 'Home',        hi: 'होम'        },
-  { href: '/free-kundli', en: 'Free Kundli', hi: 'फ्री कुंडली' },
-  { href: '/calculators', en: 'Calculators', hi: 'कैलकुलेटर'  },
-  { href: '/kundli',      en: 'Kundli',      hi: 'कुंडली'     },
-  { href: '/horoscope',        en: 'Horoscope',   hi: 'राशिफल'  },
-  { href: '/panchang-muhurat', en: 'Muhurta',     hi: 'मुहूर्त'  },
-  { href: '/festivals',        en: 'Festivals',   hi: 'त्योहार'  },
-  { href: '/planetary-positions', en: 'Planets',  hi: 'ग्रह'     },
-  { href: '/varshphal',        en: 'Varshphal',   hi: 'वर्षफल'  },
-  { href: '/matchmaking', en: 'Matching',    hi: 'मिलान'      },
-  { href: '/predictions', en: 'Predictions', hi: 'भविष्यवाणी' },
-  { href: '/remedies',    en: 'Remedies',    hi: 'उपाय'       },
-  { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'      },
+  { href: '/', en: 'Home', hi: 'होम' },
+  {
+    en: 'Kundli', hi: 'कुंडली',
+    children: [
+      { href: '/free-kundli',  en: 'Free Kundli',      hi: 'फ्री कुंडली'  },
+      { href: '/kundli',       en: 'My Kundli',        hi: 'मेरी कुंडली'  },
+      { href: '/matchmaking',  en: 'Kundli Matching',  hi: 'कुंडली मिलान' },
+      { href: '/varshphal',    en: 'Varshphal',        hi: 'वर्षफल'       },
+    ],
+  },
+  {
+    en: 'Horoscope', hi: 'राशिफल',
+    children: [
+      { href: '/horoscope',           en: 'Daily Horoscope',       hi: 'दैनिक राशिफल'  },
+      { href: '/predictions',         en: 'Predictions',           hi: 'भविष्यवाणी'    },
+      { href: '/planetary-positions', en: 'Planetary Positions',   hi: 'ग्रह स्थिति'   },
+    ],
+  },
+  {
+    en: 'Panchang', hi: 'पंचांग',
+    children: [
+      { href: '/panchang-muhurat', en: 'Panchang & Muhurta', hi: 'पंचांग व मुहूर्त' },
+      { href: '/festivals',        en: 'Festivals 2026',     hi: 'त्योहार 2026'     },
+    ],
+  },
+  { href: '/calculators', en: 'Calculators', hi: 'कैलकुलेटर' },
+  { href: '/remedies',    en: 'Remedies',    hi: 'उपाय'      },
+  { href: '/pricing',     en: 'Pricing',     hi: 'मूल्य'     },
 ];
+
+const Chevron = () => (
+  <svg className="w-3 h-3 opacity-60 transition-transform duration-200 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+  </svg>
+);
 
 export default function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
@@ -42,6 +64,10 @@ export default function Navbar() {
     await logout();
     router.push('/');
   };
+
+  const isActive = (item) =>
+    item.href ? pathname === item.href
+              : item.children?.some((c) => pathname === c.href);
 
   const navBg = scrolled
     ? 'bg-cosmos-900/95 backdrop-blur-xl border-b border-gold/20 shadow-cosmos'
@@ -63,21 +89,45 @@ export default function Navbar() {
           </div>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-1">
-          {NAV.map(l => {
-            const active = pathname === l.href;
+        {/* Desktop nav (links + dropdown groups) */}
+        <div className="hidden md:flex items-center gap-0.5">
+          {NAV.map((item) => {
+            const active = isActive(item);
+            if (!item.children) {
+              return (
+                <Link key={item.href} href={item.href}
+                  className={`relative px-3.5 py-2 text-sm font-medium rounded-sm transition-colors duration-200 ${
+                    active ? 'text-gold' : 'text-ivory/65 hover:text-ivory'
+                  }`}>
+                  {t(lang, item.en, item.hi)}
+                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-gold rounded-full" />}
+                </Link>
+              );
+            }
             return (
-              <Link key={l.href} href={l.href}
-                className={`relative px-4 py-2 text-sm font-medium rounded-sm transition-colors duration-200 ${
-                  active ? 'text-gold' : 'text-ivory/65 hover:text-ivory'
-                }`}>
-                {t(lang, l.en, l.hi)}
-                {active && (
-                  <motion.span layoutId="nav-underline"
-                    className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-gold rounded-full" />
-                )}
-              </Link>
+              <div key={item.en} className="relative group">
+                <button
+                  className={`flex items-center gap-1 px-3.5 py-2 text-sm font-medium rounded-sm transition-colors duration-200 ${
+                    active ? 'text-gold' : 'text-ivory/65 hover:text-ivory'
+                  }`}>
+                  {t(lang, item.en, item.hi)} <Chevron />
+                  {active && <span className="absolute inset-x-3 -bottom-0.5 h-0.5 bg-gold rounded-full" />}
+                </button>
+                {/* pt-2 forms a hover bridge so the panel doesn't close between button and menu */}
+                <div className="absolute left-0 top-full pt-2 min-w-[210px] invisible opacity-0 translate-y-1
+                                group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
+                  <div className="rounded-lg border border-gold/20 bg-cosmos-900/98 backdrop-blur-xl shadow-cosmos py-2 overflow-hidden">
+                    {item.children.map((c) => (
+                      <Link key={c.href} href={c.href}
+                        className={`block px-4 py-2 text-sm transition-colors ${
+                          pathname === c.href ? 'text-gold bg-gold/10' : 'text-ivory/70 hover:text-gold hover:bg-white/5'
+                        }`}>
+                        {t(lang, c.en, c.hi)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -143,16 +193,34 @@ export default function Navbar() {
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="md:hidden overflow-hidden border-t border-gold/15 bg-cosmos-900/98 backdrop-blur-xl">
-            <div className="px-5 py-4 space-y-1">
-              {NAV.map(l => (
-                <Link key={l.href} href={l.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-colors ${
-                    pathname === l.href ? 'text-gold bg-gold/8' : 'text-ivory/65 hover:text-ivory'
-                  }`}>
-                  {t(lang, l.en, l.hi)}
-                </Link>
-              ))}
+            <div className="px-5 py-4 space-y-1 max-h-[75vh] overflow-y-auto">
+              {NAV.map((item) => {
+                if (!item.children) {
+                  return (
+                    <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded text-sm transition-colors ${
+                        pathname === item.href ? 'text-gold bg-gold/8' : 'text-ivory/65 hover:text-ivory'
+                      }`}>
+                      {t(lang, item.en, item.hi)}
+                    </Link>
+                  );
+                }
+                return (
+                  <div key={item.en} className="pt-1.5">
+                    <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-[0.15em] text-gold/50 font-semibold">
+                      {t(lang, item.en, item.hi)}
+                    </p>
+                    {item.children.map((c) => (
+                      <Link key={c.href} href={c.href} onClick={() => setMenuOpen(false)}
+                        className={`flex items-center gap-3 pl-6 pr-3 py-2 rounded text-sm transition-colors ${
+                          pathname === c.href ? 'text-gold bg-gold/8' : 'text-ivory/60 hover:text-ivory'
+                        }`}>
+                        {t(lang, c.en, c.hi)}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })}
 
               <div className="pt-3 border-t border-gold/10 flex flex-col gap-2">
                 <div className="grid grid-cols-3 gap-2">

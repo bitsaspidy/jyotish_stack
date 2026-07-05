@@ -291,7 +291,7 @@ export default function PanchangMuhurta() {
     <div className="min-h-screen bg-gradient-to-b from-[#070918] to-[#0a0c1c] text-ivory pb-20">
 
       {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="text-center pt-10 pb-6 px-4">
+      <div className="text-center pt-24 pb-6 px-4">
         <div className="flex items-center justify-center gap-3 mb-3">
           <span className="text-gold/30 text-2xl">✦</span>
           <h1 className="text-3xl font-bold text-gold" style={{ fontFamily: 'Georgia, serif' }}>
