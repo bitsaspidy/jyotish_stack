@@ -1,5 +1,5 @@
 /* Jyotish Stack service worker — PWA install + web push */
-const CACHE = 'js-static-v1';
+const CACHE = 'js-static-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -13,7 +13,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Network-first passthrough; cache only same-origin static assets as fallback
+function isSafeStaticResponse(request, response) {
+  if (!response || !response.ok || response.type === 'opaque') return false;
+
+  const path = new URL(request.url).pathname.toLowerCase();
+  const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+  // A reverse proxy may return an HTML error document for a missing chunk.
+  // Never store that response under a JavaScript or stylesheet cache key.
+  if (path.endsWith('.js')) return contentType.includes('javascript');
+  if (path.endsWith('.css')) return contentType.includes('text/css');
+  return !contentType.includes('text/html');
+}
+
+// Network-first passthrough; cache only valid same-origin static assets as fallback
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
@@ -26,12 +39,23 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     fetch(event.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(event.request, copy)).catch(() => {});
+      .then(async (res) => {
+        if (!res.ok) {
+          const cached = await caches.match(event.request);
+          return cached || res;
+        }
+
+        if (isSafeStaticResponse(event.request, res)) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(event.request, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        return Response.error();
+      })
   );
 });
 
