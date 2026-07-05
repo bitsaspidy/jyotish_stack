@@ -23,6 +23,7 @@ const { generateJudgement } = require('../services/judgement-engine');
 const { composeKundliUserSummary } = require('../services/kundli-user-summary.service');
 const { composeLifeReportUserFriendly } = require('../services/report-engine/life-report-humanizer');
 const { composeStrengthUserFriendly }   = require('../services/report-engine/strength-humanizer');
+const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
 
 router.use(authenticate);
 
@@ -585,6 +586,7 @@ router.get('/:id', async (req, res) => {
   profile.judgement    = generateJudgement(cd, profile, { lang: 'hi', admin: false });
   profile.user_summary = composeKundliUserSummary(cd, profile.judgement);
   profile.life_report_friendly = composeLifeReportUserFriendly(cd, cd.life_report, profile.judgement, {});
+  profile.predictions_friendly = composePredictionUserFriendly(cd, cd.predictions);
   profile.remedy_manual        = await fetchRemedyManual();
   profile.personalized_remedies = generatePersonalizedRemedies(cd, { remedyManual: profile.remedy_manual });
 
@@ -643,6 +645,7 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.judgement    = generateJudgement(chart, { date_of_birth: freshProfile.date_of_birth, gender: freshProfile.gender }, { lang: 'hi', admin: false });
   freshProfile.user_summary = composeKundliUserSummary(chart, freshProfile.judgement);
   freshProfile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, freshProfile.judgement, {});
+  freshProfile.predictions_friendly = composePredictionUserFriendly(chart, chart.predictions);
   freshProfile.remedy_manual        = await fetchRemedyManual();
   freshProfile.personalized_remedies = generatePersonalizedRemedies(chart, { remedyManual: freshProfile.remedy_manual });
 

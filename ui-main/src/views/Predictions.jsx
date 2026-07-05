@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import StarField from '../components/StarField';
 import LifeGuidancePanel from '../components/LifeGuidancePanel';
+import PredictionFriendlyView from '../components/PredictionFriendlyView';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import api from '../lib/api';
@@ -573,6 +574,7 @@ export default function Predictions() {
   );
   const chart        = parseChart(selected);
   const pred         = chart?.predictions;
+  const friendly     = selected?.predictions_friendly || null;
   const remedyData   = selected?.remedy_data || null;
   const lifeGuidance = selected?.life_guidance || null;
   const dasha = chart?.dasha?.find((d) => d.is_current) || chart?.dasha?.[0];
@@ -648,15 +650,15 @@ export default function Predictions() {
               {/* Dasha summary card */}
               {chart && (
                 <div className="card-royal p-4">
-                  <p className="text-[10px] text-gold/50 uppercase tracking-widest mb-3">{t('Active Period', 'सक्रिय अवधि')}</p>
+                  <p className="text-[10px] text-gold/50 uppercase tracking-widest mb-3">{t('Your Current Chapter', 'आपका वर्तमान अध्याय')}</p>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-[10px] text-ivory/35 uppercase tracking-wider">{t('Mahadasha', 'महादशा')}</p>
+                      <p className="text-[10px] text-ivory/35 uppercase tracking-wider">{t('Main Influence', 'मुख्य प्रभाव')}</p>
                       <p className="text-gold font-serif text-lg">{planetName(dasha?.lord, lang) || '—'}</p>
                       <p className="text-[10px] text-ivory/30">{untilText(fmtDate(dasha?.end), lang)}</p>
                     </div>
                     <div style={{ borderTop:'1px solid rgba(212,175,55,0.1)', paddingTop:10 }}>
-                      <p className="text-[10px] text-ivory/35 uppercase tracking-wider">{t('Antardasha', 'अंतर्दशा')}</p>
+                      <p className="text-[10px] text-ivory/35 uppercase tracking-wider">{t('Current Influence', 'वर्तमान प्रभाव')}</p>
                       <p style={{ color:'#A78BFA' }} className="font-serif text-base">{planetName(antar?.lord, lang) || '—'}</p>
                       <p className="text-[10px] text-ivory/30">{untilText(fmtDate(antar?.end), lang)}</p>
                     </div>
@@ -682,21 +684,31 @@ export default function Predictions() {
                         <p className="text-[10px] text-gold/45 uppercase tracking-[0.3em] mb-1">{t('Reading for', 'रीडिंग')}</p>
                         <h2 className="font-serif text-2xl text-gold">{selected.name}</h2>
                         <p className="text-ivory/50 text-sm mt-2">
-                          {lang === 'hi' ? chart.ascendant?.rashi_hi : chart.ascendant?.rashi_en} {t('Lagna', 'लग्न')}
-                          {' · '}{t('Moon in', 'चंद्र')} {lang === 'hi' ? chart.planets?.Moon?.rashi_hi : chart.planets?.Moon?.rashi_en}
-                          {' · '}{lang === 'hi' ? chart.nakshatra?.hi : chart.nakshatra?.en} {t('Nakshatra', 'नक्षत्र')}, {t(`Pada ${chart.nakshatra?.pada}`, `चरण ${chart.nakshatra?.pada}`)}
+                          {friendly?.overview
+                            ? chooseText(lang, friendly.overview.chartLineEn, friendly.overview.chartLineHi)
+                            : <>
+                                {lang === 'hi' ? chart.ascendant?.rashi_hi : chart.ascendant?.rashi_en} {t('Lagna', 'लग्न')}
+                                {' · '}{t('Moon in', 'चंद्र')} {lang === 'hi' ? chart.planets?.Moon?.rashi_hi : chart.planets?.Moon?.rashi_en}
+                                {' · '}{lang === 'hi' ? chart.nakshatra?.hi : chart.nakshatra?.en} {t('Nakshatra', 'नक्षत्र')}, {t(`Pada ${chart.nakshatra?.pada}`, `चरण ${chart.nakshatra?.pada}`)}
+                              </>}
                         </p>
                         {/* Portrait sentence */}
-                        {pred?.portrait?.combined_en && (
+                        {(friendly?.overview || pred?.portrait?.combined_en) && (
                           <p style={{ color:'rgba(245,240,232,0.65)', fontSize:13, lineHeight:1.8, marginTop:10, borderTop:'1px solid rgba(212,175,55,0.08)', paddingTop:10 }}>
-                            {portraitText(pred.portrait, 'combined', chart, lang)}
+                            {friendly?.overview
+                              ? chooseText(lang, friendly.overview.summaryEn, friendly.overview.summaryHi)
+                              : portraitText(pred.portrait, 'combined', chart, lang)}
                           </p>
                         )}
                       </div>
                     </div>
                   </motion.div>
 
-                  {/* ── Who You Are — Lagna Portrait ── */}
+                  {friendly ? (
+                    <PredictionFriendlyView data={friendly} lang={lang} />
+                  ) : (
+                    <>
+                  {/* ── Who You Are — Lagna Portrait (legacy fallback) ── */}
                   {pred?.portrait && (
                     <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.04 }}
                       className="card-royal p-5">
@@ -792,6 +804,8 @@ export default function Predictions() {
 
                   {/* ── Transit Summary ── */}
                   <GocharCard gochar={pred?.gochar_narrative} chart={chart} lang={lang} delay={0.26} />
+                    </>
+                  )}
 
                   {/* ── Remedies (from DB via PDF) ── */}
                   <RemediesCard
