@@ -11,6 +11,8 @@ test('production deployment builds separately and preserves previous static chun
   const nextConfig = fs.readFileSync(path.join(ROOT, 'ui-main/next.config.js'), 'utf8');
 
   assert.match(nextConfig, /distDir:\s*process\.env\.NEXT_DIST_DIR/);
+  assert.match(nextConfig, /source:\s*'\/favicon\.ico'/);
+  assert.match(nextConfig, /destination:\s*'\/logo-icon\.svg'/);
   assert.match(deploy, /NEXT_DIST_DIR="\$NEXT_RELEASE_DIR"/);
   assert.match(deploy, /cp -a -n "\$UI_DIR\/\.next\/static\/\."/);
   assert.match(deploy, /mv "\$UI_DIR\/\$NEXT_RELEASE_DIR" "\$UI_DIR\/\.next"/);

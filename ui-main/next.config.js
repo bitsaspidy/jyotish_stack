@@ -7,6 +7,15 @@ const nextConfig = {
     cpus: 1,
     webpackBuildWorker: false,
   },
+  async redirects() {
+    return [
+      {
+        source: '/favicon.ico',
+        destination: '/logo-icon.svg',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
