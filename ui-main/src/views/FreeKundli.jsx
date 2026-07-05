@@ -198,6 +198,9 @@ export default function FreeKundli() {
   const [locQuery, setLocQuery]     = useState('');
   const [locResults, setLocResults] = useState([]);
   const [searching, setSearching]   = useState(false);
+  const [leadEmail, setLeadEmail]   = useState('');
+  const [emailBusy, setEmailBusy]   = useState(false);
+  const [emailSent, setEmailSent]   = useState(false);
   const searchRef = useRef(null);
   const resultRef = useRef(null);
 
@@ -261,6 +264,24 @@ export default function FreeKundli() {
       toast.error(err.response?.data?.message || t('Unable to calculate kundli.', 'कुंडली की गणना नहीं हो सकी।'));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function emailKundli(e) {
+    e.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail)) {
+      toast.error(t('Please enter a valid email.', 'कृपया एक मान्य ईमेल दर्ज करें।'));
+      return;
+    }
+    setEmailBusy(true);
+    try {
+      const { data } = await api.post('/public/free-kundli/email', { ...form, email: leadEmail, lang });
+      setEmailSent(true);
+      toast.success(data.message || t('Sent! Check your inbox.', 'भेज दिया! अपना इनबॉक्स देखें।'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || t('Could not send. Try again.', 'भेजा नहीं जा सका। पुनः प्रयास करें।'));
+    } finally {
+      setEmailBusy(false);
     }
   }
 
@@ -393,6 +414,35 @@ export default function FreeKundli() {
                     </div>
                   ) : null)}
                 </div>
+              </motion.div>
+
+              {/* Email lead capture */}
+              <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} className="card-royal p-5"
+                style={{ border:'1px solid rgba(212,175,55,0.3)' }}>
+                {emailSent ? (
+                  <p style={{ fontSize:13, color:GREEN, fontWeight:600 }}>
+                    ✅ {t('Your kundli summary is on its way to your inbox. Check your email!', 'आपकी कुंडली सारांश आपके इनबॉक्स में भेज दी गई है। ईमेल देखें!')}
+                  </p>
+                ) : (
+                  <>
+                    <p style={{ fontSize:13, fontWeight:700, color:GOLD, marginBottom:4 }}>
+                      📧 {t('Email me this kundli summary', 'यह कुंडली सारांश मुझे ईमेल करें')}
+                    </p>
+                    <p style={{ fontSize:11, color:MUTED, marginBottom:10, lineHeight:1.6 }}>
+                      {t('Get your birth chart summary in your inbox, plus a free link to unlock the full report.',
+                         'अपना जन्म-कुंडली सारांश इनबॉक्स में पाएं, साथ ही पूर्ण रिपोर्ट खोलने का निःशुल्क लिंक।')}
+                    </p>
+                    <form onSubmit={emailKundli} style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                      <input type="email" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} required
+                        placeholder={t('your@email.com', 'your@email.com')}
+                        className="input-royal" style={{ flex:1, minWidth:200, fontSize:13 }} />
+                      <button type="submit" disabled={emailBusy} className="btn-gold"
+                        style={{ fontSize:12, fontWeight:700, padding:'9px 18px', borderRadius:8, whiteSpace:'nowrap' }}>
+                        {emailBusy ? '…' : t('Email My Kundli', 'कुंडली ईमेल करें')}
+                      </button>
+                    </form>
+                  </>
+                )}
               </motion.div>
 
               {/* Chart */}

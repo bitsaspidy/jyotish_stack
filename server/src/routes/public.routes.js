@@ -4,6 +4,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { sendEmail, departmentInbox, DEPARTMENTS, DEPT_LABELS } = require('../services/email.service');
+const { randomToken } = require('../utils/token');
 
 const VALID_DEPARTMENTS = ['sales', 'team', 'account', 'general'];
 
@@ -322,6 +323,68 @@ router.post('/free-kundli', freeKundliLimiter, async (req, res) => {
   } catch (e) {
     console.error('[public/free-kundli]', e.message);
     return fail(res, 'Unable to calculate kundli. Please check the birth details.', 500);
+  }
+});
+
+// POST /api/public/free-kundli/email — subscribe to newsletter + email the
+// kundli summary (lead capture from the free funnel). Nothing else persisted.
+router.post('/free-kundli/email', freeKundliLimiter, async (req, res) => {
+  try {
+    const { name, email } = req.body || {};
+    if (!name?.trim()) return fail(res, 'Name is required', 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || ''))) return fail(res, 'A valid email is required', 400);
+
+    const parsed = parseBirthInput(req.body);
+    if (parsed.error) return fail(res, parsed.error, 400);
+
+    const { calculateVedicChart } = require('../services/vedic-calc.service');
+    const chart = calculateVedicChart(parsed.params);
+    const asc = chart.ascendant || {}, moon = chart.planets?.Moon || {}, sun = chart.planets?.Sun || {};
+
+    // dosha count (mirror the teaser logic)
+    const doshaList = [...(chart.yogas_doshas?.doshas || [])];
+    if (chart.mangal_dosha?.has_dosha && !doshaList.some((d) => /mangal|manglik/i.test(d.name))) doshaList.push({ name: 'Manglik' });
+    const currentMaha = Array.isArray(chart.dasha) ? (chart.dasha.find((d) => d.is_current) || null) : null;
+
+    // upsert newsletter subscriber
+    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanName  = name.trim();
+    const lang = req.body.lang === 'hi' ? 'hi' : 'en';
+    let unsubscribeToken;
+    const existing = await db('newsletter_subscribers').where({ email: cleanEmail }).first();
+    if (existing) {
+      unsubscribeToken = existing.unsubscribe_token;
+      if (!existing.is_active) {
+        await db('newsletter_subscribers').where({ email: cleanEmail })
+          .update({ is_active: true, unsubscribed_at: null, name: existing.name || cleanName });
+      }
+    } else {
+      unsubscribeToken = randomToken(16);
+      await db('newsletter_subscribers').insert({
+        email: cleanEmail, name: cleanName, preferred_language: lang,
+        is_active: true, unsubscribe_token: unsubscribeToken,
+      });
+    }
+
+    // send summary email (non-fatal)
+    const base = process.env.APP_URL || 'https://jyotishstack.com';
+    sendEmail({
+      to: cleanEmail, template: 'free_kundli', from: 'sales',
+      data: {
+        name: cleanName, lang,
+        lagna: asc.rashi_en, moonSign: moon.rashi_en, sunSign: sun.rashi_en,
+        nakshatra: chart.nakshatra?.en ? `${chart.nakshatra.en} (Pada ${chart.nakshatra.pada || '—'})` : null,
+        dasha: currentMaha ? `${currentMaha.lord} (until ${String(currentMaha.end).slice(0, 10)})` : null,
+        doshaCount: doshaList.length,
+        registerUrl: `${base}/register?ref=free-kundli`,
+        unsubscribeUrl: `${base}/newsletter/unsubscribe?token=${unsubscribeToken}`,
+      },
+    }).catch((e) => console.error('[free-kundli/email] send failed:', e.message));
+
+    return ok(res, {}, lang === 'hi' ? 'आपकी कुंडली सारांश आपके ईमेल पर भेज दी गई है!' : 'Your kundli summary has been emailed to you!');
+  } catch (e) {
+    console.error('[public/free-kundli/email]', e.message);
+    return fail(res, 'Unable to send your kundli. Please try again.', 500);
   }
 });
 

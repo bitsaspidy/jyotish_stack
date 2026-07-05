@@ -76,6 +76,7 @@ const TEMPLATE_DEPARTMENT = {
   remedy_resubmit:      'account',
   account_setup:        'account',
   newsletter:           'team',
+  free_kundli:          'sales',
   custom:               'team',
   daily_digest:         'team',
   contact_ack:          'team',
@@ -304,6 +305,36 @@ const templates = {
         </div>
         <p style="color:#c8c0b0;">Once submitted, your remedy PDF will be generated and emailed to you instantly.</p>
         <p style="font-size:12px;color:#888;">If you did not request this, you can safely ignore this email.</p>`, sig),
+  }),
+
+  free_kundli: (data, sig) => ({
+    subject: data.lang === 'hi'
+      ? `${data.name} जी — आपकी निःशुल्क कुंडली सारांश 🔯`
+      : `${data.name}, your free Kundli summary 🔯`,
+    html: BRAND_SHELL(`
+        <p style="font-size:16px;">Namaste ${data.name},</p>
+        <p>Here is your <strong style="color:#D4AF37;">free Vedic birth chart summary</strong>, calculated from your birth details using accurate Lahiri ayanamsa.</p>
+        <table style="font-size:14px;color:#F5F0E8;border-collapse:collapse;margin:18px 0;">
+          <tr><td style="padding:5px 16px 5px 0;color:#888;">Lagna (Ascendant)</td><td><strong style="color:#D4AF37;">${data.lagna || '—'}</strong></td></tr>
+          <tr><td style="padding:5px 16px 5px 0;color:#888;">Moon Sign (Rashi)</td><td><strong style="color:#D4AF37;">${data.moonSign || '—'}</strong></td></tr>
+          <tr><td style="padding:5px 16px 5px 0;color:#888;">Sun Sign</td><td>${data.sunSign || '—'}</td></tr>
+          <tr><td style="padding:5px 16px 5px 0;color:#888;">Nakshatra</td><td>${data.nakshatra || '—'}</td></tr>
+          <tr><td style="padding:5px 16px 5px 0;color:#888;">Current Mahadasha</td><td>${data.dasha || '—'}</td></tr>
+        </table>
+        ${data.doshaCount > 0 ? `
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:14px 18px;margin:18px 0;">
+          <p style="margin:0;color:#EF4444;font-weight:bold;">⚠️ ${data.doshaCount} dosha${data.doshaCount > 1 ? 's' : ''} detected in your chart</p>
+          <p style="margin:6px 0 0;color:#c8c0b0;font-size:13px;">Which doshas they are, how severe, whether cancellations exist, and the exact remedies — all wait in your full report.</p>
+        </div>` : `
+        <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:14px 18px;margin:18px 0;">
+          <p style="margin:0;color:#22C55E;font-weight:bold;">✅ No major doshas detected — a fortunate chart!</p>
+        </div>`}
+        <div style="text-align:center;margin:24px 0;">
+          <a href="${data.registerUrl}" style="display:inline-block;background:#D4AF37;color:#0B0D1A;padding:13px 34px;text-decoration:none;font-weight:bold;border-radius:4px;font-size:15px;">Unlock My Full Kundli — Free →</a>
+          <p style="margin:12px 0 0;font-size:12px;color:#888;">Full chart analysis, dosha details, dasha timeline, yogas &amp; personalised remedies.</p>
+        </div>
+        <p style="font-size:11px;color:#777;">You're receiving this because you generated a free Kundli on jyotishstack.com.
+          ${data.unsubscribeUrl ? `<a href="${data.unsubscribeUrl}" style="color:#888;">Unsubscribe</a>.` : ''}</p>`, sig),
   }),
 
   account_setup: (data, sig) => ({
