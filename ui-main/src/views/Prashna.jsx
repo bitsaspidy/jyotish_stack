@@ -178,6 +178,25 @@ function PaidReport({ premium, lang, canViewTechnical = false }) {
   );
   return (
     <div style={{ display:'grid', gap:16 }}>
+      {premium.personalContext && (
+        <section className="card-royal p-5" style={{ border:'1px solid rgba(96,165,250,0.28)', background:'linear-gradient(135deg,rgba(59,130,246,0.09),rgba(17,20,40,0.96))' }}>
+          <span style={{ color:'#93C5FD', fontSize:9.5, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.09em' }}>
+            👤 {t(lang, 'Personal Kundli context', 'व्यक्तिगत कुंडली संदर्भ')}
+          </span>
+          <h2 className="font-serif text-gold text-lg font-bold mt-2">
+            {t(lang, `How this connects to ${premium.personalContext.profileName}`, `${premium.personalContext.profileName} की कुंडली से संबंध`)}
+          </h2>
+          <p style={{ color:TEXT, fontSize:13, lineHeight:1.8, marginTop:10 }}>{t(lang, premium.personalContext.summaryEn, premium.personalContext.summaryHi)}</p>
+          {t(lang, premium.personalContext.currentPhaseEn, premium.personalContext.currentPhaseHi) && (
+            <p style={{ color:MUTED, fontSize:11.5, lineHeight:1.75, marginTop:9 }}>{t(lang, premium.personalContext.currentPhaseEn, premium.personalContext.currentPhaseHi)}</p>
+          )}
+          <div style={{ marginTop:12, padding:'10px 12px', borderRadius:9, background:'rgba(96,165,250,0.08)', border:'1px solid rgba(96,165,250,0.16)' }}>
+            <strong style={{ color:'#93C5FD', fontSize:10 }}>{t(lang, 'Personal guidance:', 'व्यक्तिगत मार्गदर्शन:')}</strong>{' '}
+            <span style={{ color:TEXT, fontSize:11.5, lineHeight:1.7 }}>{t(lang, premium.personalContext.adviceEn, premium.personalContext.adviceHi)}</span>
+          </div>
+        </section>
+      )}
+
       <section className="card-royal p-5">
         <h2 className="font-serif text-gold text-lg font-bold">💡 {t(lang, 'Why this answer?', 'यह उत्तर क्यों मिला?')}</h2>
         <p style={{ color:MUTED, fontSize:11.5, lineHeight:1.7, marginTop:6 }}>
@@ -295,7 +314,9 @@ function FreePaywall({ reading, authenticated, lang }) {
 export default function Prashna() {
   const { lang } = useLang();
   const { user } = useAuth();
-  const [form, setForm] = useState({ question:'', category:'general', place:'', latitude:null, longitude:null, timezone_offset:5.5 });
+  const [form, setForm] = useState({ question:'', category:'general', place:'', latitude:null, longitude:null, timezone_offset:5.5, kundli_uuid:'' });
+  const [kundlis, setKundlis] = useState([]);
+  const [loadingKundlis, setLoadingKundlis] = useState(false);
   const [chartStyle, setChartStyle] = useState('north');
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -306,6 +327,31 @@ export default function Prashna() {
       if (saved === 'north' || saved === 'south') setChartStyle(saved);
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setKundlis([]);
+      setForm((current) => ({ ...current, kundli_uuid:'' }));
+      return undefined;
+    }
+    let active = true;
+    setLoadingKundlis(true);
+    api.get('/kundli')
+      .then(({ data }) => {
+        if (!active) return;
+        const profiles = (data.profiles || []).filter((profile) => profile.chart_summary?.calculated);
+        setKundlis(profiles);
+        setForm((current) => ({
+          ...current,
+          kundli_uuid:profiles.some((profile) => profile.uuid === current.kundli_uuid)
+            ? current.kundli_uuid
+            : (profiles[0]?.uuid || ''),
+        }));
+      })
+      .catch(() => { if (active) setKundlis([]); })
+      .finally(() => { if (active) setLoadingKundlis(false); });
+    return () => { active = false; };
+  }, [user]);
 
   const changeStyle = (style) => {
     setChartStyle(style);
@@ -377,6 +423,32 @@ export default function Prashna() {
               style={{ resize:'vertical', lineHeight:1.6 }} />
             <p style={{ color:MUTED, fontSize:9, textAlign:'right', marginTop:3 }}>{form.question.length}/500</p>
 
+            {user && (
+              <div className="mt-4">
+                <label className="text-ivory/65 text-xs block">{t(lang, 'Whose Kundli should guide this question?', 'यह प्रश्न किसकी कुंडली से जोड़ना है?')}</label>
+                {kundlis.length > 0 ? (
+                  <>
+                    <select className="input-royal w-full mt-1" value={form.kundli_uuid} disabled={loadingKundlis}
+                      onChange={(event) => setForm((current) => ({ ...current, kundli_uuid:event.target.value }))}>
+                      <option value="">{t(lang, 'Use only the current Prashna chart', 'केवल वर्तमान प्रश्न कुंडली उपयोग करें')}</option>
+                      {kundlis.map((profile) => (
+                        <option key={profile.uuid} value={profile.uuid}>{profile.name} · {String(profile.date_of_birth).slice(0, 10)}</option>
+                      ))}
+                    </select>
+                    <p style={{ color:MUTED, fontSize:9.5, lineHeight:1.55, marginTop:5 }}>
+                      {t(lang, 'Premium and Yearly members receive an answer connected to the selected birth chart.', 'प्रीमियम और वार्षिक सदस्यों को चुनी हुई जन्म कुंडली से जुड़ा उत्तर मिलता है।')}
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ color:MUTED, fontSize:10.5, marginTop:6 }}>
+                    {loadingKundlis
+                      ? t(lang, 'Loading your Kundlis…', 'आपकी कुंडलियां लोड हो रही हैं…')
+                      : <>{t(lang, 'No calculated Kundli is available yet.', 'अभी कोई तैयार कुंडली उपलब्ध नहीं है।')} <Link href="/kundli/new" style={{ color:GOLD }}>{t(lang, 'Create one', 'कुंडली बनाएं')}</Link></>}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="mt-4">
               <LocationPicker value={form} onChange={(location) => setForm((current) => ({ ...current, ...location }))} lang={lang} />
             </div>
@@ -423,6 +495,11 @@ export default function Prashna() {
                   <p style={{ color:MUTED, fontSize:10.5, marginTop:7 }}>
                     {t(lang, 'Your question:', 'आपका प्रश्न:')} <span style={{ color:TEXT }}>{reading.question.text}</span>
                   </p>
+                  {reading.question.analysis?.understoodAsEn && (
+                    <p style={{ color:'#93C5FD', fontSize:10.5, marginTop:5 }}>
+                      {t(lang, 'Understood as:', 'प्रश्न का अर्थ समझा गया:')} <span style={{ color:TEXT }}>{t(lang, reading.question.analysis.understoodAsEn, reading.question.analysis.understoodAsHi)}</span>
+                    </p>
+                  )}
                 </div>
                 <span style={{ color:paid ? '#34D399' : '#FBBF24', border:`1px solid ${paid ? 'rgba(52,211,153,0.28)' : 'rgba(251,191,36,0.25)'}`, background:paid ? 'rgba(52,211,153,0.08)' : 'rgba(251,191,36,0.07)', borderRadius:14, padding:'4px 9px', fontSize:9.5, fontWeight:800 }}>
                   {paid ? t(lang, 'Complete member reading', 'पूर्ण सदस्य फल') : t(lang, 'Free reading', 'निःशुल्क फल')}

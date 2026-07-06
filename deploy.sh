@@ -38,7 +38,7 @@ require_cmd() {
 log "Jyotish Stack AI deploy starting"
 log "App dir: ${APP_DIR} | Branch: ${BRANCH} | API x${API_INSTANCES} | UI x${UI_INSTANCES} | RUN_SEED=${RUN_SEED}"
 
-for cmd in git npm pm2 curl sudo apache2ctl systemctl; do
+for cmd in git npm pm2 curl sudo apache2ctl systemctl python3; do
   require_cmd "$cmd"
 done
 
@@ -60,6 +60,16 @@ git pull --ff-only origin "$BRANCH"
 
 log "Installing workspace dependencies (incl. build tools needed by next build)..."
 npm install --include=dev
+
+log "Preparing the local Python question-understanding service..."
+QUESTION_SERVICE_DIR="$APP_DIR/question-service"
+if [ ! -d "$QUESTION_SERVICE_DIR/.venv" ]; then
+  if ! python3 -m venv "$QUESTION_SERVICE_DIR/.venv"; then
+    echo "ERROR: Could not create the Python virtual environment. Install python3-venv and run deploy.sh again." >&2
+    exit 1
+  fi
+fi
+"$QUESTION_SERVICE_DIR/.venv/bin/pip" install --disable-pip-version-check -r "$QUESTION_SERVICE_DIR/requirements.txt"
 
 log "Running database migrations (from server/ so server/.env is loaded)..."
 ( cd "$APP_DIR/server" && NODE_ENV=production npm run migrate )
@@ -126,6 +136,23 @@ if [ "$ok" -ne 1 ]; then
   exit 1
 fi
 
+log "Smoke-testing question-understanding service..."
+question_ok=0
+for i in 1 2 3 4 5 6; do
+  if curl -fsS --max-time 5 http://127.0.0.1:5100/health >/dev/null 2>&1; then
+    question_ok=1
+    break
+  fi
+  log "  question service health attempt ${i} failed; retrying in 2s..."
+  sleep 2
+done
+if [ "$question_ok" -ne 1 ]; then
+  echo "ERROR: Question service did not become healthy on http://127.0.0.1:5100/health" >&2
+  pm2 logs jyotish-question-nlp --lines 30 --nostream || true
+  exit 1
+fi
+
 log "Deployment complete."
 log "API: http://127.0.0.1:5000/health"
+log "Question understanding: http://127.0.0.1:5100/health"
 log "UI:  http://127.0.0.1:3000"

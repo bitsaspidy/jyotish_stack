@@ -141,6 +141,46 @@ const PRACTICAL_CHECKLISTS = {
   ],
 };
 
+const SPECIFIC_CHECKLISTS = {
+  career_job_offer: [
+    { en:'Confirm role, fixed and variable salary, location, joining date and probation in writing.', hi:'भूमिका, निश्चित और परिवर्तनीय वेतन, स्थान, जॉइनिंग तिथि और प्रोबेशन लिखित में पक्का करें।' },
+    { en:'Compare learning, stability, manager and work culture with your current position.', hi:'मौजूदा नौकरी से सीख, स्थिरता, मैनेजर और कार्य-संस्कृति की तुलना करें।' },
+    { en:'Check the notice period, benefits and any bond before accepting.', hi:'स्वीकार करने से पहले नोटिस अवधि, सुविधाएं और किसी भी बॉन्ड की जांच करें।' },
+  ],
+  career_job_change: [
+    { en:'Do not resign until the new role, compensation and joining date are confirmed in writing.', hi:'नई भूमिका, वेतन और जॉइनिंग तिथि लिखित में पक्की होने से पहले इस्तीफा न दें।' },
+    { en:'Compare long-term growth and stability, not only the immediate salary difference.', hi:'केवल तुरंत मिलने वाले वेतन के बजाय दीर्घकालीन विकास और स्थिरता की तुलना करें।' },
+    { en:'Keep a financial buffer for the transition period.', hi:'नौकरी बदलने की अवधि के लिए आर्थिक बचत तैयार रखें।' },
+  ],
+  career_promotion: [
+    { en:'Ask for measurable expectations, decision dates and the approval path.', hi:'मापने योग्य अपेक्षाएं, निर्णय की तारीख और स्वीकृति प्रक्रिया स्पष्ट करें।' },
+    { en:'Document recent results and responsibilities that support the promotion.', hi:'पदोन्नति के समर्थन में हाल के परिणाम और जिम्मेदारियां लिखित में रखें।' },
+    { en:'Prepare an alternative growth plan if the decision is delayed.', hi:'निर्णय टलने पर विकास की वैकल्पिक योजना तैयार रखें।' },
+  ],
+  career_business_start: [
+    { en:'Validate demand, startup cost and six months of operating cash before committing.', hi:'शुरू करने से पहले मांग, प्रारंभिक लागत और छह महीने की कार्यशील पूंजी जांचें।' },
+    { en:'Clarify ownership, responsibilities and exit terms with every partner.', hi:'हर साझेदार के साथ स्वामित्व, जिम्मेदारियां और अलग होने की शर्तें स्पष्ट करें।' },
+    { en:'Test the idea on a small scale before making a large investment.', hi:'बड़ा निवेश करने से पहले विचार को छोटे स्तर पर जांचें।' },
+  ],
+  marriage_proposal: [
+    { en:'Discuss values, family expectations, money and timelines directly.', hi:'मूल्य, परिवार की अपेक्षाएं, धन और समय-सीमा पर सीधे बात करें।' },
+    { en:'Observe consistency between promises and actions before committing.', hi:'प्रतिबद्ध होने से पहले वादों और व्यवहार में निरंतरता देखें।' },
+    { en:'Do not decide only because of family or emotional pressure.', hi:'केवल परिवार या भावनात्मक दबाव में निर्णय न लें।' },
+  ],
+  finance_investment: PRACTICAL_CHECKLISTS.finance,
+  property_purchase: PRACTICAL_CHECKLISTS.property,
+  education_exam: PRACTICAL_CHECKLISTS.education,
+  travel_relocation: PRACTICAL_CHECKLISTS.travel,
+  health_recovery: PRACTICAL_CHECKLISTS.health,
+  legal_dispute: PRACTICAL_CHECKLISTS.legal,
+  lost_object_recovery: PRACTICAL_CHECKLISTS.lost_object,
+  family_decision: PRACTICAL_CHECKLISTS.family,
+};
+
+function checklistFor(category, actionKey) {
+  return SPECIFIC_CHECKLISTS[actionKey] || PRACTICAL_CHECKLISTS[category] || PRACTICAL_CHECKLISTS.general;
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -220,8 +260,8 @@ function verdictText(tone, config) {
   return values[tone] || values.mixed;
 }
 
-function nextActionText(tone, category) {
-  const firstStep = (PRACTICAL_CHECKLISTS[category] || PRACTICAL_CHECKLISTS.general)[0];
+function nextActionText(tone, category, actionKey) {
+  const firstStep = checklistFor(category, actionKey)[0];
   const introductions = {
     supportive:{ en:'Move forward thoughtfully, after this check:', hi:'सोच-समझकर आगे बढ़ें, लेकिन पहले यह जांच करें:' },
     conditional:{ en:'Before saying yes, do this first:', hi:'हाँ कहने से पहले यह काम करें:' },
@@ -290,7 +330,7 @@ function compactChart(chart) {
   };
 }
 
-function generatePrashnaReading({ chart, question, category = 'general', askedAt, place }) {
+function generatePrashnaReading({ chart, question, category = 'general', askedAt, place, questionAnalysis = null, personalContext = null }) {
   if (!chart?.ascendant || !chart?.planets || !chart?.houses) return null;
   const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG.general;
   const lagnaLord = chart.ascendant.rashi_lord;
@@ -323,7 +363,7 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   const score = clamp(clarity === 'low' ? Math.min(rawScore, 59) : rawScore, 18, 88);
   const tone = toneFromScore(score, clarity);
   const verdict = verdictText(tone, config);
-  const nextAction = nextActionText(tone, category);
+  const nextAction = nextActionText(tone, category, questionAnalysis?.actionKey);
   const timing = timingText(chart.planets[queryLord], tone, category);
 
   const signals = [
@@ -390,8 +430,8 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   if (clarity === 'low') cautions.unshift({ en:'Important facts still appear unsettled, so a firm answer would be premature.', hi:'कुछ महत्वपूर्ण बातें अभी स्थिर नहीं हैं, इसलिए पक्का निर्णय लेना जल्दबाज़ी होगा।' });
 
   return sanitizeForUser({
-    version:'prashna-friendly-v2',
-    question:{ text:question, category, categoryTitleEn:config.titleEn, categoryTitleHi:config.titleHi, askedAt, place },
+    version:'prashna-personalized-v3',
+    question:{ text:question, category, categoryTitleEn:config.titleEn, categoryTitleHi:config.titleHi, askedAt, place, analysis:questionAnalysis },
     chart:compactChart(chart),
     free:{
       tone,
@@ -411,7 +451,8 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
       timing,
       guidanceEn:config.adviceEn,
       guidanceHi:config.adviceHi,
-      nextSteps:PRACTICAL_CHECKLISTS[category] || PRACTICAL_CHECKLISTS.general,
+      nextSteps:checklistFor(category, questionAnalysis?.actionKey),
+      personalContext,
       technicalDetails:{
         score,
         clarity,
@@ -473,4 +514,5 @@ module.exports = {
   toneFromScore,
   stripTechnicalSignal,
   nextActionText,
+  checklistFor,
 };

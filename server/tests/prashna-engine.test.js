@@ -28,7 +28,7 @@ function sampleReading(category = 'career', chart = sampleChart()) {
 
 test('Prashna reading returns free, paid and chart sections', () => {
   const reading = sampleReading();
-  assert.equal(reading.version, 'prashna-friendly-v2');
+  assert.equal(reading.version, 'prashna-personalized-v3');
   assert.equal(reading.question.category, 'career');
   assert.equal(reading.free.visibleSignals.length, 2);
   assert.equal(reading.premium.allSignals.length, 3);
@@ -130,7 +130,19 @@ test('Prashna input accepts current time and validates required fields', () => {
   assert.ok(valid.values);
   assert.equal(valid.values.category, 'general');
 
+  const withKundli = parseInput({
+    question:'Should I accept this job offer?', category:'career', place:'New Delhi, India',
+    latitude:28.6139, longitude:77.2090, timezone_offset:5.5, asked_at:new Date().toISOString(),
+    kundli_uuid:'11111111-1111-4111-8111-111111111111',
+  });
+  assert.equal(withKundli.values.kundliUuid, '11111111-1111-4111-8111-111111111111');
+
   assert.match(parseInput({}).error, /Question/);
+  assert.match(parseInput({
+    question:'Should I accept this job offer?', category:'career', place:'New Delhi, India',
+    latitude:28.6139, longitude:77.2090, timezone_offset:5.5, asked_at:new Date().toISOString(),
+    kundli_uuid:'not-a-uuid',
+  }).error, /Kundli/);
   assert.match(parseInput({
     question:'Will this matter move forward?', category:'invalid', place:'New Delhi',
     latitude:28, longitude:77, timezone_offset:5.5, asked_at:new Date().toISOString(),
