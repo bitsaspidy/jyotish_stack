@@ -81,6 +81,64 @@ const CATEGORY_CONFIG = {
   },
 };
 
+const PRACTICAL_CHECKLISTS = {
+  general: [
+    { en:'Write down the exact decision that must be made.', hi:'जिस निर्णय की जरूरत है, उसे एक वाक्य में लिखें।' },
+    { en:'Separate confirmed facts from assumptions or fears.', hi:'पक्की जानकारी को अनुमान और डर से अलग करें।' },
+    { en:'Choose one small action that gives you better information.', hi:'ऐसा एक छोटा कदम चुनें जिससे बेहतर जानकारी मिले।' },
+  ],
+  marriage: [
+    { en:'Discuss expectations, commitment and timelines openly.', hi:'अपेक्षाओं, प्रतिबद्धता और समय-सीमा पर खुलकर बात करें।' },
+    { en:'Check practical compatibility around family, money and lifestyle.', hi:'परिवार, धन और जीवनशैली की व्यावहारिक अनुकूलता जांचें।' },
+    { en:'Do not decide under emotional pressure or an ultimatum.', hi:'भावनात्मक दबाव या अल्टीमेटम में निर्णय न लें।' },
+  ],
+  career: [
+    { en:'Confirm role, salary, location, joining date and probation in writing.', hi:'भूमिका, वेतन, स्थान, जॉइनिंग तिथि और प्रोबेशन लिखित में पक्का करें।' },
+    { en:'Compare growth, stability and work culture with your current option.', hi:'मौजूदा विकल्प से विकास, स्थिरता और कार्य-संस्कृति की तुलना करें।' },
+    { en:'Ask for clarification or time before accepting if any key term is unclear.', hi:'कोई मुख्य शर्त अस्पष्ट हो तो स्वीकार करने से पहले जानकारी या समय मांगें।' },
+  ],
+  finance: [
+    { en:'Verify the total amount, return, fees and worst-case loss.', hi:'कुल राशि, लाभ, शुल्क और सबसे बड़े संभावित नुकसान की जांच करें।' },
+    { en:'Keep an emergency buffer before committing money.', hi:'धन लगाने से पहले आपातकालीन बचत अलग रखें।' },
+    { en:'Get independent advice for a large or unfamiliar commitment.', hi:'बड़े या अनजान निवेश पर स्वतंत्र विशेषज्ञ की सलाह लें।' },
+  ],
+  health: [
+    { en:'Note symptoms, duration and any recent changes.', hi:'लक्षण, उनकी अवधि और हाल के बदलाव लिखें।' },
+    { en:'Consult a qualified medical professional for diagnosis or treatment.', hi:'जांच और उपचार के लिए योग्य चिकित्सक से सलाह लें।' },
+    { en:'Seek urgent care if symptoms are severe or worsening.', hi:'लक्षण गंभीर हों या बढ़ रहे हों तो तुरंत चिकित्सा सहायता लें।' },
+  ],
+  legal: [
+    { en:'Preserve documents, messages, dates and payment records.', hi:'दस्तावेज, संदेश, तारीखें और भुगतान रिकॉर्ड सुरक्षित रखें।' },
+    { en:'Write down the outcome you want and the deadline involved.', hi:'अपेक्षित परिणाम और संबंधित समय-सीमा लिखें।' },
+    { en:'Use a qualified legal professional before taking action.', hi:'कार्रवाई से पहले योग्य कानूनी विशेषज्ञ की सलाह लें।' },
+  ],
+  travel: [
+    { en:'Confirm documents, bookings, budget and local requirements.', hi:'दस्तावेज, बुकिंग, बजट और स्थानीय नियम पक्के करें।' },
+    { en:'Keep a backup route, date or accommodation option.', hi:'वैकल्पिक मार्ग, तारीख या ठहरने की व्यवस्था रखें।' },
+    { en:'Check the practical impact on work and family before finalising.', hi:'अंतिम निर्णय से पहले काम और परिवार पर प्रभाव जांचें।' },
+  ],
+  lost_object: [
+    { en:'Return to the last place where the item was definitely seen.', hi:'उस अंतिम स्थान पर दोबारा देखें जहां वस्तु निश्चित रूप से थी।' },
+    { en:'Check bags, drawers, vehicles and secure or enclosed places.', hi:'बैग, दराज, वाहन और सुरक्षित या बंद स्थान जांचें।' },
+    { en:'Contact the people and places involved without delay.', hi:'संबंधित लोगों और स्थानों से तुरंत संपर्क करें।' },
+  ],
+  property: [
+    { en:'Verify title, approvals, dues and ownership documents.', hi:'स्वामित्व, अनुमति, बकाया और सभी दस्तावेज जांचें।' },
+    { en:'Inspect condition, neighbourhood and total ownership cost.', hi:'स्थिति, आसपास का क्षेत्र और कुल लागत जांचें।' },
+    { en:'Use independent legal and technical checks before payment.', hi:'भुगतान से पहले स्वतंत्र कानूनी और तकनीकी जांच कराएं।' },
+  ],
+  education: [
+    { en:'List the syllabus, remaining preparation and important dates.', hi:'पाठ्यक्रम, बाकी तैयारी और महत्वपूर्ण तारीखें लिखें।' },
+    { en:'Use a realistic daily plan with measurable targets.', hi:'मापने योग्य लक्ष्यों वाली यथार्थ दैनिक योजना बनाएं।' },
+    { en:'Review weak areas with a teacher or reliable mentor.', hi:'कमजोर विषयों की शिक्षक या विश्वसनीय मार्गदर्शक से समीक्षा करें।' },
+  ],
+  family: [
+    { en:'Speak directly with the people affected by the decision.', hi:'निर्णय से प्रभावित लोगों से सीधे बात करें।' },
+    { en:'Separate the practical issue from old emotional conflicts.', hi:'व्यावहारिक विषय को पुराने भावनात्मक विवादों से अलग रखें।' },
+    { en:'Agree on one fair next step and a time to review it.', hi:'एक उचित अगला कदम और उसकी समीक्षा का समय तय करें।' },
+  ],
+};
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -132,29 +190,29 @@ function toneFromScore(score, clarity) {
 function verdictText(tone, config) {
   const values = {
     supportive: {
-      headlineEn:'The matter has meaningful support', headlineHi:'इस विषय को सार्थक सहयोग मिल रहा है',
-      summaryEn:`The chart supports progress in ${config.focusEn}, especially when you act clearly and consistently.`,
-      summaryHi:`कुंडली ${config.focusHi} में प्रगति का समर्थन करती है, विशेषकर जब आप स्पष्ट और नियमित कदम उठाते हैं।`,
+      headlineEn:'Favourable — move forward thoughtfully', headlineHi:'अनुकूल — सोच-समझकर आगे बढ़ें',
+      summaryEn:`The present conditions support progress in ${config.focusEn}. Confirm the practical details, then take a clear next step.`,
+      summaryHi:`अभी ${config.focusHi} में आगे बढ़ने के संकेत अनुकूल हैं। व्यावहारिक बातें पक्की करके स्पष्ट अगला कदम लें।`,
     },
     conditional: {
-      headlineEn:'Progress is possible with clear conditions', headlineHi:'स्पष्ट शर्तों के साथ प्रगति संभव है',
-      summaryEn:`There is useful potential around ${config.focusEn}, but the result depends on timing and practical follow-through.`,
-      summaryHi:`${config.focusHi} में उपयोगी संभावना है, लेकिन परिणाम समय और व्यावहारिक प्रयास पर निर्भर रहेगा।`,
+      headlineEn:'Possible — check the conditions before saying yes', headlineHi:'संभावना है — हाँ कहने से पहले शर्तें जांचें',
+      summaryEn:`There is useful potential around ${config.focusEn}, but a good outcome depends on timing, clear terms and your follow-through.`,
+      summaryHi:`${config.focusHi} में संभावना है, लेकिन अच्छा परिणाम सही समय, स्पष्ट शर्तों और आपके प्रयास पर निर्भर करेगा।`,
     },
     mixed: {
-      headlineEn:'The picture is mixed and needs careful handling', headlineHi:'स्थिति मिश्रित है और सावधानी से संभालने की जरूरत है',
-      summaryEn:`The chart shows both support and resistance around ${config.focusEn}; avoid treating the situation as settled yet.`,
-      summaryHi:`${config.focusHi} में सहयोग और रुकावट दोनों दिखाई देते हैं; अभी स्थिति को अंतिम न मानें।`,
+      headlineEn:'Do not rush — the answer is mixed', headlineHi:'जल्दबाज़ी न करें — संकेत मिले-जुले हैं',
+      summaryEn:`There are both opportunities and concerns around ${config.focusEn}. Gather the missing facts and compare the risks before deciding.`,
+      summaryHi:`${config.focusHi} में अवसर और चिंताएं दोनों हैं। निर्णय से पहले बाकी जानकारी लें और जोखिमों की तुलना करें।`,
     },
     delayed: {
-      headlineEn:'Patience and revision are more useful than pressure', headlineHi:'दबाव से अधिक धैर्य और सुधार उपयोगी रहेंगे',
-      summaryEn:`The present chart suggests delay or extra work around ${config.focusEn}, rather than an easy immediate result.`,
-      summaryHi:`वर्तमान कुंडली ${config.focusHi} में आसान त्वरित परिणाम की बजाय देरी या अतिरिक्त प्रयास का संकेत देती है।`,
+      headlineEn:'Not yet — improve the situation before deciding', headlineHi:'अभी नहीं — निर्णय से पहले परिस्थिति सुधारें',
+      summaryEn:`An immediate result around ${config.focusEn} may bring delay or extra difficulty. Prepare, renegotiate or wait for better conditions.`,
+      summaryHi:`${config.focusHi} में तुरंत आगे बढ़ने पर देरी या अतिरिक्त कठिनाई हो सकती है। तैयारी करें, शर्तों पर दोबारा बात करें या बेहतर परिस्थिति की प्रतीक्षा करें।`,
     },
     unclear: {
-      headlineEn:'The situation is still forming', headlineHi:'स्थिति अभी बन रही है',
-      summaryEn:'The question may be too early, too late, or dependent on facts that are still changing. Wait for a material change before judging again.',
-      summaryHi:'प्रश्न बहुत जल्दी, बहुत देर से या बदलते तथ्यों पर आधारित हो सकता है। दोबारा विचार करने से पहले वास्तविक परिस्थिति बदलने दें।',
+      headlineEn:'Pause — this is not the right moment for a firm answer', headlineHi:'रुकें — अभी पक्का निर्णय लेने का सही समय नहीं है',
+      summaryEn:'Important facts still appear unsettled. Do not decide from urgency alone; get clarity on the real-world conditions first.',
+      summaryHi:'कुछ महत्वपूर्ण बातें अभी स्पष्ट या स्थिर नहीं हैं। केवल जल्दबाज़ी में निर्णय न लें; पहले वास्तविक शर्तों और परिस्थितियों को साफ करें।',
     },
   };
   return values[tone] || values.mixed;
@@ -252,35 +310,65 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   const signals = [
     {
       key:'lagna', tone:lagnaCondition.score >= 4 ? 'support' : lagnaCondition.score <= -5 ? 'care' : 'balanced',
-      titleEn:'Your ability to influence the matter', titleHi:'विषय को प्रभावित करने की आपकी क्षमता',
-      summaryEn:`The Prashna ascendant is ${chart.ascendant.rashi_en}; its lord ${lagnaLord} is placed in house ${lagnaLordHouse || '—'}.`,
-      summaryHi:`प्रश्न लग्न ${chart.ascendant.rashi_hi} है; इसके स्वामी ${PLANET_HI[lagnaLord] || lagnaLord} भाव ${lagnaLordHouse || '—'} में हैं।`,
+      titleEn:'What is in your control', titleHi:'आपके हाथ में क्या है',
+      summaryEn:lagnaCondition.score >= 4
+        ? 'You have useful influence here. Clear communication and a timely practical step can improve the outcome.'
+        : lagnaCondition.score <= -5
+          ? 'Your control is limited right now. Prepare carefully and do not depend on effort alone to fix every uncertainty.'
+          : 'You can influence part of the outcome, but other people or circumstances will also matter.',
+      summaryHi:lagnaCondition.score >= 4
+        ? 'इस विषय में आपका प्रभाव उपयोगी है। स्पष्ट बातचीत और समय पर लिया गया व्यावहारिक कदम परिणाम बेहतर कर सकता है।'
+        : lagnaCondition.score <= -5
+          ? 'अभी स्थिति पर आपका नियंत्रण सीमित है। पूरी तैयारी करें और यह न मानें कि केवल प्रयास से हर अनिश्चितता दूर हो जाएगी।'
+          : 'आप परिणाम के कुछ हिस्से को प्रभावित कर सकते हैं, लेकिन दूसरे लोग और परिस्थितियां भी महत्वपूर्ण रहेंगी।',
+      technicalEn:`Prashna ascendant: ${chart.ascendant.rashi_en}; ascendant lord ${lagnaLord} in house ${lagnaLordHouse || '—'}.`,
+      technicalHi:`प्रश्न लग्न: ${chart.ascendant.rashi_hi}; लग्न स्वामी ${PLANET_HI[lagnaLord] || lagnaLord} भाव ${lagnaLordHouse || '—'} में।`,
     },
     {
       key:'matter', tone:queryCondition.score >= 4 ? 'support' : queryCondition.score <= -5 ? 'care' : 'balanced',
-      titleEn:'Condition of the matter', titleHi:'विषय की स्थिति',
-      summaryEn:`House ${config.house} represents this question. Its lord ${queryLord} is placed in house ${queryLordHouse || '—'}.`,
-      summaryHi:`इस प्रश्न का प्रतिनिधित्व भाव ${config.house} करता है। इसके स्वामी ${PLANET_HI[queryLord] || queryLord} भाव ${queryLordHouse || '—'} में हैं।`,
+      titleEn:'What the situation is showing', titleHi:'परिस्थिति क्या बता रही है',
+      summaryEn:queryCondition.score >= 4
+        ? 'The external conditions can support progress, provided the practical terms are acceptable.'
+        : queryCondition.score <= -5
+          ? 'The matter may involve delay, revision or dependence on another person. Verify the terms before committing.'
+          : 'The opportunity is neither fully blocked nor fully settled. More information will make the decision safer.',
+      summaryHi:queryCondition.score >= 4
+        ? 'बाहरी परिस्थितियां आगे बढ़ने में सहयोग कर सकती हैं, यदि व्यावहारिक शर्तें आपके लिए सही हों।'
+        : queryCondition.score <= -5
+          ? 'विषय में देरी, बदलाव या किसी दूसरे व्यक्ति पर निर्भरता हो सकती है। प्रतिबद्ध होने से पहले शर्तें जांचें।'
+          : 'अवसर न पूरी तरह रुका है, न पूरी तरह तय है। अधिक जानकारी मिलने पर निर्णय सुरक्षित होगा।',
+      technicalEn:`Question house: ${config.house}; its lord ${queryLord} is in house ${queryLordHouse || '—'}.`,
+      technicalHi:`प्रश्न भाव: ${config.house}; इसके स्वामी ${PLANET_HI[queryLord] || queryLord} भाव ${queryLordHouse || '—'} में।`,
     },
     {
       key:'moon', tone:moonAdjustment >= 5 ? 'support' : moonAdjustment <= -4 ? 'care' : 'balanced',
-      titleEn:'Mind, movement and unfolding events', titleHi:'मन, गति और घटनाओं का विकास',
-      summaryEn:`The Moon is in ${moon.rashi_en}, house ${moonHouse || '—'}, showing how the matter is likely to unfold emotionally and practically.`,
-      summaryHi:`चंद्र ${moon.rashi_hi}, भाव ${moonHouse || '—'} में हैं, जो विषय के भावनात्मक और व्यावहारिक विकास को दर्शाते हैं।`,
+      titleEn:'How the situation may develop', titleHi:'आगे स्थिति कैसे बन सकती है',
+      summaryEn:moonAdjustment >= 5
+        ? 'Momentum can improve as the conversation or process moves forward.'
+        : moonAdjustment <= -4
+          ? 'Stress or changing details may affect judgement. Give yourself enough time to review the facts.'
+          : 'Progress is likely to be gradual. Watch what changes before making a final commitment.',
+      summaryHi:moonAdjustment >= 5
+        ? 'बातचीत या प्रक्रिया आगे बढ़ने पर स्थिति बेहतर हो सकती है।'
+        : moonAdjustment <= -4
+          ? 'तनाव या बदलती जानकारी निर्णय को प्रभावित कर सकती है। तथ्यों की समीक्षा के लिए पर्याप्त समय लें।'
+          : 'प्रगति धीरे-धीरे होने की संभावना है। अंतिम प्रतिबद्धता से पहले बदलती बातों पर ध्यान दें।',
+      technicalEn:`Moon: ${moon.rashi_en}, house ${moonHouse || '—'}.`,
+      technicalHi:`चंद्र: ${moon.rashi_hi}, भाव ${moonHouse || '—'}।`,
     },
   ];
 
   const supportingFactors = [];
   const cautions = [];
-  if (lagnaCondition.score >= 4) supportingFactors.push({ en:`${lagnaLord}, the ascendant lord, has usable support.`, hi:`लग्न स्वामी ${PLANET_HI[lagnaLord] || lagnaLord} को उपयोगी सहयोग प्राप्त है।` });
+  if (lagnaCondition.score >= 4) supportingFactors.push({ en:'Your actions and communication can meaningfully influence the result.', hi:'आपके कदम और बातचीत परिणाम को सार्थक रूप से प्रभावित कर सकते हैं।' });
   else cautions.push({ en:'Your control over the situation may be limited or require more preparation.', hi:'स्थिति पर आपका नियंत्रण सीमित हो सकता है या अधिक तैयारी की जरूरत हो सकती है।' });
-  if (queryCondition.score >= 4) supportingFactors.push({ en:`${queryLord}, the question lord, can help the matter develop.`, hi:`प्रश्न स्वामी ${PLANET_HI[queryLord] || queryLord} विषय को आगे बढ़ाने में सहायक हो सकते हैं।` });
+  if (queryCondition.score >= 4) supportingFactors.push({ en:'The surrounding conditions can help the matter move forward.', hi:'आसपास की परिस्थितियां विषय को आगे बढ़ाने में सहयोग कर सकती हैं।' });
   else cautions.push({ en:'The main matter may face delay, revision or dependency on another person.', hi:'मुख्य विषय में देरी, सुधार या किसी अन्य व्यक्ति पर निर्भरता हो सकती है।' });
-  if (relation.score > 0) supportingFactors.push({ en:'The ascendant lord and question lord have a workable connection.', hi:'लग्न स्वामी और प्रश्न स्वामी के बीच उपयोगी संबंध है।' });
-  if (relation.score < 0) cautions.push({ en:'Your intention and the matter are not fully aligned yet.', hi:'आपकी इच्छा और विषय की परिस्थिति अभी पूरी तरह अनुकूल नहीं हैं।' });
-  if (beneficOccupants.length) supportingFactors.push({ en:`Supportive planets in the question house: ${beneficOccupants.join(', ')}.`, hi:`प्रश्न भाव में सहायक ग्रह: ${beneficOccupants.map((p) => PLANET_HI[p] || p).join(', ')}।` });
-  if (challengingOccupants.length) cautions.push({ en:`Extra care is shown by ${challengingOccupants.join(', ')} in the question house.`, hi:`प्रश्न भाव में ${challengingOccupants.map((p) => PLANET_HI[p] || p).join(', ')} अतिरिक्त सावधानी का संकेत देते हैं।` });
-  if (clarity === 'low') cautions.unshift({ en:'The ascendant is at an early or late degree, so the situation may still be changing.', hi:'लग्न आरंभिक या अंतिम अंश में है, इसलिए स्थिति अभी बदल रही हो सकती है।' });
+  if (relation.score > 0) supportingFactors.push({ en:'What you want and what the situation offers can work together.', hi:'आपकी जरूरत और परिस्थिति में उपलब्ध अवसर एक साथ काम कर सकते हैं।' });
+  if (relation.score < 0) cautions.push({ en:'What you want and what the situation currently offers are not fully aligned.', hi:'आपकी जरूरत और परिस्थिति में अभी उपलब्ध अवसर पूरी तरह मेल नहीं खाते।' });
+  if (beneficOccupants.length) supportingFactors.push({ en:'There are additional signs of support around the matter.', hi:'इस विषय के आसपास कुछ अतिरिक्त सहायक संकेत भी हैं।' });
+  if (challengingOccupants.length) cautions.push({ en:'There are extra signs of delay, pressure or complications that need checking.', hi:'देरी, दबाव या उलझन के अतिरिक्त संकेत हैं, जिन्हें जांचना जरूरी है।' });
+  if (clarity === 'low') cautions.unshift({ en:'Important facts still appear unsettled, so a firm answer would be premature.', hi:'कुछ महत्वपूर्ण बातें अभी स्थिर नहीं हैं, इसलिए पक्का निर्णय लेना जल्दबाज़ी होगा।' });
 
   return {
     version:'prashna-v1',
@@ -303,6 +391,7 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
       timing,
       guidanceEn:config.adviceEn,
       guidanceHi:config.adviceHi,
+      nextSteps:PRACTICAL_CHECKLISTS[category] || PRACTICAL_CHECKLISTS.general,
       technicalDetails:{
         score,
         clarity,

@@ -85,6 +85,23 @@ test('user-facing Prashna language avoids fatalistic promises', () => {
   }
 });
 
+test('Prashna gives a direct plain-language answer and category checklist', () => {
+  const reading = sampleReading('career');
+  assert.match(reading.free.headlineEn, /move forward|check|rush|wait|pause|not yet/i);
+  assert.match(reading.free.headlineHi, /आगे बढ़ें|जांचें|जल्दबाज़ी|निर्णय|रुकें|अभी नहीं/);
+  assert.equal(reading.premium.nextSteps.length, 3);
+  assert.match(reading.premium.nextSteps[0].en, /role|salary|location/i);
+  assert.match(reading.premium.nextSteps[0].hi, /भूमिका|वेतन|स्थान/);
+});
+
+test('visible Prashna signals explain meaning without house-lord jargon', () => {
+  const reading = sampleReading('career');
+  const plainSignals = JSON.stringify(reading.premium.allSignals.map(({ titleEn, titleHi, summaryEn, summaryHi }) => ({ titleEn, titleHi, summaryEn, summaryHi })));
+  assert.equal(/ascendant lord|question lord|house \d/i.test(plainSignals), false);
+  assert.equal(/लग्न स्वामी|प्रश्न स्वामी|भाव \d/.test(plainSignals), false);
+  assert.ok(reading.premium.allSignals.every((signal) => signal.technicalEn && signal.technicalHi));
+});
+
 test('Prashna input accepts current time and validates required fields', () => {
   const valid = parseInput({
     question:'Will this matter move forward?', category:'general',

@@ -41,6 +41,14 @@ const TONE_STYLE = {
   care:{ color:'#FB923C', border:'rgba(251,146,60,0.27)', background:'rgba(251,146,60,0.07)' },
 };
 
+const RESULT_STYLE = {
+  supportive:{ color:'#34D399', border:'rgba(52,211,153,0.38)', background:'linear-gradient(135deg,rgba(52,211,153,0.12),rgba(17,20,40,0.96))' },
+  conditional:{ color:'#FBBF24', border:'rgba(251,191,36,0.38)', background:'linear-gradient(135deg,rgba(251,191,36,0.11),rgba(17,20,40,0.96))' },
+  mixed:{ color:'#FB923C', border:'rgba(251,146,60,0.38)', background:'linear-gradient(135deg,rgba(251,146,60,0.11),rgba(17,20,40,0.96))' },
+  delayed:{ color:'#F87171', border:'rgba(248,113,113,0.38)', background:'linear-gradient(135deg,rgba(248,113,113,0.11),rgba(17,20,40,0.96))' },
+  unclear:{ color:'#C4B5FD', border:'rgba(196,181,253,0.38)', background:'linear-gradient(135deg,rgba(167,139,250,0.12),rgba(17,20,40,0.96))' },
+};
+
 function pick(lang, value, key) {
   return t(lang, value?.[`${key}En`] || '', value?.[`${key}Hi`] || value?.[`${key}En`] || '');
 }
@@ -171,8 +179,10 @@ function PaidReport({ premium, lang }) {
   return (
     <div style={{ display:'grid', gap:16 }}>
       <section className="card-royal p-5">
-        <h2 className="font-serif text-gold text-lg font-bold">✦ {t(lang, 'Complete Prashna Reading', 'पूर्ण प्रश्न फल')}</h2>
-        <p style={{ color:TEXT, fontSize:13.5, lineHeight:1.85, marginTop:10 }}>{t(lang, premium.fullAnswerEn, premium.fullAnswerHi)}</p>
+        <h2 className="font-serif text-gold text-lg font-bold">💡 {t(lang, 'Why this answer?', 'यह उत्तर क्यों मिला?')}</h2>
+        <p style={{ color:MUTED, fontSize:11.5, lineHeight:1.7, marginTop:6 }}>
+          {t(lang, 'Three simple signals used to understand your situation.', 'आपकी परिस्थिति समझने के लिए तीन सरल संकेत।')}
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
           {premium.allSignals?.map((signal) => <SignalCard key={signal.key} signal={signal} lang={lang} />)}
         </div>
@@ -189,27 +199,60 @@ function PaidReport({ premium, lang }) {
         </section>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <section className="card-royal p-5" style={{ border:'1px solid rgba(167,139,250,0.25)' }}>
           <h3 style={{ color:'#C4B5FD', fontFamily:'Georgia,serif', fontWeight:700 }}>⏳ {t(lang, 'Likely Timing Window', 'संभावित समय-सीमा')}</h3>
           <p style={{ color:'#E9D5FF', fontWeight:800, fontSize:14, marginTop:10 }}>{pick(lang, premium.timing, 'window')}</p>
           <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.6, marginTop:6 }}>{pick(lang, premium.timing, 'note')}</p>
         </section>
-        <section className="card-royal p-5" style={{ border:'1px solid rgba(52,211,153,0.22)' }}>
-          <h3 style={{ color:'#34D399', fontFamily:'Georgia,serif', fontWeight:700 }}>✓ {t(lang, 'What To Do Now', 'अब क्या करें')}</h3>
-          <p style={{ color:TEXT, fontSize:12.5, lineHeight:1.75, marginTop:9 }}>{t(lang, premium.guidanceEn, premium.guidanceHi)}</p>
+        <section className="card-royal p-5 lg:col-span-4" style={{ border:'1px solid rgba(52,211,153,0.22)' }}>
+          <h3 style={{ color:'#34D399', fontFamily:'Georgia,serif', fontWeight:700 }}>✓ {t(lang, 'Your decision checklist', 'निर्णय से पहले यह जांचें')}</h3>
+          <div style={{ display:'grid', gap:9, marginTop:12 }}>
+            {premium.nextSteps?.map((step, index) => (
+              <div key={index} style={{ display:'grid', gridTemplateColumns:'26px 1fr', gap:9, alignItems:'start' }}>
+                <span style={{ width:24, height:24, borderRadius:'50%', display:'grid', placeItems:'center', color:'#34D399', background:'rgba(52,211,153,0.1)', border:'1px solid rgba(52,211,153,0.25)', fontSize:10, fontWeight:800 }}>{index + 1}</span>
+                <p style={{ color:TEXT, fontSize:12.5, lineHeight:1.65, paddingTop:2 }}>{t(lang, step.en, step.hi || step.en)}</p>
+              </div>
+            ))}
+          </div>
+          <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.65, marginTop:13, paddingTop:11, borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+            <strong style={{ color:'#34D399' }}>{t(lang, 'Bottom line:', 'मुख्य सलाह:')}</strong>{' '}{t(lang, premium.guidanceEn, premium.guidanceHi)}
+          </p>
         </section>
       </div>
 
       <details className="card-royal" style={{ overflow:'hidden' }}>
         <summary style={{ padding:'13px 17px', color:GOLD, cursor:'pointer', fontSize:11, fontWeight:700 }}>
-          {t(lang, 'Technical Prashna Factors', 'तकनीकी प्रश्न संकेत')}
+          {t(lang, 'Astrology behind this answer (optional)', 'इस उत्तर के ज्योतिषीय आधार (वैकल्पिक)')}
         </summary>
-        <pre style={{ margin:0, padding:'0 17px 17px', color:'rgba(245,240,232,0.62)', fontSize:10, whiteSpace:'pre-wrap', lineHeight:1.6 }}>
-          {JSON.stringify(premium.technicalDetails, null, 2)}
-        </pre>
+        <div style={{ padding:'0 17px 17px', display:'grid', gap:8 }}>
+          {premium.allSignals?.map((signal) => (
+            <p key={signal.key} style={{ color:'rgba(245,240,232,0.62)', fontSize:10.5, lineHeight:1.65 }}>
+              <strong style={{ color:'rgba(245,240,232,0.82)' }}>{pick(lang, signal, 'title')}:</strong>{' '}
+              {pick(lang, signal, 'technical')}
+            </p>
+          ))}
+        </div>
       </details>
     </div>
+  );
+}
+
+function ChartPanel({ chart, chartStyle, onStyleChange, lang }) {
+  return (
+    <details className="card-royal" style={{ overflow:'hidden' }}>
+      <summary style={{ padding:'15px 18px', color:GOLD, cursor:'pointer', fontSize:12, fontWeight:800 }}>
+        🔮 {t(lang, 'View Prashna chart and planet placements', 'प्रश्न कुंडली और ग्रह स्थिति देखें')}
+      </summary>
+      <div style={{ padding:'0 18px 18px', maxWidth:520, margin:'0 auto' }}>
+        <ChartToggle style={chartStyle} onChange={onStyleChange} lang={lang} />
+        <motion.div key={chartStyle} initial={{ opacity:0, scale:0.98 }} animate={{ opacity:1, scale:1 }}>
+          {chartStyle === 'south'
+            ? <SouthIndianChart chart={chart} lang={lang} />
+            : <NorthIndianChart chart={chart} lang={lang} />}
+        </motion.div>
+      </div>
+    </details>
   );
 }
 
@@ -291,6 +334,7 @@ export default function Prashna() {
 
   const reading = result?.reading;
   const paid = !!result?.access?.is_paid;
+  const resultStyle = RESULT_STYLE[reading?.free?.tone] || RESULT_STYLE.mixed;
 
   return (
     <div className="min-h-screen relative" style={{ background:'linear-gradient(180deg,#0B0E23 0%,#141838 100%)' }}>
@@ -368,41 +412,43 @@ export default function Prashna() {
 
         {reading && (
           <div id="prashna-result" style={{ scrollMarginTop:85, marginTop:24, display:'grid', gap:16 }}>
-            <section className="card-royal p-5" style={{ border:`1px solid ${paid ? 'rgba(52,211,153,0.3)' : 'rgba(212,175,55,0.3)'}` }}>
+            <section className="card-royal p-5" aria-live="polite" style={{ border:`1px solid ${resultStyle.border}`, background:resultStyle.background }}>
               <div style={{ display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap', alignItems:'flex-start' }}>
                 <div>
-                  <span style={{ color:paid ? '#34D399' : '#FBBF24', fontSize:9.5, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                    {paid ? `✦ ${t(lang, 'Premium / Yearly Reading', 'प्रीमियम / वार्षिक सदस्य फल')}` : `◈ ${t(lang, 'Free Preview', 'निःशुल्क झलक')}`}
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:5, color:resultStyle.color, fontSize:10, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                    ✓ {t(lang, 'Direct answer', 'सीधा जवाब')}
                   </span>
-                  <h2 className="font-serif text-gold text-xl font-bold mt-2">{pick(lang, reading.free, 'headline')}</h2>
+                  <p style={{ color:MUTED, fontSize:10.5, marginTop:7 }}>
+                    {t(lang, 'Your question:', 'आपका प्रश्न:')} <span style={{ color:TEXT }}>{reading.question.text}</span>
+                  </p>
                 </div>
-                <span style={{ color:MUTED, fontSize:9.5 }}>{new Date(reading.question.askedAt).toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN')}<br />{reading.question.place}</span>
+                <span style={{ color:paid ? '#34D399' : '#FBBF24', border:`1px solid ${paid ? 'rgba(52,211,153,0.28)' : 'rgba(251,191,36,0.25)'}`, background:paid ? 'rgba(52,211,153,0.08)' : 'rgba(251,191,36,0.07)', borderRadius:14, padding:'4px 9px', fontSize:9.5, fontWeight:800 }}>
+                  {paid ? t(lang, 'Complete member reading', 'पूर्ण सदस्य फल') : t(lang, 'Free reading', 'निःशुल्क फल')}
+                </span>
               </div>
-              <p style={{ color:TEXT, fontSize:13.5, lineHeight:1.85, marginTop:10 }}>{pick(lang, reading.free, 'summary')}</p>
-              <p style={{ color:'rgba(245,240,232,0.36)', fontSize:9.5, marginTop:9 }}>{pick(lang, reading.free, 'note')}</p>
+              <h2 className="font-serif font-bold mt-4" style={{ color:resultStyle.color, fontSize:'clamp(21px,3vw,29px)', lineHeight:1.35 }}>{pick(lang, reading.free, 'headline')}</h2>
+              <p style={{ color:TEXT, fontSize:14, lineHeight:1.85, marginTop:9, maxWidth:880 }}>{pick(lang, reading.free, 'summary')}</p>
+              <div style={{ display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginTop:14, paddingTop:11, borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+                <p style={{ color:'rgba(245,240,232,0.43)', fontSize:9.5, lineHeight:1.55, maxWidth:680 }}>{pick(lang, reading.free, 'note')}</p>
+                <span style={{ color:MUTED, fontSize:9.5 }}>{new Date(reading.question.askedAt).toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN')} · {reading.question.place}</span>
+              </div>
             </section>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-              <section className="card-royal p-5 lg:col-span-2">
-                <ChartToggle style={chartStyle} onChange={changeStyle} lang={lang} />
-                <p className="font-serif text-gold text-sm font-semibold text-center mb-3">🔮 {t(lang, 'Prashna Chart', 'प्रश्न कुंडली')}</p>
-                <motion.div key={chartStyle} initial={{ opacity:0, scale:0.98 }} animate={{ opacity:1, scale:1 }}>
-                  {chartStyle === 'south'
-                    ? <SouthIndianChart chart={reading.chart} lang={lang} />
-                    : <NorthIndianChart chart={reading.chart} lang={lang} />}
-                </motion.div>
-              </section>
-              <section className="lg:col-span-3">
-                <p style={{ color:MUTED, fontSize:9.5, textTransform:'uppercase', letterSpacing:'0.16em', marginBottom:9 }}>{t(lang, 'Key Indicators', 'मुख्य संकेत')}</p>
-                <div style={{ display:'grid', gap:10 }}>
-                  {reading.free.visibleSignals?.map((signal) => <SignalCard key={signal.key} signal={signal} lang={lang} />)}
-                </div>
-              </section>
-            </div>
 
             {paid && reading.premium
               ? <PaidReport premium={reading.premium} lang={lang} />
-              : <FreePaywall reading={reading} authenticated={result.access.authenticated || !!user} lang={lang} />}
+              : (
+                <>
+                  <section className="card-royal p-5">
+                    <h2 className="font-serif text-gold text-lg font-bold">💡 {t(lang, 'Why this answer?', 'यह उत्तर क्यों मिला?')}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                      {reading.free.visibleSignals?.map((signal) => <SignalCard key={signal.key} signal={signal} lang={lang} />)}
+                    </div>
+                  </section>
+                  <FreePaywall reading={reading} authenticated={result.access.authenticated || !!user} lang={lang} />
+                </>
+              )}
+
+            <ChartPanel chart={reading.chart} chartStyle={chartStyle} onStyleChange={changeStyle} lang={lang} />
           </div>
         )}
       </div>
