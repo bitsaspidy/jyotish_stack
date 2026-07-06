@@ -1,5 +1,7 @@
 'use strict';
 
+const { sanitizeForUser } = require('./judgement-engine/conflictResolver');
+
 const BENEFICS = new Set(['Jupiter', 'Venus', 'Mercury']);
 const CHALLENGING_PLANETS = new Set(['Saturn', 'Mars', 'Rahu', 'Ketu']);
 const SUPPORTIVE_HOUSES = new Set([1, 4, 5, 7, 9, 10, 11]);
@@ -218,6 +220,22 @@ function verdictText(tone, config) {
   return values[tone] || values.mixed;
 }
 
+function nextActionText(tone, category) {
+  const firstStep = (PRACTICAL_CHECKLISTS[category] || PRACTICAL_CHECKLISTS.general)[0];
+  const introductions = {
+    supportive:{ en:'Move forward thoughtfully, after this check:', hi:'सोच-समझकर आगे बढ़ें, लेकिन पहले यह जांच करें:' },
+    conditional:{ en:'Before saying yes, do this first:', hi:'हाँ कहने से पहले यह काम करें:' },
+    mixed:{ en:'Pause the final decision and do this first:', hi:'अंतिम निर्णय रोकें और पहले यह काम करें:' },
+    delayed:{ en:'Do not force an immediate decision. Start here:', hi:'तुरंत निर्णय का दबाव न बनाएं। यहां से शुरुआत करें:' },
+    unclear:{ en:'Wait for the unclear facts to settle. Meanwhile:', hi:'अस्पष्ट बातें साफ होने दें। इस बीच:' },
+  };
+  const intro = introductions[tone] || introductions.mixed;
+  return {
+    nextActionEn:`${intro.en} ${firstStep.en}`,
+    nextActionHi:`${intro.hi} ${firstStep.hi}`,
+  };
+}
+
 function timingText(queryPlanet, tone, category) {
   if (tone === 'unclear') {
     return {
@@ -305,6 +323,7 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   const score = clamp(clarity === 'low' ? Math.min(rawScore, 59) : rawScore, 18, 88);
   const tone = toneFromScore(score, clarity);
   const verdict = verdictText(tone, config);
+  const nextAction = nextActionText(tone, category);
   const timing = timingText(chart.planets[queryLord], tone, category);
 
   const signals = [
@@ -370,14 +389,15 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   if (challengingOccupants.length) cautions.push({ en:'There are extra signs of delay, pressure or complications that need checking.', hi:'देरी, दबाव या उलझन के अतिरिक्त संकेत हैं, जिन्हें जांचना जरूरी है।' });
   if (clarity === 'low') cautions.unshift({ en:'Important facts still appear unsettled, so a firm answer would be premature.', hi:'कुछ महत्वपूर्ण बातें अभी स्थिर नहीं हैं, इसलिए पक्का निर्णय लेना जल्दबाज़ी होगा।' });
 
-  return {
-    version:'prashna-v1',
+  return sanitizeForUser({
+    version:'prashna-friendly-v2',
     question:{ text:question, category, categoryTitleEn:config.titleEn, categoryTitleHi:config.titleHi, askedAt, place },
     chart:compactChart(chart),
     free:{
       tone,
       scoreBand:score >= 70 ? 'strong-support' : score >= 52 ? 'moderate-support' : score >= 38 ? 'mixed' : 'needs-time',
       ...verdict,
+      ...nextAction,
       visibleSignals:signals.slice(0, 2),
       noteEn:'Prashna shows tendencies and conditions; your choices and circumstances still matter.',
       noteHi:'प्रश्न कुंडली प्रवृत्तियां और परिस्थितियां दिखाती है; आपके निर्णय और हालात भी महत्वपूर्ण हैं।',
@@ -414,7 +434,7 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
       { key:'factors', titleEn:'Supporting and conflicting factors', titleHi:'सहायक और विरोधी संकेत' },
       { key:'guidance', titleEn:'Question-specific practical guidance', titleHi:'प्रश्न के अनुसार व्यावहारिक मार्गदर्शन' },
     ],
-  };
+  });
 }
 
 function stripTechnicalSignal(signal) {
@@ -452,4 +472,5 @@ module.exports = {
   planetHouse,
   toneFromScore,
   stripTechnicalSignal,
+  nextActionText,
 };

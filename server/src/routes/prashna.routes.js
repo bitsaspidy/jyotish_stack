@@ -98,6 +98,7 @@ router.post('/calculate', optionalAuthenticate, async (req, res) => {
         plan_name:access.planName,
         expires_at:access.expiresAt || null,
         can_view_technical:canViewTechnical,
+        engine_version:responseReading.version,
         required_plans:['premium', 'yearly'],
       },
       reading:responseReading,

@@ -28,7 +28,7 @@ function sampleReading(category = 'career', chart = sampleChart()) {
 
 test('Prashna reading returns free, paid and chart sections', () => {
   const reading = sampleReading();
-  assert.equal(reading.version, 'prashna-v1');
+  assert.equal(reading.version, 'prashna-friendly-v2');
   assert.equal(reading.question.category, 'career');
   assert.equal(reading.free.visibleSignals.length, 2);
   assert.equal(reading.premium.allSignals.length, 3);
@@ -100,6 +100,8 @@ test('Prashna gives a direct plain-language answer and category checklist', () =
   assert.equal(reading.premium.nextSteps.length, 3);
   assert.match(reading.premium.nextSteps[0].en, /role|salary|location/i);
   assert.match(reading.premium.nextSteps[0].hi, /भूमिका|वेतन|स्थान/);
+  assert.match(reading.free.nextActionEn, /before saying yes|pause|move forward|start here|meanwhile/i);
+  assert.match(reading.free.nextActionHi, /हाँ कहने से पहले|अंतिम निर्णय|आगे बढ़ें|शुरुआत करें|इस बीच/);
 });
 
 test('visible Prashna signals explain meaning without house-lord jargon', () => {
@@ -108,6 +110,15 @@ test('visible Prashna signals explain meaning without house-lord jargon', () => 
   assert.equal(/ascendant lord|question lord|house \d/i.test(plainSignals), false);
   assert.equal(/लग्न स्वामी|प्रश्न स्वामी|भाव \d/.test(plainSignals), false);
   assert.ok(reading.premium.allSignals.every((signal) => signal.technicalEn && signal.technicalHi));
+});
+
+test('member-facing Prashna payload excludes legacy technical and duplicate copy', () => {
+  const paid = gatePrashnaReading(sampleReading('career'), true, false);
+  const visible = JSON.stringify({ free:paid.free, premium:paid.premium });
+  assert.doesNotMatch(visible, /Prashna ascendant|ascendant lord|question lord|House 10 represents|लग्न स्वामी|प्रश्न स्वामी|भाव 10/iu);
+  assert.doesNotMatch(visible, /The picture is mixed and needs careful handling|Complete Prashna Reading|Key Indicators/i);
+  assert.match(paid.free.nextActionEn, /role|salary|location/i);
+  assert.equal(paid.premium.technicalDetails, undefined);
 });
 
 test('Prashna input accepts current time and validates required fields', () => {

@@ -430,6 +430,15 @@ export default function Prashna() {
               </div>
               <h2 className="font-serif font-bold mt-4" style={{ color:resultStyle.color, fontSize:'clamp(21px,3vw,29px)', lineHeight:1.35 }}>{pick(lang, reading.free, 'headline')}</h2>
               <p style={{ color:TEXT, fontSize:14, lineHeight:1.85, marginTop:9, maxWidth:880 }}>{pick(lang, reading.free, 'summary')}</p>
+              {pick(lang, reading.free, 'nextAction') && (
+                <div style={{ display:'grid', gridTemplateColumns:'30px 1fr', gap:10, alignItems:'start', maxWidth:880, marginTop:14, padding:'12px 14px', borderRadius:11, border:`1px solid ${resultStyle.border}`, background:'rgba(0,0,0,0.18)' }}>
+                  <span aria-hidden="true" style={{ width:28, height:28, borderRadius:'50%', display:'grid', placeItems:'center', color:resultStyle.color, background:'rgba(255,255,255,0.05)', fontWeight:900 }}>→</span>
+                  <div>
+                    <p style={{ color:resultStyle.color, fontSize:10, fontWeight:900, textTransform:'uppercase', letterSpacing:'0.08em' }}>{t(lang, 'Recommended next move', 'अगला सही कदम')}</p>
+                    <p style={{ color:TEXT, fontSize:12.5, lineHeight:1.7, marginTop:3 }}>{pick(lang, reading.free, 'nextAction')}</p>
+                  </div>
+                </div>
+              )}
               <div style={{ display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap', marginTop:14, paddingTop:11, borderTop:'1px solid rgba(255,255,255,0.07)' }}>
                 <p style={{ color:'rgba(245,240,232,0.43)', fontSize:9.5, lineHeight:1.55, maxWidth:680 }}>{pick(lang, reading.free, 'note')}</p>
                 <span style={{ color:MUTED, fontSize:9.5 }}>{new Date(reading.question.askedAt).toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN')} · {reading.question.place}</span>
