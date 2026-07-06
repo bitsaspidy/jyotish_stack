@@ -75,6 +75,7 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
   const [lon,           setLon]           = useState('');
   const [tz,            setTz]            = useState('5.5');
   const [gender,        setGender]        = useState('male');
+  const [maritalStatus, setMaritalStatus] = useState('');
   const [geocoding,     setGeocoding]     = useState(false);
   const [placeResults,  setPlaceResults]  = useState([]);
   const [showPlaceDrop, setShowPlaceDrop] = useState(false);
@@ -162,6 +163,7 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
         longitude: parseFloat(lon),
         timezone_offset: parseFloat(tz) || 5.5,
         gender,
+        marital_status: maritalStatus,
       });
       toast.success(T('Kundli created successfully!', 'कुंडली सफलतापूर्वक बनाई गई!'), { duration: 3000 });
       onCreated();
@@ -361,6 +363,20 @@ function CreateKundliModal({ onClose, onCreated, lang }) {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label style={labelStyle}>{T('Marital Status', 'वैवाहिक स्थिति')}</label>
+            <select value={maritalStatus} onChange={e => setMaritalStatus(e.target.value)} style={inputStyle}>
+              <option value="">{T('Not specified', 'नहीं बताया')}</option>
+              <option value="unmarried">{T('Unmarried', 'अविवाहित')}</option>
+              <option value="married">{T('Married', 'विवाहित')}</option>
+              <option value="divorced">{T('Divorced', 'तलाकशुदा')}</option>
+              <option value="widowed">{T('Widowed', 'विधवा / विधुर')}</option>
+            </select>
+            <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, marginTop:5 }}>
+              {T('D9 activates after marriage or from age 36.', 'D9 विवाह के बाद या 36 वर्ष की आयु से सक्रिय होता है।')}
+            </p>
           </div>
 
           {/* Actions */}

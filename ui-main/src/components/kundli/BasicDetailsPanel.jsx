@@ -32,6 +32,12 @@ export default function BasicDetailsPanel({ kundli, chart, lang }) {
   const p    = chart?.panchang;
   const ad   = chart?.astro_details;
   const label = (en, hi) => t(lang, en, hi);
+  const maritalLabel = {
+    unmarried:label('Unmarried', 'अविवाहित'),
+    married:label('Married', 'विवाहित'),
+    divorced:label('Divorced', 'तलाकशुदा'),
+    widowed:label('Widowed', 'विधवा / विधुर'),
+  }[kundli.marital_status];
 
   const fmt12 = (t) => {
     if (!t) return '—';
@@ -67,6 +73,7 @@ export default function BasicDetailsPanel({ kundli, chart, lang }) {
       {tab === 'basic' && (
         <div>
           <InfoRow label={label('Name', 'नाम')}       value={kundli.name} />
+          <InfoRow label={label('Marital Status', 'वैवाहिक स्थिति')} value={maritalLabel} />
           <InfoRow label={label('Place', 'स्थान')}      value={kundli.place_of_birth} />
           <InfoRow label={label('Date', 'तिथि')}       value={dateFormatted} />
           <InfoRow label={label('Time', 'समय')}       value={fmt12(time)} />

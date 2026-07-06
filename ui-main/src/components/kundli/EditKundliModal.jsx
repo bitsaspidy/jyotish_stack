@@ -18,6 +18,7 @@ export default function EditKundliModal({ kundli, onClose, onSaved }) {
     longitude:        String(kundli.longitude || ''),
     timezone_offset:  String(kundli.timezone_offset || '5.5'),
     gender:           kundli.gender        || 'male',
+    marital_status:   kundli.marital_status || '',
   });
 
   const [locQuery,    setLocQuery]    = useState('');
@@ -97,6 +98,7 @@ export default function EditKundliModal({ kundli, onClose, onSaved }) {
         longitude:       parseFloat(form.longitude),
         timezone_offset: parseFloat(form.timezone_offset),
         gender:          form.gender,
+        marital_status:  form.marital_status,
       });
       await api.post(`/kundli/${kundli.uuid}/recalculate`);
       toast.success(t(lang, 'Birth details saved & chart recalculated!', 'जन्म विवरण सेव हो गया और कुंडली पुनः गणना हो गई!'));
@@ -145,6 +147,20 @@ export default function EditKundliModal({ kundli, onClose, onSaved }) {
                 <option value="female">{t(lang, 'Female', 'महिला')}</option>
                 <option value="other">{t(lang, 'Other', 'अन्य')}</option>
               </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t(lang, 'Marital Status', 'वैवाहिक स्थिति')}</label>
+              <select className={inputCls} value={form.marital_status}
+                onChange={e => set('marital_status', e.target.value)}>
+                <option value="">{t(lang, 'Not specified', 'नहीं बताया')}</option>
+                <option value="unmarried">{t(lang, 'Unmarried', 'अविवाहित')}</option>
+                <option value="married">{t(lang, 'Married', 'विवाहित')}</option>
+                <option value="divorced">{t(lang, 'Divorced', 'तलाकशुदा')}</option>
+                <option value="widowed">{t(lang, 'Widowed', 'विधवा / विधुर')}</option>
+              </select>
+              <p style={{ color:'rgba(245,240,232,0.35)', fontSize:9, marginTop:4 }}>
+                {t(lang, 'D9 activates after marriage or from age 36.', 'D9 विवाह के बाद या 36 वर्ष की आयु से सक्रिय होता है।')}
+              </p>
             </div>
           </div>
 

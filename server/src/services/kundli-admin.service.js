@@ -474,7 +474,11 @@ async function buildFullKundliResponse(uuid) {
   profile.placement_narratives   = buildPlacementNarratives(chart);
   profile.asta_vakri         = await fetchAstaVakriAnalysis(chart);
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(chart);
-  profile.judgement = generateJudgement(chart, { date_of_birth: profile.date_of_birth, gender: profile.gender }, { lang: 'hi', admin: true });
+  profile.judgement = generateJudgement(chart, {
+    date_of_birth:profile.date_of_birth,
+    gender:profile.gender,
+    marital_status:profile.marital_status,
+  }, { lang: 'hi', admin: true });
   profile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, profile.judgement, {});
   profile.personalized_remedies = generatePersonalizedRemedies(chart, { remedyManual: remedy_manual });
 

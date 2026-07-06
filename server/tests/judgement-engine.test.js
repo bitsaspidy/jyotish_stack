@@ -15,7 +15,7 @@ const { FORBIDDEN_USER } = require('../src/services/judgement-engine/conflictRes
 //   Venus: Pisces (rashi_num 12) → house 9   (trikona — exalted)
 //   Saturn: Capricorn (rashi_num 10) → house 7 (own sign — strong 7th lord)
 const rahulBirth = { year: 1990, month: 5, day: 15, hour: 10, minute: 30, second: 0, timezone: 5.5, latitude: 28.6139, longitude: 77.2090 };
-const rahulProfile = { date_of_birth: '1990-05-15', gender: 'male' };
+const rahulProfile = { date_of_birth: '1990-05-15', gender: 'male', marital_status: 'unmarried' };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -256,13 +256,30 @@ test('CAT-8 navamsha: age 36 → d9Activated = true', () => {
 
 test('CAT-8 navamsha: age 34 (born 1992) → d9Activated = false', () => {
   const youngBirth = { ...rahulBirth, year: 1992 };
-  const youngProfile = { date_of_birth: '1992-05-15', gender: 'male' };
+  const youngProfile = { date_of_birth: '1992-05-15', gender: 'male', marital_status: 'unmarried' };
   const chart = calculateVedicChart(youngBirth);
   const report = generateJudgement(chart, youngProfile, { lang: 'hi', admin: true });
 
   const navamsha = report.rawNavamsha;
   // 2026 - 1992 = 34 < 36 → d9Activated = false
   assert.equal(navamsha.d9Activated, false, 'Age 34 (<36) must NOT activate D9/Navamsha');
+});
+
+test('CAT-8 navamsha: married user under 36 activates D9', () => {
+  const youngBirth = { ...rahulBirth, year: 1992 };
+  const marriedProfile = { date_of_birth: '1992-05-15', gender: 'female', marital_status: 'married' };
+  const chart = calculateVedicChart(youngBirth);
+  const report = generateJudgement(chart, marriedProfile, { lang: 'hi', admin: true });
+
+  const navamsha = report.rawNavamsha;
+  assert.equal(navamsha.currentAge, 34);
+  assert.equal(navamsha.d9Activated, true, 'Marriage must activate D9 before age 36');
+  assert.equal(navamsha.activatedByMarriage, true);
+  assert.equal(navamsha.activatedByAge, false);
+  assert.equal(navamsha.activationReason, 'marriage');
+  const maturity = report.areas.find((area) => area.areaKey === 'maturity');
+  assert.equal(maturity.technical.rawFactors.activationReason, 'marriage');
+  assert.equal(maturity.technical.rawFactors.activatedByMarriage, true);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

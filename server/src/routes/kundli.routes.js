@@ -25,6 +25,7 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
 const { analyzeQuestion } = require('../services/question-understanding.service');
 const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
+const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 
 router.use(authenticate);
 
@@ -316,11 +317,12 @@ async function fetchNakshatraInsight(nakNum) {
 // ── POST /api/kundli — create ────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   const { name, date_of_birth, time_of_birth, place_of_birth,
-          latitude, longitude, timezone_offset, gender } = req.body;
+          latitude, longitude, timezone_offset, gender, marital_status } = req.body;
 
   if (!name || !date_of_birth || !time_of_birth || !place_of_birth
       || latitude == null || longitude == null || timezone_offset == null || !gender)
     return fail(res, 'All birth details are required', 400);
+  if (!isValidMaritalStatusInput(marital_status)) return fail(res, 'Marital status is invalid', 400);
 
   if (req.user.role !== 'admin') {
     const limit = PLAN_PROFILE_LIMITS[req.user.plan ?? 'free'] ?? PLAN_PROFILE_LIMITS.free;
@@ -334,6 +336,7 @@ router.post('/', async (req, res) => {
     uuid: uuidv4(), user_id: req.user.id,
     name, date_of_birth, time_of_birth, place_of_birth,
     latitude, longitude, timezone_offset, gender,
+    marital_status:normalizeMaritalStatus(marital_status) ?? null,
   });
 
   // Trigger async calculation
@@ -359,7 +362,7 @@ router.get('/', async (req, res) => {
     .where({ user_id: req.user.id })
     .select('id','uuid','user_id','name','date_of_birth','time_of_birth',
             'place_of_birth','latitude','longitude','timezone_offset',
-            'gender','is_public','created_at','updated_at')
+            'gender','marital_status','is_public','created_at','updated_at')
     .orderBy('created_at', 'desc');
 
   const chartRows = profiles.length
@@ -652,7 +655,11 @@ router.post('/:id/recalculate', async (req, res) => {
   freshProfile.placement_narratives   = buildPlacementNarratives(chart);
   freshProfile.asta_vakri        = await fetchAstaVakriAnalysis(chart);
   if (freshProfile.remedy_data) freshProfile.remedy_data.suite = computeRemedySuite(chart);
-  freshProfile.judgement    = generateJudgement(chart, { date_of_birth: freshProfile.date_of_birth, gender: freshProfile.gender }, { lang: 'hi', admin: false });
+  freshProfile.judgement    = generateJudgement(chart, {
+    date_of_birth:freshProfile.date_of_birth,
+    gender:freshProfile.gender,
+    marital_status:freshProfile.marital_status,
+  }, { lang: 'hi', admin: false });
   freshProfile.user_summary = composeKundliUserSummary(chart, freshProfile.judgement);
   freshProfile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, freshProfile.judgement, {});
   freshProfile.predictions_friendly = composePredictionUserFriendly(chart, chart.predictions);
@@ -670,9 +677,12 @@ router.patch('/:id', async (req, res) => {
   if (!profile) return fail(res, 'Kundli not found', 404);
 
   const allowed = ['name','date_of_birth','time_of_birth','place_of_birth',
-                   'latitude','longitude','timezone_offset','gender','is_public'];
+                   'latitude','longitude','timezone_offset','gender','marital_status','is_public'];
   const update = {};
-  allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+  if (!isValidMaritalStatusInput(req.body.marital_status)) return fail(res, 'Marital status is invalid', 400);
+  allowed.forEach(k => {
+    if (req.body[k] !== undefined) update[k] = k === 'marital_status' ? (normalizeMaritalStatus(req.body[k]) ?? null) : req.body[k];
+  });
 
   if (Object.keys(update).length) {
     update.calculated_data = null;   // invalidate old chart
@@ -772,7 +782,7 @@ router.get('/:id/guidance', async (req, res) => {
 
     const lang = req.query.lang;
     // Generate judgement so contradictions between sections and scores are resolved
-    const judgement = generateJudgement(chart, {}, { lang: lang || 'hi', admin: false });
+    const judgement = generateJudgement(chart, profile, { lang: lang || 'hi', admin: false });
     const report = generateLifeReport(chart, { lang, judgement });
     const daily  = generateDailyGuidance(chart, new Date(), { lang });
     const personalizedRemedies = generatePersonalizedRemedies(chart);

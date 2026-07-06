@@ -15,6 +15,7 @@ const { composeStrengthUserFriendly } = require('../services/report-engine/stren
 const { kundliReportPdf } = require('../services/report.service');
 const { resetInstance: resetRazorpay } = require('../services/razorpay.service');
 const { syncAdminSelectedPlan } = require('../services/admin-plan.service');
+const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 
 // Async error wrapper — passes any thrown/rejected error to Express global handler
 // (Express 4 does NOT auto-handle async errors; without this, unhandled rejections
@@ -310,11 +311,12 @@ router.patch('/plans/:id', ah(async (req, res) => {
 // Create a kundli for any user (admin override — no ownership restriction)
 router.post('/kundlis', ah(async (req, res) => {
   const { user_email, name, date_of_birth, time_of_birth, place_of_birth,
-          latitude, longitude, timezone_offset, gender } = req.body;
+          latitude, longitude, timezone_offset, gender, marital_status } = req.body;
 
   if (!user_email || !name || !date_of_birth || !time_of_birth || !place_of_birth
       || latitude == null || longitude == null || timezone_offset == null || !gender)
     return fail(res, 'user_email and all birth details are required', 400);
+  if (!isValidMaritalStatusInput(marital_status)) return fail(res, 'Marital status is invalid', 400);
 
   const user = await db('users').where({ email: user_email.trim().toLowerCase() }).first();
   if (!user) return fail(res, `No user found with email "${user_email}"`, 404);
@@ -324,6 +326,7 @@ router.post('/kundlis', ah(async (req, res) => {
     uuid: newUuid, user_id: user.id,
     name, date_of_birth, time_of_birth, place_of_birth,
     latitude, longitude, timezone_offset, gender,
+    marital_status:normalizeMaritalStatus(marital_status) ?? null,
   });
 
   const profile = await db('kundli_profiles').where({ id }).first();
@@ -361,7 +364,7 @@ router.get('/kundlis', ah(async (req, res) => {
     .join('users as u', 'kp.user_id', 'u.id')
     .select(
       'kp.id', 'kp.uuid', 'kp.name', 'kp.date_of_birth', 'kp.time_of_birth',
-      'kp.place_of_birth', 'kp.gender', 'kp.user_id', 'kp.created_at',
+      'kp.place_of_birth', 'kp.gender', 'kp.marital_status', 'kp.user_id', 'kp.created_at',
       'u.name as owner_name', 'u.email as owner_email'
     );
 

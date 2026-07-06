@@ -10,15 +10,22 @@ const {
   getAfflictions, afflictionPenalty,
   clamp, statusFromScore, pHi, estimateAge,
 } = require('./helpers');
+const { hasMarriageOccurred, normalizeMaritalStatus } = require('../../utils/marital-status');
 
 function evaluateNavamsha(chart, lagnaResult, profile = {}) {
   const age          = estimateAge(profile);
   const d9Chart      = chart?.varga_analysis?.d9 || null;
-  const d9Activated  = age !== null ? age >= 36 : true; // assume activated if no DOB
+  const maritalStatus = normalizeMaritalStatus(profile.marital_status ?? profile.maritalStatus) ?? null;
+  const activatedByMarriage = hasMarriageOccurred(profile);
+  const activatedByAge = age !== null ? age >= 36 : false;
+  const d9Activated  = activatedByMarriage || activatedByAge || age === null;
+  const activationReason = activatedByMarriage ? 'marriage' : activatedByAge ? 'age-36' : age === null ? 'age-unknown' : 'not-yet-active';
 
   // If D9 data is not available, return a default
   if (!d9Chart || !chart.planets) {
-    return _noD9Result(lagnaResult, d9Activated, age);
+    return _noD9Result(lagnaResult, d9Activated, age, {
+      maritalStatus, activatedByMarriage, activatedByAge, activationReason,
+    });
   }
 
   // Use main chart's planets since D9 positions are stored in varga_matrix
@@ -56,8 +63,10 @@ function evaluateNavamsha(chart, lagnaResult, profile = {}) {
     notes.push(`D9 (Navamsha) chart activates more strongly after age 36 or after marriage. Currently (age ${age ?? 'unknown'}), the D1 (birth chart) is the primary guide. Keep the D9 chart in mind for future growth.`);
     notesHi.push(`D9 (नवांश) चार्ट 36 वर्ष की आयु या विवाह के बाद अधिक सक्रिय होता है। अभी D1 (जन्म कुंडली) प्राथमिक मार्गदर्शक है। भविष्य के विकास के लिए D9 को ध्यान में रखें।`);
   } else {
-    notes.push(`D9 chart is now active (age ${age ?? '36+'}). It refines the birth chart promise — especially for marriage, relationships, dharma, and post-marriage career growth.`);
-    notesHi.push(`D9 चार्ट अब सक्रिय है (आयु ${age ?? '36+'})। यह जन्म कुंडली के वचन को परिष्कृत करता है — विशेष रूप से विवाह, रिश्तों, धर्म और विवाह के बाद करियर विकास के लिए।`);
+    const reasonEn = activatedByMarriage ? 'because marriage has occurred' : `from age ${age ?? '36+'}`;
+    const reasonHi = activatedByMarriage ? 'विवाह होने के कारण' : `आयु ${age ?? '36+'} से`;
+    notes.push(`D9 chart is now active ${reasonEn}. It refines the birth chart promise — especially for marriage, relationships, dharma, and post-marriage career growth.`);
+    notesHi.push(`D9 चार्ट अब ${reasonHi} सक्रिय है। यह जन्म कुंडली के वचन को परिष्कृत करता है — विशेष रूप से विवाह, रिश्तों, धर्म और विवाह के बाद करियर विकास के लिए।`);
   }
 
   // D9 vs main chart comparison
@@ -102,6 +111,7 @@ function evaluateNavamsha(chart, lagnaResult, profile = {}) {
   return {
     score, status, combinedStatus,
     d9Activated, currentAge: age, d9ActivationAge: 36,
+    maritalStatus, activatedByMarriage, activatedByAge, activationReason,
     mainChartScore: mainScore, d9Score,
     blockers, amplifiers, notes, notesHi,
     summaryEn, summaryHi,
@@ -141,11 +151,15 @@ function _assessCharaKarakas(karakas, notes, notesHi, blockers, amplifiers) {
   }
 }
 
-function _noD9Result(lagnaResult, d9Activated, age) {
+function _noD9Result(lagnaResult, d9Activated, age, activation = {}) {
   const mainScore = lagnaResult?.score ?? 50;
   return {
     score: mainScore, status: statusFromScore(mainScore),
     combinedStatus: 'data-unavailable', d9Activated, currentAge: age, d9ActivationAge: 36,
+    maritalStatus:activation.maritalStatus ?? null,
+    activatedByMarriage:!!activation.activatedByMarriage,
+    activatedByAge:!!activation.activatedByAge,
+    activationReason:activation.activationReason || 'data-unavailable',
     mainChartScore: mainScore, d9Score: null,
     blockers: [], amplifiers: [],
     notes: ['Navamsha (D9) detailed data not available. Birth chart indicators are used for marriage and relationship assessment.'],

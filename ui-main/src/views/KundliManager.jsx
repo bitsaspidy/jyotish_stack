@@ -14,6 +14,7 @@ import UpgradeModal, { PLAN_LIMITS } from '../components/UpgradeModal';
 const emptyForm = {
   name: '',
   gender: 'male',
+  marital_status: '',
   date_of_birth: '',
   time_of_birth: '',
   place_of_birth: '',
@@ -293,6 +294,19 @@ export default function KundliManager({ startWithForm = false }) {
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </select>
+              </label>
+              <label className="text-xs text-ivory/55">
+                {t('Marital Status', 'वैवाहिक स्थिति')}
+                <select className="input-royal mt-1" value={form.marital_status} onChange={(e) => update('marital_status', e.target.value)}>
+                  <option value="">{t('Not specified', 'नहीं बताया')}</option>
+                  <option value="unmarried">{t('Unmarried', 'अविवाहित')}</option>
+                  <option value="married">{t('Married', 'विवाहित')}</option>
+                  <option value="divorced">{t('Divorced', 'तलाकशुदा')}</option>
+                  <option value="widowed">{t('Widowed', 'विधवा / विधुर')}</option>
+                </select>
+                <span className="block mt-1 text-[9px] text-ivory/35">
+                  {t('D9 becomes active after marriage or from age 36.', 'D9 विवाह के बाद या 36 वर्ष की आयु से सक्रिय होता है।')}
+                </span>
               </label>
               <label className="text-xs text-ivory/55">
                 {t('Date of Birth', 'Janm tithi')}

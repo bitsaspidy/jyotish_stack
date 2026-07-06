@@ -199,7 +199,15 @@ function composeFullReport({
       notesHi: [...navamshaResult.notesHi, navamshaResult.summaryHi].filter(Boolean),
       blockers: navamshaResult.blockers,
       amplifiers: navamshaResult.amplifiers,
-      adminData: { d9Activated: navamshaResult.d9Activated, combinedStatus: navamshaResult.combinedStatus },
+      adminData: {
+        d9Activated:navamshaResult.d9Activated,
+        combinedStatus:navamshaResult.combinedStatus,
+        activationReason:navamshaResult.activationReason,
+        activatedByMarriage:navamshaResult.activatedByMarriage,
+        activatedByAge:navamshaResult.activatedByAge,
+        currentAge:navamshaResult.currentAge,
+        maritalStatus:navamshaResult.maritalStatus,
+      },
       lang, isAdmin,
     }));
   }
