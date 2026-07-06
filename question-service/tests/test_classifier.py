@@ -35,6 +35,33 @@ class QuestionClassifierTests(unittest.TestCase):
         self.assertTrue(result["is_ambiguous"])
         self.assertTrue(result["needs_clarification_en"])
 
+    def test_kundli_career_question_routes_to_d1_and_d10(self):
+        result = analyze_question("Will I get a promotion in my current job?", "general", "kundli")
+        self.assertEqual(result["analysis_mode"], "kundli")
+        self.assertEqual(result["action_key"], "career_promotion")
+        self.assertEqual(result["chart_slugs"], ["d1", "d10"])
+        self.assertEqual(result["timing_key"], "career")
+        self.assertIn(10, result["focus_houses"])
+
+    def test_kundli_children_question_routes_to_d7(self):
+        result = analyze_question("When are we likely to have a child?", "general", "kundli")
+        self.assertEqual(result["action_key"], "family_children")
+        self.assertIn("d7", result["chart_slugs"])
+        self.assertEqual(result["detected_category"], "family")
+
+    def test_kundli_general_career_question_is_not_mislabeled_as_job_change(self):
+        result = analyze_question("What career is best for me?", "general", "kundli")
+        self.assertEqual(result["detected_category"], "career")
+        self.assertEqual(result["subtype"], "general")
+        self.assertEqual(result["action_key"], "career_general")
+        self.assertEqual(result["chart_slugs"], ["d1", "d10"])
+
+    def test_kundli_general_finance_question_routes_to_d2(self):
+        result = analyze_question("How can my finances improve?", "general", "kundli")
+        self.assertEqual(result["detected_category"], "finance")
+        self.assertEqual(result["subtype"], "general")
+        self.assertIn("d2", result["chart_slugs"])
+
 
 if __name__ == "__main__":
     unittest.main()

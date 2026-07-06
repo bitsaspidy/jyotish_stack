@@ -22,7 +22,7 @@ Jyotish Stack AI provides a complete Vedic astrology engine covering kundli (bir
 | Email | Nodemailer (SMTP) |
 | PDF Reports | PDFKit |
 | Geocoding | Nominatim (free, no API key) |
-| AI Readings | Anthropic Claude Sonnet (`@anthropic-ai/sdk`) |
+| Question understanding | Local Python + deterministic English/Hindi rules |
 | Process Manager | PM2 |
 | Web Server | Apache 2 (mod_proxy) |
 
@@ -45,9 +45,11 @@ jyotish-stack/
 │           ├── life-report.service.js    # Atmakaraka, Isht Devata, varga analysis
 │           ├── ephemeris.service.js      # Astronomical algorithms (Meeus 2nd Ed.)
 │           ├── razorpay.service.js       # Razorpay — keys read from DB with env fallback
-│           ├── ai-prediction.service.js  # Claude Sonnet AI personalised reading
+│           ├── kundli-question.service.js # Programmatic Kundli + D-chart Q&A
 │           ├── report.service.js         # PDFKit report generation
 │           └── email.service.js          # Nodemailer + HTML templates
+│
+├── question-service/                 # Local FastAPI question classifier — port 5100
 │
 ├── ui-main/                       # Main website — jyotishstack.com — port 3000
 │   └── src/
@@ -140,8 +142,10 @@ SMTP_FROM=Jyotish Stack <account@jyotishstack.com>
 RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=your_key_secret
 
-# Anthropic — required for AI Personalised Reading (optional; shows stub if not set)
-ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxx
+# Local question-understanding service
+QUESTION_SERVICE_ENABLED=true
+QUESTION_SERVICE_URL=http://127.0.0.1:5100
+QUESTION_SERVICE_TIMEOUT_MS=1800
 
 # CORS origins
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
@@ -149,7 +153,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 
 > **Razorpay keys** can also be stored in the admin panel under **Settings → Payments** — no `.env` change or server restart needed. DB values take priority over env vars.
 
-> **ANTHROPIC_API_KEY** enables the AI Reading tab in every Kundli. Without it the tab shows a graceful "coming soon" stub — no errors.
+> Kundli questions use the private Python service on port 5100. Birth-chart data stays in the authenticated Node server; Python returns only an allow-listed D-chart routing plan.
 
 ### 4. Run Migrations & Seeds
 
@@ -285,7 +289,7 @@ Built on Meeus *Astronomical Algorithms* (2nd Ed.) with Lahiri (Chitra-paksha) a
 | Yogas | Yoga & Dosha detection with cancellation |
 | Fav Days | Auspicious days and nakshatras for the native |
 | Final Results | Kundli Synthesis — strength verdict, dominant themes, marriage timing, key remedies |
-| AI Reading | Claude Sonnet personalised 4-section Vedic reading (stub shown if no API key) |
+| Ask a Question | Kundli-aware Q&A that selects D1 and the relevant divisional charts for the question |
 
 Additional features:
 - PDF export (premium-gated) — full kundli report via PDFKit
@@ -354,7 +358,7 @@ GET    /api/kundli/:uuid                      Full chart (auto-recalculates if s
 POST   /api/kundli/:uuid/recalculate          Force fresh calculation
 PATCH  /api/kundli/:uuid                      Update birth details
 GET    /api/kundli/:uuid/report.pdf           PDF export (premium only)
-POST   /api/kundli/:uuid/ai-reading           Claude Sonnet AI personalised reading
+POST   /api/kundli/:uuid/ask-question         Programmatic Kundli and D-chart answer
 POST   /api/kundli/matchmaking/request        Calculate Ashtakoot + Dashakoot
 GET    /api/kundli/matchmaking/list           List matchmaking requests
 
@@ -499,7 +503,7 @@ Astronomical algorithms: Meeus *Astronomical Algorithms* (2nd Ed.).
 - **DATE typecast:** MySQL2 returns DATE columns as JS Date objects — fixed via `typeCast` in `knexfile.js` to return plain `"YYYY-MM-DD"` strings
 - **Calculation freshness:** `ensureCalculatedChart()` checks for marker fields added each session — stale charts auto-recalculate on next API access without user action
 - **Razorpay secret:** Never exposed via API — masked as `[SET]` sentinel in admin settings GET. Raw value lives only in the DB and never crosses the wire after initial save
-- **AI reading:** `ai-prediction.service.js` returns `{ available: false, stub: true }` when `ANTHROPIC_API_KEY` is absent — no errors, graceful UI fallback
+- **Kundli Q&A:** Python classifies the exact question and chooses an allow-listed D-chart plan; Node verifies chart ownership, reads the saved calculations, and produces the bilingual answer with a safe local fallback
 - **Service helpers:** `vedic-calc.service.js` is a lean orchestrator; all domain logic is split across 25 independent helper modules for testability
 - **Admin audit:** Every create/update/delete action in admin routes calls `logActivity()` — a non-fatal fire-and-forget that writes to `activity_logs`
 - **Settings upsert:** Admin settings PATCH uses `onConflict('key').merge()` — new keys are created on first save without needing a seed re-run

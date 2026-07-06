@@ -51,7 +51,7 @@ import PlacementNarrativesPanel from '../components/PlacementNarrativesPanel';
 import AvakahadaPanel       from '../components/AvakahadaPanel';
 import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
-import AIPredictionPanel    from '../components/AIPredictionPanel';
+import KundliQuestionPanel  from '../components/KundliQuestionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import JudgementPanel      from '../components/kundli/JudgementPanel';
 import MantrasPanel        from '../components/MantrasPanel';
@@ -1444,10 +1444,10 @@ export default function KundliDetail({ uuid }) {
           </div>
         )}
 
-        {/* ══ TAB: AI READING ══════════════════════════════════════════════ */}
-        {activeTab === 'ai-reading' && (
-          <div className="max-w-3xl mx-auto">
-            <AIPredictionPanel uuid={kundli?.uuid || uuid} lang={lang} />
+        {/* ══ TAB: ASK A QUESTION ══════════════════════════════════════════ */}
+        {activeTab === 'ask-question' && (
+          <div className="max-w-4xl mx-auto">
+            <KundliQuestionPanel uuid={kundli?.uuid || uuid} name={kundli?.name} lang={lang} />
           </div>
         )}
 

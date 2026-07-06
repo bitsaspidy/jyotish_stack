@@ -14,7 +14,6 @@ const { generatePersonalizedRemedies } = require('../services/remedy-engine');
 const { computeCharaKarakas, computeSadeSatiJourney, computeDashaJourney, computeNumerology } = require('../services/helpers/cosmic-insights');
 const { computeYutiAnalysis, computeRemedySuite, computeMarriageTiming, computeAntardashaNarratives } = require('../services/helpers/cosmic-extras');
 const { buildLifeReportNarratives }  = require('../services/helpers/life-report-narrative');
-const { generateAIPrediction }        = require('../services/ai-prediction.service');
 const { buildPlacementNarratives }  = require('../services/helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('../services/helpers/varshphal');
 const { computeKundliStrength }               = require('../services/helpers/kundli-strength');
@@ -24,11 +23,22 @@ const { composeKundliUserSummary } = require('../services/kundli-user-summary.se
 const { composeLifeReportUserFriendly } = require('../services/report-engine/life-report-humanizer');
 const { composeStrengthUserFriendly }   = require('../services/report-engine/strength-humanizer');
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
+const { analyzeQuestion } = require('../services/question-understanding.service');
+const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
 
 router.use(authenticate);
 
 // Max Kundli profiles a user may create, by plan tier
 const PLAN_PROFILE_LIMITS = { free: 1, basic: 3, premium: 10, yearly: 9999 };
+const QUESTION_CATEGORIES = new Set(['general','marriage','career','finance','health','legal','travel','lost_object','property','education','family']);
+
+function parseKundliQuestion(body) {
+  const question = String(body?.question || '').replace(/\s+/g, ' ').trim();
+  const requestedCategory = String(body?.category || 'general').trim();
+  if (question.length < 8 || question.length > 500) return { error:'Your question must be between 8 and 500 characters.' };
+  if (!QUESTION_CATEGORIES.has(requestedCategory)) return { error:'Question category is invalid.' };
+  return { question, category:requestedCategory };
+}
 
 // ── Helper: run calculation and persist ──────────────────────────────────────
 async function calcAndSave(profile) {
@@ -814,8 +824,10 @@ router.get('/:id/today', async (req, res) => {
   }
 });
 
-// ── POST /api/kundli/:id/ai-reading — Claude-powered personalised reading ────
-router.post('/:id/ai-reading', async (req, res) => {
+// ── POST /api/kundli/:id/ask-question — private rule-based Kundli Q&A ───────
+router.post('/:id/ask-question', async (req, res) => {
+  const input = parseKundliQuestion(req.body);
+  if (input.error) return fail(res, input.error, 400);
   try {
     const profile = await db('kundli_profiles')
       .where({ uuid: req.params.id, user_id: req.user.id })
@@ -825,11 +837,23 @@ router.post('/:id/ai-reading', async (req, res) => {
     const chart = await ensureCalculatedChart(profile);
     if (!chart) return fail(res, 'Unable to calculate chart', 500);
 
-    const result = await generateAIPrediction(chart);
-    return ok(res, result);
+    const analysis = await analyzeQuestion(input.question, input.category, { mode:'kundli' });
+    if (analysis.isAmbiguous) {
+      const message = analysis.language === 'hi'
+        ? (analysis.needsClarificationHi || 'कृपया एक स्पष्ट विषय, विकल्प या समय के बारे में पूछें।')
+        : (analysis.needsClarificationEn || 'Please ask about one clear topic, choice or time period.');
+      return fail(res, message, 422, { code:'QUESTION_NEEDS_DETAIL' });
+    }
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis, includeTechnical:isAdmin });
+    if (!answer) return fail(res, 'The saved Kundli does not contain enough calculated data for this question. Please recalculate it and try again.', 422);
+    return ok(res, {
+      answer,
+      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug) },
+    });
   } catch (e) {
-    console.error('[AI Reading]', e.message);
-    return fail(res, 'AI reading failed', 500);
+    console.error('[KundliQuestion]', e.message);
+    return fail(res, 'Unable to answer from this Kundli right now. Please try again.', 500);
   }
 });
 
@@ -844,3 +868,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.parseKundliQuestion = parseKundliQuestion;

@@ -16,6 +16,7 @@ app = FastAPI(title="Jyotish Question Understanding", version=SERVICE_VERSION, d
 class AnalyzeRequest(BaseModel):
     question: str = Field(min_length=8, max_length=500)
     selected_category: str = Field(default="general", max_length=40)
+    analysis_mode: str = Field(default="prashna", pattern="^(prashna|kundli)$")
 
 
 def _authorize(token: str | None) -> None:
@@ -32,4 +33,4 @@ def health() -> dict:
 @app.post("/analyze")
 def analyze(payload: AnalyzeRequest, x_internal_token: str | None = Header(default=None)) -> dict:
     _authorize(x_internal_token)
-    return analyze_question(payload.question, payload.selected_category)
+    return analyze_question(payload.question, payload.selected_category, payload.analysis_mode)

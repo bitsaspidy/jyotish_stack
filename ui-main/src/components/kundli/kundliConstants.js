@@ -60,6 +60,7 @@ export const BHAVA_NATURE = {
 // Main tabs for KundliDetail
 export const MAIN_TABS = [
   { key:'kundli',      en:'Kundli',        hi:'कुंडली',         icon:'🔯' },
+  { key:'ask-question', en:'Ask a Question', hi:'प्रश्न पूछें',   icon:'💬' },
   { key:'life-guide',  en:'Simple Report', hi:'सरल रिपोर्ट',     icon:'🪔' },
   { key:'life-report', en:'Life Report',   hi:'जीवन रिपोर्ट',   icon:'📋' },
   { key:'strength',    en:'Strength',      hi:'ग्रह बल',        icon:'💪' },
@@ -77,7 +78,6 @@ export const MAIN_TABS = [
   { key:'results',     en:'Final Results', hi:'संपूर्ण निर्णय',  icon:'🌟' },
   { key:'upagrahas',   en:'Upagrahas',    hi:'उपग्रह',           icon:'🪐' },
   { key:'judgement',   en:'Judgement',    hi:'निर्णय',           icon:'⚖️' },
-  { key:'ai-reading',  en:'AI Reading',   hi:'AI पठन',          icon:'🤖' },
 ];
 
 // Life area icons (Drishti section)
