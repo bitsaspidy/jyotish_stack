@@ -37,12 +37,20 @@ test('Prashna reading returns free, paid and chart sections', () => {
   assert.equal(Object.keys(reading.chart.planets).length, 9);
 });
 
-test('free access removes premium details on the server', () => {
+test('free and paid members never receive admin-only technical factors', () => {
   const reading = sampleReading();
   const free = gatePrashnaReading(reading, false);
-  const paid = gatePrashnaReading(reading, true);
+  const paid = gatePrashnaReading(reading, true, false);
+  const admin = gatePrashnaReading(reading, true, true);
   assert.equal(free.premium, null);
-  assert.ok(paid.premium?.technicalDetails);
+  assert.equal(free.free.visibleSignals[0].technicalEn, undefined);
+  assert.equal(free.free.visibleSignals[0].technicalHi, undefined);
+  assert.equal(paid.premium?.technicalDetails, undefined);
+  assert.equal(paid.premium?.allSignals[0].technicalEn, undefined);
+  assert.equal(paid.premium?.allSignals[0].technicalHi, undefined);
+  assert.ok(admin.premium?.technicalDetails);
+  assert.ok(admin.premium?.allSignals[0].technicalEn);
+  assert.ok(admin.premium?.allSignals[0].technicalHi);
   assert.ok(free.free.headlineEn);
   assert.ok(free.chart.houses);
 });

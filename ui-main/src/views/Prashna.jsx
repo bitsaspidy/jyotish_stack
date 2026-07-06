@@ -166,7 +166,7 @@ function SignalCard({ signal, lang }) {
   );
 }
 
-function PaidReport({ premium, lang }) {
+function PaidReport({ premium, lang, canViewTechnical = false }) {
   const list = (items, color) => (
     <div style={{ display:'grid', gap:8 }}>
       {items?.map((item, index) => (
@@ -221,19 +221,21 @@ function PaidReport({ premium, lang }) {
         </section>
       </div>
 
-      <details className="card-royal" style={{ overflow:'hidden' }}>
-        <summary style={{ padding:'13px 17px', color:GOLD, cursor:'pointer', fontSize:11, fontWeight:700 }}>
-          {t(lang, 'Astrology behind this answer (optional)', 'इस उत्तर के ज्योतिषीय आधार (वैकल्पिक)')}
-        </summary>
-        <div style={{ padding:'0 17px 17px', display:'grid', gap:8 }}>
-          {premium.allSignals?.map((signal) => (
-            <p key={signal.key} style={{ color:'rgba(245,240,232,0.62)', fontSize:10.5, lineHeight:1.65 }}>
-              <strong style={{ color:'rgba(245,240,232,0.82)' }}>{pick(lang, signal, 'title')}:</strong>{' '}
-              {pick(lang, signal, 'technical')}
-            </p>
-          ))}
-        </div>
-      </details>
+      {canViewTechnical && premium.technicalDetails && (
+        <details className="card-royal" style={{ overflow:'hidden' }}>
+          <summary style={{ padding:'13px 17px', color:GOLD, cursor:'pointer', fontSize:11, fontWeight:700 }}>
+            🔐 {t(lang, 'Technical Prashna Factors — Admin only', 'तकनीकी प्रश्न संकेत — केवल एडमिन')}
+          </summary>
+          <div style={{ padding:'0 17px 17px', display:'grid', gap:8 }}>
+            {premium.allSignals?.map((signal) => (
+              <p key={signal.key} style={{ color:'rgba(245,240,232,0.62)', fontSize:10.5, lineHeight:1.65 }}>
+                <strong style={{ color:'rgba(245,240,232,0.82)' }}>{pick(lang, signal, 'title')}:</strong>{' '}
+                {pick(lang, signal, 'technical')}
+              </p>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
@@ -435,7 +437,7 @@ export default function Prashna() {
             </section>
 
             {paid && reading.premium
-              ? <PaidReport premium={reading.premium} lang={lang} />
+              ? <PaidReport premium={reading.premium} lang={lang} canViewTechnical={!!result.access.can_view_technical} />
               : (
                 <>
                   <section className="card-royal p-5">

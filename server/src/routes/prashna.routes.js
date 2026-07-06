@@ -88,7 +88,8 @@ router.post('/calculate', optionalAuthenticate, async (req, res) => {
     if (!reading) return fail(res, 'Unable to calculate the Prashna chart.', 500);
 
     const access = await paidAccessFor(req.user);
-    const responseReading = gatePrashnaReading(reading, access.isPaid);
+    const canViewTechnical = req.user?.role === 'admin' || req.user?.role === 'superadmin';
+    const responseReading = gatePrashnaReading(reading, access.isPaid, canViewTechnical);
     return ok(res, {
       access:{
         level:access.isPaid ? 'paid' : 'free',
@@ -96,6 +97,7 @@ router.post('/calculate', optionalAuthenticate, async (req, res) => {
         authenticated:!!req.user,
         plan_name:access.planName,
         expires_at:access.expiresAt || null,
+        can_view_technical:canViewTechnical,
         required_plans:['premium', 'yearly'],
       },
       reading:responseReading,

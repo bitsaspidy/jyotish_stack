@@ -417,9 +417,31 @@ function generatePrashnaReading({ chart, question, category = 'general', askedAt
   };
 }
 
-function gatePrashnaReading(reading, isPaid) {
-  if (!reading || isPaid) return reading;
-  return { ...reading, premium:null };
+function stripTechnicalSignal(signal) {
+  if (!signal) return signal;
+  const { technicalEn, technicalHi, ...userSignal } = signal;
+  return userSignal;
+}
+
+function gatePrashnaReading(reading, isPaid, canViewTechnical = false) {
+  if (!reading) return reading;
+
+  const safeReading = canViewTechnical ? reading : {
+    ...reading,
+    free:{
+      ...reading.free,
+      visibleSignals:reading.free?.visibleSignals?.map(stripTechnicalSignal) || [],
+    },
+    premium:reading.premium ? (() => {
+      const { technicalDetails, ...userPremium } = reading.premium;
+      return {
+        ...userPremium,
+        allSignals:reading.premium.allSignals?.map(stripTechnicalSignal) || [],
+      };
+    })() : null,
+  };
+
+  return isPaid ? safeReading : { ...safeReading, premium:null };
 }
 
 module.exports = {
@@ -429,4 +451,5 @@ module.exports = {
   compactChart,
   planetHouse,
   toneFromScore,
+  stripTechnicalSignal,
 };
