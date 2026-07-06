@@ -16,6 +16,10 @@ function isPrashnaMemberPlan(planName) {
 async function paidAccessFor(user) {
   if (!user) return { isPaid:false, planName:null };
   if (user.role === 'admin' || user.role === 'superadmin') return { isPaid:true, planName:'Admin' };
+  if (isPrashnaMemberPlan(user.plan)) {
+    const planName = String(user.plan).trim().toLowerCase() === 'yearly' ? 'Yearly' : 'Premium';
+    return { isPaid:true, planName, expiresAt:null };
+  }
   try {
     const now = new Date();
     const subscriptions = await db('user_subscriptions as us')

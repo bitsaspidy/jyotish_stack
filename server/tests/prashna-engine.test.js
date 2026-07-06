@@ -6,7 +6,7 @@ const {
   generatePrashnaReading,
   gatePrashnaReading,
 } = require('../src/services/prashna-engine');
-const { parseInput, isPrashnaMemberPlan } = require('../src/routes/prashna.routes');
+const { parseInput, paidAccessFor, isPrashnaMemberPlan } = require('../src/routes/prashna.routes');
 const { optionalAuthenticate } = require('../src/middleware/auth');
 
 function sampleChart() {
@@ -122,4 +122,12 @@ test('only Premium and Yearly plans unlock the complete Prashna reading', () => 
   assert.equal(isPrashnaMemberPlan('Basic'), false);
   assert.equal(isPrashnaMemberPlan('Free'), false);
   assert.equal(isPrashnaMemberPlan(null), false);
+});
+
+test('authenticated Premium and Yearly user records unlock Prashna without a subscription row', async () => {
+  const premium = await paidAccessFor({ id:101, role:'user', plan:'premium' });
+  const yearly = await paidAccessFor({ id:102, role:'user', plan:'Yearly' });
+
+  assert.deepEqual(premium, { isPaid:true, planName:'Premium', expiresAt:null });
+  assert.deepEqual(yearly, { isPaid:true, planName:'Yearly', expiresAt:null });
 });
