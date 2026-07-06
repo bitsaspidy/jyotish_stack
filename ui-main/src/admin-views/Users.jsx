@@ -137,7 +137,7 @@ function UserDetail({ user, onClose, onUpdated }) {
     setPlanLoading(true);
     try {
       await adminApi.patch(`/admin/users/${user.id}/plan`, { plan: newPlan });
-      toast.success(`Plan updated to ${newPlan}`);
+      toast.success(newPlan === 'free' ? 'Plan set to free' : `${newPlan} subscription activated`);
       onUpdated();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to update plan'); }
     finally { setPlanLoading(false); }
@@ -300,16 +300,17 @@ function UserDetail({ user, onClose, onUpdated }) {
                 const ps = PLAN_STYLE[p];
                 const isCurrent = (user.plan || 'free') === p;
                 return (
-                  <button key={p} onClick={() => changePlan(p)} disabled={planLoading || isCurrent}
+                  <button key={p} onClick={() => changePlan(p)} disabled={planLoading}
+                    title={isCurrent ? 'Click to activate or sync this subscription' : `Change plan to ${p}`}
                     style={{
                       padding:'5px 12px', borderRadius:6, fontSize:11, fontWeight:600,
-                      cursor: isCurrent ? 'default' : 'pointer',
+                      cursor: planLoading ? 'wait' : 'pointer',
                       background: isCurrent ? ps.bg : 'rgba(255,255,255,0.04)',
                       border: `1px solid ${isCurrent ? ps.border : 'rgba(255,255,255,0.1)'}`,
                       color: isCurrent ? ps.color : 'rgba(245,240,232,0.4)',
                       opacity: planLoading ? 0.6 : 1,
                     }}>
-                    {p}
+                    {isCurrent ? `${p} · sync` : p}
                   </button>
                 );
               })}

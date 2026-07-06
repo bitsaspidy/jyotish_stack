@@ -14,6 +14,7 @@ const {
 const { composeStrengthUserFriendly } = require('../services/report-engine/strength-humanizer');
 const { kundliReportPdf } = require('../services/report.service');
 const { resetInstance: resetRazorpay } = require('../services/razorpay.service');
+const { syncAdminSelectedPlan } = require('../services/admin-plan.service');
 
 // Async error wrapper — passes any thrown/rejected error to Express global handler
 // (Express 4 does NOT auto-handle async errors; without this, unhandled rejections
@@ -118,14 +119,25 @@ router.patch('/users/:id/role', ah(async (req, res) => {
 }));
 
 router.patch('/users/:id/plan', ah(async (req, res) => {
-  const { plan } = req.body;
+  const plan = String(req.body.plan || '').trim().toLowerCase();
   const allowed = ['free', 'basic', 'premium', 'yearly'];
   if (!allowed.includes(plan)) return fail(res, 'Invalid plan. Must be free, basic, premium, or yearly', 400);
-  const user = await db('users').where({ id: req.params.id }).first();
-  if (!user) return fail(res, 'User not found', 404);
-  await db('users').where({ id: req.params.id }).update({ plan, updated_at: new Date() });
-  await logActivity(req, 'update', 'user', req.params.id, `Plan changed to ${plan}`);
-  return ok(res, { plan }, 'Plan updated');
+  try {
+    const result = await syncAdminSelectedPlan(db, { userId:req.params.id, planKey:plan });
+    const detail = result.subscription
+      ? `Plan changed to ${plan}; subscription ${result.subscription.id} activated`
+      : 'Plan changed to free; open subscriptions cancelled';
+    await logActivity(req, 'update', 'user', req.params.id, detail);
+    return ok(
+      res,
+      { plan:result.plan, subscription:result.subscription },
+      result.subscription ? 'Plan updated and subscription activated' : 'Plan updated and subscriptions cancelled',
+    );
+  } catch (error) {
+    if (error.code === 'USER_NOT_FOUND') return fail(res, error.message, 404);
+    if (error.code === 'PLAN_NOT_FOUND' || error.code === 'INVALID_PLAN_DURATION') return fail(res, error.message, 409);
+    throw error;
+  }
 }));
 
 router.post('/users/:id/resend-verification', ah(async (req, res) => {
