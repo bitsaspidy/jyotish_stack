@@ -223,7 +223,7 @@ function FreePaywall({ reading, authenticated, lang }) {
         </span>
         <h2 className="font-serif text-gold text-lg font-bold mt-3">{t(lang, 'Unlock the complete Prashna judgement', 'पूर्ण प्रश्न निर्णय खोलें')}</h2>
         <p style={{ color:MUTED, fontSize:12, lineHeight:1.7, marginTop:7, maxWidth:720 }}>
-          {t(lang, 'Your free result shows the chart and basic direction. Paid members can see the decisive factors, timing and practical guidance that should be considered before acting.', 'आपके निःशुल्क परिणाम में कुंडली और मूल दिशा दिखाई गई है। सशुल्क सदस्य निर्णय से पहले देखने योग्य मुख्य कारण, समय और व्यावहारिक मार्गदर्शन देख सकते हैं।')}
+          {t(lang, 'Your free result shows the chart and basic direction. Premium and Yearly members can see the decisive factors, timing and practical guidance that should be considered before acting.', 'आपके निःशुल्क परिणाम में कुंडली और मूल दिशा दिखाई गई है। प्रीमियम और वार्षिक सदस्य निर्णय से पहले देखने योग्य मुख्य कारण, समय और व्यावहारिक मार्गदर्शन देख सकते हैं।')}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
           {reading.lockedSections?.map((section) => (
@@ -360,7 +360,7 @@ export default function Prashna() {
             <section className="card-royal p-5" style={{ border:'1px solid rgba(52,211,153,0.2)' }}>
               <p style={{ color:'#34D399', fontSize:11, fontWeight:800 }}>✓ {t(lang, 'Free access', 'निःशुल्क उपलब्ध')}</p>
               <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.6, marginTop:5 }}>{t(lang, 'Chart, basic direction and two key indicators.', 'कुंडली, मूल दिशा और दो मुख्य संकेत।')}</p>
-              <p style={{ color:'#C4B5FD', fontSize:11, fontWeight:800, marginTop:11 }}>✦ {t(lang, 'Paid member access', 'सशुल्क सदस्य सुविधा')}</p>
+              <p style={{ color:'#C4B5FD', fontSize:11, fontWeight:800, marginTop:11 }}>✦ {t(lang, 'Premium & Yearly access', 'प्रीमियम और वार्षिक सदस्य सुविधा')}</p>
               <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.6, marginTop:5 }}>{t(lang, 'Complete judgement, all indicators, timing, cautions and practical guidance.', 'पूर्ण निर्णय, सभी संकेत, समय, सावधानियां और व्यावहारिक मार्गदर्शन।')}</p>
             </section>
           </aside>
@@ -372,7 +372,7 @@ export default function Prashna() {
               <div style={{ display:'flex', justifyContent:'space-between', gap:12, flexWrap:'wrap', alignItems:'flex-start' }}>
                 <div>
                   <span style={{ color:paid ? '#34D399' : '#FBBF24', fontSize:9.5, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                    {paid ? `✦ ${t(lang, 'Full Member Reading', 'पूर्ण सदस्य फल')}` : `◈ ${t(lang, 'Free Preview', 'निःशुल्क झलक')}`}
+                    {paid ? `✦ ${t(lang, 'Premium / Yearly Reading', 'प्रीमियम / वार्षिक सदस्य फल')}` : `◈ ${t(lang, 'Free Preview', 'निःशुल्क झलक')}`}
                   </span>
                   <h2 className="font-serif text-gold text-xl font-bold mt-2">{pick(lang, reading.free, 'headline')}</h2>
                 </div>

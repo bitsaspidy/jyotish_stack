@@ -7,12 +7,18 @@ const { ok, fail } = require('../utils/response');
 const { calculateVedicChart } = require('../services/vedic-calc.service');
 const { CATEGORY_CONFIG, generatePrashnaReading, gatePrashnaReading } = require('../services/prashna-engine');
 
+const PRASHNA_MEMBER_PLANS = new Set(['premium', 'yearly']);
+
+function isPrashnaMemberPlan(planName) {
+  return PRASHNA_MEMBER_PLANS.has(String(planName || '').trim().toLowerCase());
+}
+
 async function paidAccessFor(user) {
   if (!user) return { isPaid:false, planName:null };
   if (user.role === 'admin' || user.role === 'superadmin') return { isPaid:true, planName:'Admin' };
   try {
     const now = new Date();
-    const subscription = await db('user_subscriptions as us')
+    const subscriptions = await db('user_subscriptions as us')
       .join('subscription_plans as sp', 'us.plan_id', 'sp.id')
       .where('us.user_id', user.id)
       .where('us.status', 'active')
@@ -20,8 +26,8 @@ async function paidAccessFor(user) {
       .where('us.starts_at', '<=', now)
       .where('us.expires_at', '>', now)
       .orderBy('us.expires_at', 'desc')
-      .select('sp.name', 'us.expires_at')
-      .first();
+      .select('sp.name', 'us.expires_at');
+    const subscription = subscriptions.find((item) => isPrashnaMemberPlan(item.name));
     return { isPaid:!!subscription, planName:subscription?.name || null, expiresAt:subscription?.expires_at || null };
   } catch (error) {
     console.error('[PrashnaAccess]', error.message);
@@ -86,6 +92,7 @@ router.post('/calculate', optionalAuthenticate, async (req, res) => {
         authenticated:!!req.user,
         plan_name:access.planName,
         expires_at:access.expiresAt || null,
+        required_plans:['premium', 'yearly'],
       },
       reading:responseReading,
     });
@@ -98,3 +105,4 @@ router.post('/calculate', optionalAuthenticate, async (req, res) => {
 module.exports = router;
 module.exports.parseInput = parseInput;
 module.exports.paidAccessFor = paidAccessFor;
+module.exports.isPrashnaMemberPlan = isPrashnaMemberPlan;

@@ -6,7 +6,7 @@ const {
   generatePrashnaReading,
   gatePrashnaReading,
 } = require('../src/services/prashna-engine');
-const { parseInput } = require('../src/routes/prashna.routes');
+const { parseInput, isPrashnaMemberPlan } = require('../src/routes/prashna.routes');
 const { optionalAuthenticate } = require('../src/middleware/auth');
 
 function sampleChart() {
@@ -112,4 +112,14 @@ test('optional authentication lets stale credentials use the free reading', asyn
   await optionalAuthenticate({ headers:{ authorization:'Bearer expired-token' } }, res, next);
 
   assert.equal(nextCalls, 2);
+});
+
+test('only Premium and Yearly plans unlock the complete Prashna reading', () => {
+  assert.equal(isPrashnaMemberPlan('Premium'), true);
+  assert.equal(isPrashnaMemberPlan('premium'), true);
+  assert.equal(isPrashnaMemberPlan('Yearly'), true);
+  assert.equal(isPrashnaMemberPlan(' yearly '), true);
+  assert.equal(isPrashnaMemberPlan('Basic'), false);
+  assert.equal(isPrashnaMemberPlan('Free'), false);
+  assert.equal(isPrashnaMemberPlan(null), false);
 });
