@@ -25,6 +25,7 @@ const NAV = [
     children: [
       { href: '/horoscope',           en: 'Daily Horoscope',       hi: 'दैनिक राशिफल'  },
       { href: '/predictions',         en: 'Predictions',           hi: 'भविष्यवाणी'    },
+      { href: '/prashna',             en: 'Prashna Jyotish',       hi: 'प्रश्न ज्योतिष'  },
       { href: '/planetary-positions', en: 'Planetary Positions',   hi: 'ग्रह स्थिति'   },
     ],
   },

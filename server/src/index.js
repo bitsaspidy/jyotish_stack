@@ -19,6 +19,7 @@ const settingsRoutes = require('./routes/settings.routes');
 const horoscopeRoutes  = require('./routes/horoscope.routes');
 const panchangRoutes   = require('./routes/panchang.routes');
 const publicRoutes     = require('./routes/public.routes');
+const prashnaRoutes    = require('./routes/prashna.routes');
 const { initDailyDigestJob } = require('./jobs/daily-digest');
 const { initDailyPushJob }   = require('./jobs/daily-push');
 
@@ -70,6 +71,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/horoscope', horoscopeRoutes);
 app.use('/api/panchang', panchangRoutes);
 app.use('/api/public',   publicRoutes);
+app.use('/api/prashna',  prashnaRoutes);
 app.use('/api/remedy',   require('./routes/remedy-package.routes'));
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
