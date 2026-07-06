@@ -381,7 +381,7 @@ function ContactSection({ lang }) {
             </div>
           ) : (
             <form onSubmit={submit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
                   <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Name *', 'नाम *')}</label>
                   <input value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))}
@@ -393,7 +393,7 @@ function ContactSection({ lang }) {
                     required placeholder="you@example.com" style={inp} />
                 </div>
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+              <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
                 <div>
                   <label style={{ color:DIM, fontSize:11, display:'block', marginBottom:5 }}>{translate(lang, 'Topic', 'विषय श्रेणी')}</label>
                   <select value={form.department} onChange={e => setForm(f=>({...f,department:e.target.value}))}

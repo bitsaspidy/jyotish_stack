@@ -81,7 +81,7 @@ function DetailModal({ inquiry, onClose, onRefresh }) {
           <StatusBadge status={status} />
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:16 }}>
+        <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:16 }}>
           {[['Name', inquiry.name], ['Email', inquiry.email], ['Phone', inquiry.phone || '—'], ['Subject', inquiry.subject || '—']].map(([l, v]) => (
             <div key={l}>
               <p style={{ color:DIM, fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:3 }}>{l}</p>

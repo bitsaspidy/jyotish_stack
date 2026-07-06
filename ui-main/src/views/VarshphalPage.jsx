@@ -129,7 +129,7 @@ export default function VarshphalPage() {
 
         {/* ── Main Layout: selector + panel ── */}
         {!loading && user && kundlis.length > 0 && (
-          <div style={{ display:'grid', gridTemplateColumns:'260px 1fr', gap:24, alignItems:'start' }}>
+          <div className="varshphal-main-grid" style={{ display:'grid', gridTemplateColumns:'260px 1fr', gap:24, alignItems:'start' }}>
 
             {/* Kundli Selector Sidebar */}
             <motion.div initial={{ opacity:0, x:-12 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }}>

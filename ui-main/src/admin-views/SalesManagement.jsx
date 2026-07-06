@@ -80,7 +80,7 @@ function BusinessSettings({ onClose }) {
       </div>
       <p style={{ color: 'rgba(245,240,232,0.4)', fontSize: 12, marginBottom: 18 }}>These appear on every invoice. Fill in your real GSTIN and legal details for compliant tax invoices.</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 16 }}>
+      <div className="admin-responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 16 }}>
         {CONFIG_FIELDS.map(({ key, label, type, full }) => (
           <div key={key} style={full ? { gridColumn: '1 / -1' } : undefined}>
             <label style={labelStyle}>{label}</label>
@@ -184,7 +184,7 @@ function InvoiceEditModal({ invoice, onClose, onSaved }) {
         </div>
 
         {/* Current values */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
+        <div className="admin-responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '12px 14px', marginBottom: 20 }}>
           {[
             { l: 'Total Paid', v: money(invoice.total_amount) },
             { l: 'Taxable', v: money(invoice.taxable_value) },

@@ -213,7 +213,7 @@ function AreaChips({ analysis, lang }) {
     { key:'health',   icon:'🌿', en:'Health',       hi:'स्वास्थ्य', data: analysis.health },
   ];
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
+    <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
       {areas.map(({ key, icon, en, hi, data }) => {
         if (!data) return null;
         const tone = data.tone || 'moderate';

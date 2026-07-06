@@ -131,7 +131,7 @@ function UpagrahaCard({ u, lang, defaultOpen }) {
           )}
 
           {/* Positive / Negative */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+          <div className="responsive-two-column" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
             {positive && (
               <div style={{ background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 8, padding: '10px 12px' }}>
                 <p style={{ fontSize: 10, color: GREEN, fontWeight: 700, marginBottom: 6 }}>

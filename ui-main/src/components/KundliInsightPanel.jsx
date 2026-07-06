@@ -400,7 +400,7 @@ function SummaryTab({ chart, enrichment, lang }) {
 
       {/* ── Yogas & Doshas Quick Count ── */}
       {(yogasCount > 0 || doshasCount > 0) && (
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
           <div style={{ border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 16px',
             background:'rgba(34,197,94,0.04)', textAlign:'center' }}>
             <p style={{ color:'#22C55E', fontSize:26, fontWeight:700 }}>{yogasCount}</p>
@@ -429,7 +429,7 @@ function SummaryTab({ chart, enrichment, lang }) {
       )}
 
       {/* ── Strong / Watch-out Planets ── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+      <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
         <div style={{ border:'1px solid rgba(34,197,94,0.2)', borderRadius:12, padding:'14px 16px',
           background:'rgba(34,197,94,0.04)' }}>
           <SectionTitle icon="✅">{t(lang, 'Strong Planets', 'शक्तिशाली ग्रह')}</SectionTitle>

@@ -70,11 +70,11 @@ function ShellInner({ children }) {
     : 'Admin');
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0A0C18', color:'#F5F0E8', fontFamily:'Inter, system-ui, sans-serif' }}>
+    <div className="admin-shell" style={{ minHeight:'100vh', background:'#0A0C18', color:'#F5F0E8', fontFamily:'Inter, system-ui, sans-serif' }}>
       <Sidebar collapsed={collapsed} onToggle={toggleCollapsed} />
 
       {/* ── Top Header ─────────────────────────────────────────────────────── */}
-      <header style={{
+      <header className="admin-shell-header" style={{
         position:'fixed', top:0, left:sidebarW, right:0, height:56,
         background:'rgba(10,12,24,0.97)', borderBottom:'1px solid rgba(212,175,55,0.1)',
         display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -82,15 +82,15 @@ function ShellInner({ children }) {
         transition:'left 0.22s ease',
       }}>
         {/* Left: breadcrumb */}
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <span style={{ color:'rgba(245,240,232,0.28)', fontSize:11, letterSpacing:'0.06em' }}>ADMIN</span>
-          <span style={{ color:'rgba(245,240,232,0.18)', fontSize:13 }}>›</span>
-          <span style={{ color:'#D4AF37', fontSize:14, fontWeight:600, letterSpacing:'0.01em' }}>{pageTitle}</span>
+        <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+          <span className="admin-header-prefix" style={{ color:'rgba(245,240,232,0.28)', fontSize:11, letterSpacing:'0.06em' }}>ADMIN</span>
+          <span className="admin-header-prefix" style={{ color:'rgba(245,240,232,0.18)', fontSize:13 }}>›</span>
+          <span className="admin-header-page-title" style={{ color:'#D4AF37', fontSize:14, fontWeight:600, letterSpacing:'0.01em' }}>{pageTitle}</span>
         </div>
 
         {/* Right: admin identity */}
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ textAlign:'right' }}>
+          <div className="admin-header-identity-copy" style={{ textAlign:'right' }}>
             <p style={{ color:'#F5F0E8', fontSize:13, fontWeight:600, lineHeight:1.3 }}>{admin.name}</p>
             <p style={{ color:'rgba(245,240,232,0.3)', fontSize:10, textTransform:'capitalize', letterSpacing:'0.06em' }}>{admin.role}</p>
           </div>
@@ -106,8 +106,8 @@ function ShellInner({ children }) {
       </header>
 
       {/* ── Page Content ───────────────────────────────────────────────────── */}
-      <main style={{ marginLeft:sidebarW, paddingTop:56, minHeight:'100vh', transition:'margin-left 0.22s ease' }}>
-        <div style={{ padding:'30px 28px' }}>
+      <main className="admin-shell-main" style={{ marginLeft:sidebarW, paddingTop:56, minHeight:'100vh', transition:'margin-left 0.22s ease' }}>
+        <div className="admin-shell-content" style={{ padding:'30px 28px' }}>
           {children}
         </div>
       </main>

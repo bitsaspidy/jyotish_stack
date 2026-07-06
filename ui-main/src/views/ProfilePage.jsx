@@ -147,7 +147,7 @@ function ProfileTab({ user, setUser, lang, onResendVerif }) {
       )}
 
       {/* Read-only meta */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '16px 18px' }}>
+      <div className="responsive-two-column" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '16px 18px' }}>
         {[
           { label: hi ? 'ईमेल' : 'Email',        value: user.email },
           { label: hi ? 'सदस्यता' : 'Plan',       value: (PLAN_META[user.plan || 'free']?.label || 'Free').toUpperCase(), color: PLAN_META[user.plan || 'free']?.color },
@@ -162,7 +162,7 @@ function ProfileTab({ user, setUser, lang, onResendVerif }) {
       </div>
 
       {/* Editable fields */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="responsive-two-column" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Field>
           <Label>{hi ? 'पूरा नाम' : 'Full Name'}</Label>
           <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Your name" />
@@ -500,19 +500,20 @@ export default function ProfilePage() {
   const initials = user.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 
   return (
-    <div className="relative min-h-screen pt-24 px-5 pb-20">
+    <div className="profile-page relative min-h-screen pt-24 px-5 pb-20">
       <StarField count={60} />
       <div className="relative z-10 max-w-4xl mx-auto">
 
         {/* ── Header card ─────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="profile-header-card"
           style={{ background: CARD, border: `1px solid rgba(212,175,55,0.18)`, borderRadius: 16, padding: '28px 28px 0', marginBottom: 24, overflow: 'hidden' }}
         >
           {/* Gold top accent bar */}
           <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: 3, background: `linear-gradient(90deg,${pm.color},${pm.color}44,transparent)` }} />
 
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 22, flexWrap: 'wrap' }}>
+          <div className="profile-identity" style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginBottom: 22, flexWrap: 'wrap' }}>
             {/* Avatar */}
             <div style={{
               width: 72, height: 72, borderRadius: '50%', flexShrink: 0,
@@ -537,7 +538,7 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              <p style={{ color: DIM, fontSize: 13, margin: '0 0 4px' }}>{user.email}</p>
+              <p className="profile-email" style={{ color: DIM, fontSize: 13, margin: '0 0 4px' }}>{user.email}</p>
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, color: user.email_verified ? GREEN : AMBER, display: 'flex', alignItems: 'center', gap: 4 }}>
                   {user.email_verified ? '✓' : '⚠'} {user.email_verified ? (hi ? 'सत्यापित' : 'Verified') : (hi ? 'असत्यापित' : 'Unverified')}
@@ -555,7 +556,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.06)', marginLeft: -28, marginRight: -28, paddingLeft: 28 }}>
+          <div className="profile-tabs" style={{ display: 'flex', borderTop: '1px solid rgba(255,255,255,0.06)', marginLeft: -28, marginRight: -28, paddingLeft: 28 }}>
             {TABS.map(t => (
               <button
                 key={t.key}
@@ -581,6 +582,7 @@ export default function ProfilePage() {
             key={tab}
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
+            className="profile-content-card"
             style={{ background: CARD, border: '1px solid rgba(212,175,55,0.12)', borderRadius: 16, padding: '28px 28px' }}
           >
             {tab === 'profile'      && <ProfileTab      user={user} setUser={setUser} lang={lang} />}

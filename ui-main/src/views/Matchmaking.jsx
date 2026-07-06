@@ -132,7 +132,7 @@ function MangalSection({ mangal, mangal_note_en, mangal_note_hi, mangal_compatib
       </div>
 
       {/* Boy / Girl cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div className="responsive-two-column" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {[
           { label: T('Boy (Var)', 'वर'), data: mangal?.boy },
           { label: T('Girl (Vadhu)', 'वधू'), data: mangal?.girl },

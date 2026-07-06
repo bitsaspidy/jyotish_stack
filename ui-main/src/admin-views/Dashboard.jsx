@@ -115,7 +115,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Middle Row ─────────────────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
 
         {/* Signups chart */}
         <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'18px 20px' }}>
@@ -157,7 +157,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Row ─────────────────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
 
         {/* Recent Users */}
         <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'18px 20px' }}>

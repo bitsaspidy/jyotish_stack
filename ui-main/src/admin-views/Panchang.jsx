@@ -86,7 +86,7 @@ function HoraTable({ horas, title }) {
   return (
     <div>
       <p style={{ color:'rgba(245,240,232,0.35)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>{title}</p>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:4 }}>
         {horas.map((h, i) => (
           <div key={i} style={{
             display:'flex', alignItems:'center', gap:8,
@@ -185,7 +185,7 @@ export default function Panchang() {
 
       {/* ── Input Form ──────────────────────────────────────────────────────── */}
       <div style={{ background:'rgba(17,20,40,0.8)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:20, marginBottom:24 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:12 }}>
+        <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:12 }}>
           <div>
             <p style={{ color:'rgba(245,240,232,0.45)', fontSize:11, marginBottom:5 }}>{T('Date','तारीख')}</p>
             <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inp} />
@@ -224,7 +224,7 @@ export default function Panchang() {
       {p && (
         <>
           {/* ── Overview ──────────────────────────────────────────────────── */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+          <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
 
             {/* Left: Core Panchang */}
             <Card title={T('Panchang Details','पंचांग विवरण')}>
@@ -287,7 +287,7 @@ export default function Panchang() {
 
           {/* ── Chaughadiya ─────────────────────────────────────────────────── */}
           <Card title={T('Chaughadiya','चौघड़िया')} accent="rgba(167,139,250,0.2)">
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+            <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
               <ChaughadiyaTable periods={p.chaughadiya?.day}   title={T('Day','दिन')} />
               <ChaughadiyaTable periods={p.chaughadiya?.night} title={T('Night','रात')} />
             </div>
@@ -296,7 +296,7 @@ export default function Panchang() {
           {/* ── Hora ────────────────────────────────────────────────────────── */}
           <div style={{ marginTop:16 }}>
             <Card title={T('Hora (Planetary Hours)','होरा (ग्रह घड़ी)')} accent="rgba(96,165,250,0.2)">
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+              <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
                 <HoraTable horas={p.hora?.day}   title={T('Day Horas','दिन की होरा')} />
                 <HoraTable horas={p.hora?.night} title={T('Night Horas','रात की होरा')} />
               </div>

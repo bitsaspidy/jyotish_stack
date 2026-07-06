@@ -129,7 +129,7 @@ function ComposeModal({ onClose, onSent, signatures, defaultDept }) {
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'flex-end', justifyContent:'flex-end', pointerEvents:'none' }}>
-      <div style={{ pointerEvents:'all', width:540, height:'80vh', margin:'0 28px 28px 0', background:'#0F1120', border:`1px solid rgba(212,175,55,0.3)`, borderRadius:12, display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.7)' }}>
+      <div className="email-compose-modal" style={{ pointerEvents:'all', width:540, height:'80vh', margin:'0 28px 28px 0', background:'#0F1120', border:`1px solid rgba(212,175,55,0.3)`, borderRadius:12, display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.7)' }}>
 
         {/* Header */}
         <div style={{ padding:'14px 18px', borderBottom:`1px solid rgba(212,175,55,0.12)`, display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(212,175,55,0.06)', borderRadius:'12px 12px 0 0' }}>
@@ -668,11 +668,21 @@ export default function EmailManager() {
   ];
 
   return (
-    <div style={{ display:'flex', height:'calc(100vh - 86px)', overflow:'hidden', background:'#0A0C18', gap:0 }}>
+    <div className="email-manager-root" style={{ display:'flex', height:'calc(100vh - 86px)', overflow:'hidden', background:'#0A0C18', gap:0 }}>
       <style>{`@keyframes email-spin { to { transform: rotate(360deg); } }`}</style>
 
+      <div className="email-manager-mobile-toolbar">
+        <button onClick={() => { setReplyData(null); setCompose(true); }} aria-label="Compose email">✏️</button>
+        <select value={activeDept} onChange={(event) => { setActiveDept(event.target.value); setPage(1); }} aria-label="Email account">
+          {DEPT_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+        </select>
+        <select value={activeFolder} onChange={(event) => { setActiveFolder(event.target.value); setPage(1); }} aria-label="Email folder">
+          {FOLDER_TABS.map((tab) => <option key={tab.key} value={tab.key}>{tab.label}</option>)}
+        </select>
+      </div>
+
       {/* ── Left Sidebar ──────────────────────────────────────────────────────── */}
-      <div style={{ width:192, flexShrink:0, borderRight:'1px solid rgba(212,175,55,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div className="email-manager-sidebar" style={{ width:192, flexShrink:0, borderRight:'1px solid rgba(212,175,55,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         {/* Compose */}
         <div style={{ padding:'14px 12px', borderBottom:'1px solid rgba(212,175,55,0.08)' }}>
@@ -740,7 +750,7 @@ export default function EmailManager() {
       </div>
 
       {/* ── Email List ────────────────────────────────────────────────────────── */}
-      <div style={{ width:320, flexShrink:0, borderRight:'1px solid rgba(212,175,55,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div className={`email-manager-list ${detail || detailLoading ? 'email-manager-mobile-hidden' : ''}`} style={{ width:320, flexShrink:0, borderRight:'1px solid rgba(212,175,55,0.1)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
         {/* List header */}
         <div style={{ padding:'12px 14px', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0 }}>
@@ -824,7 +834,7 @@ export default function EmailManager() {
       </div>
 
       {/* ── Email Detail ──────────────────────────────────────────────────────── */}
-      <div style={{ flex:1, display:'flex', minWidth:0, overflow:'hidden', background:'#0F1120' }}>
+      <div className={`email-manager-detail ${!detail && !detailLoading ? 'email-manager-mobile-hidden' : ''}`} style={{ flex:1, display:'flex', minWidth:0, overflow:'hidden', background:'#0F1120' }}>
         {detailLoading ? (
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(245,240,232,0.3)', fontSize:13 }}>
             ⏳ Loading email…

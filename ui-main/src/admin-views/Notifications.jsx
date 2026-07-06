@@ -102,7 +102,7 @@ export default function Notifications() {
         <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13 }}>Send in-app notifications to users</p>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'420px 1fr', gap:16, alignItems:'start' }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'420px 1fr', gap:16, alignItems:'start' }}>
         {/* ── Send Form ────────────────────────────────────────────────── */}
         <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px' }}>
           <h2 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700, marginBottom:18 }}>🔔 Send Notification</h2>
@@ -232,7 +232,7 @@ export default function Notifications() {
           Browser push notifications to visitors who opted in. The daily horoscope push runs automatically at 07:00 IST.
         </p>
 
-        <div style={{ display:'grid', gridTemplateColumns:'420px 1fr', gap:16, alignItems:'start' }}>
+        <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'420px 1fr', gap:16, alignItems:'start' }}>
           {/* Blast form */}
           <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'22px' }}>
             <h3 style={{ color:'#F5F0E8', fontSize:15, fontWeight:700, marginBottom:18 }}>📢 Send Push Blast</h3>

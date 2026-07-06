@@ -133,7 +133,7 @@ export default function AdminTeam() {
           <p>No team members yet.</p>
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
+        <div className="admin-auto-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:14 }}>
           {members.map(m => (
             <div key={m.id} style={{ background:'rgba(255,255,255,0.02)',
               border:`1px solid ${m.is_active ? 'rgba(212,175,55,0.2)' : 'rgba(107,114,128,0.15)'}`,

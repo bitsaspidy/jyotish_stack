@@ -155,11 +155,11 @@ export default function Plans() {
       </div>
 
       {loading ? (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:16 }}>
+        <div className="admin-auto-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:16 }}>
           {[1,2,3].map(i => <div key={i} style={{ height:280, background:'rgba(255,255,255,0.04)', borderRadius:8, animation:'pulse 1.5s infinite' }} />)}
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
+        <div className="admin-auto-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:16 }}>
           {plans.map((p, idx) => {
             const features = Array.isArray(p.features) ? p.features : (typeof p.features === 'string' ? JSON.parse(p.features||'[]') : []);
             const accent   = ACCENT[idx % ACCENT.length];

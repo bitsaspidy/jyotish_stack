@@ -136,7 +136,7 @@ export default function Newsletter() {
       </div>
 
       {/* Stats strip */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:20 }}>
         {[
           { label:'Total Subscribers', value:total,             color:'#D4AF37' },
           { label:'Active',            value:active,            color:'#34D399' },

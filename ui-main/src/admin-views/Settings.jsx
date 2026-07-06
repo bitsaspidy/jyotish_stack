@@ -288,7 +288,7 @@ export default function Settings() {
             </div>
           )}
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:16 }}>
+          <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:16 }}>
             {[
               { key:'maintenance_title',      label:'Page Title',         multiline:false },
               { key:'maintenance_message',    label:'Message (English)',  multiline:true  },

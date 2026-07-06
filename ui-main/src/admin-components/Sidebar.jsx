@@ -73,7 +73,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   };
 
   return (
-    <aside style={{
+    <aside className="admin-sidebar" style={{
       position:'fixed', left:0, top:0, bottom:0,
       width: collapsed ? 64 : 240,
       background:'#06070F',
@@ -84,23 +84,23 @@ export default function Sidebar({ collapsed, onToggle }) {
     }}>
 
       {/* ── Logo row ─────────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="admin-sidebar-logo-row" style={{
         height:56, padding:'0 16px', flexShrink:0,
         display:'flex', alignItems:'center',
         justifyContent: collapsed ? 'center' : 'space-between',
         borderBottom:'1px solid rgba(212,175,55,0.1)',
       }}>
         {!collapsed && (
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div className="admin-sidebar-brand" style={{ display:'flex', alignItems:'center', gap:8 }}>
             <span style={{ fontSize:18 }}>🪐</span>
-            <div>
+            <div className="admin-sidebar-brand-copy">
               <p style={{ color:'#D4AF37', fontWeight:700, fontSize:13, fontFamily:'Georgia,serif', whiteSpace:'nowrap', lineHeight:1.2 }}>JS Admin</p>
               <p style={{ color:'rgba(212,175,55,0.3)', fontSize:9, letterSpacing:'0.08em', whiteSpace:'nowrap' }}>jyotishstack.com</p>
             </div>
           </div>
         )}
         {collapsed && <span style={{ fontSize:18 }}>🪐</span>}
-        <button onClick={onToggle} style={{
+        <button className="admin-sidebar-toggle" onClick={onToggle} style={{
           background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)',
           borderRadius:4, cursor:'pointer', color:'rgba(245,240,232,0.4)',
           fontSize:11, padding:'4px 6px', lineHeight:1, transition:'all 0.15s',
@@ -115,7 +115,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         {NAV.map(({ section, items }) => (
           <div key={section} style={{ marginTop:4 }}>
             {!collapsed && (
-              <p style={{
+              <p className="admin-sidebar-section" style={{
                 color:'rgba(245,240,232,0.18)', fontSize:9, fontWeight:700,
                 textTransform:'uppercase', letterSpacing:'0.18em',
                 padding:'10px 16px 3px',
@@ -128,7 +128,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             {items.map(({ href, emoji, label }) => {
               const active = pathname === href || (href !== '/admin/dashboard' && pathname.startsWith(href));
               return (
-                <Link key={href} href={href} title={collapsed ? label : undefined} style={{
+                <Link className="admin-sidebar-link" key={href} href={href} title={label} aria-label={label} style={{
                   display:'flex', alignItems:'center', gap:10, textDecoration:'none',
                   padding: collapsed ? '10px 0' : '8px 16px',
                   justifyContent: collapsed ? 'center' : 'flex-start',
@@ -140,12 +140,12 @@ export default function Sidebar({ collapsed, onToggle }) {
                 }}>
                   <span style={{ fontSize:14, width:18, textAlign:'center', flexShrink:0 }}>{emoji}</span>
                   {!collapsed && (
-                    <span style={{ fontSize:13, fontWeight: active ? 600 : 400, whiteSpace:'nowrap', letterSpacing:'0.01em' }}>
+                    <span className="admin-sidebar-link-label" style={{ fontSize:13, fontWeight: active ? 600 : 400, whiteSpace:'nowrap', letterSpacing:'0.01em' }}>
                       {label}
                     </span>
                   )}
                   {active && !collapsed && (
-                    <span style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#D4AF37', flexShrink:0 }} />
+                    <span className="admin-sidebar-active-dot" style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#D4AF37', flexShrink:0 }} />
                   )}
                 </Link>
               );
@@ -157,7 +157,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* ── Admin profile + logout ────────────────────────────────────────── */}
       <div style={{ borderTop:'1px solid rgba(212,175,55,0.1)', flexShrink:0, padding: collapsed ? '10px 0' : '12px 14px' }}>
         {!collapsed && admin && (
-          <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
+          <div className="admin-sidebar-profile" style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
             <div style={{
               width:32, height:32, borderRadius:'50%', flexShrink:0,
               background:'linear-gradient(135deg,rgba(212,175,55,0.22),rgba(212,175,55,0.06))',
@@ -186,7 +186,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           transition:'all 0.15s',
         }}>
           <span style={{ fontSize:13 }}>⎋</span>
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span className="admin-sidebar-logout-label">Sign Out</span>}
         </button>
       </div>
     </aside>

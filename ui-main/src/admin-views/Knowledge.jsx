@@ -36,7 +36,7 @@ function ExtraDataGrid({ extra }) {
   const entries = Object.entries(extra).filter(([, v]) => v !== null && v !== undefined && v !== '');
   if (!entries.length) return null;
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:8, marginTop:10 }}>
+    <div className="admin-auto-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:8, marginTop:10 }}>
       {entries.map(([k, v]) => (
         <div key={k} style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(212,175,55,0.1)', borderRadius:6, padding:'7px 10px' }}>
           <p style={{ color:'#D4AF37', fontSize:9, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:3 }}>

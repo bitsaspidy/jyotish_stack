@@ -140,7 +140,7 @@ export default function TodayPredictionPanel({ uuid, lang = 'en', admin = false 
       {meta.areas && (
         <div style={{ marginBottom:14 }}>
           <SecLabel icon="📊" en="Life Areas Today" hi="जीवन क्षेत्र आज" lang={lang} />
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
+          <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
             {AREA_CFG.map(({ key, icon, en, hi, color }) => {
               const a = meta.areas[key];
               if (!a) return null;

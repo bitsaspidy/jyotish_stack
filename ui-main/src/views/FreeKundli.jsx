@@ -313,7 +313,7 @@ export default function FreeKundli() {
         {/* Form */}
         <motion.form onSubmit={handleSubmit} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
           className="card-royal p-6 mb-8" style={{ maxWidth:640, margin:'0 auto 32px' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <div style={{ gridColumn:'1 / -1' }}>
               <label className="text-ivory/70 text-xs">{t('Full Name', 'पूरा नाम')} *</label>
               <input className="input-royal mt-1 w-full" value={form.name} onChange={(e) => update('name', e.target.value)} required

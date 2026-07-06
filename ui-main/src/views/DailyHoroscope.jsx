@@ -68,7 +68,7 @@ function TransitStrip({ summary, lang }) {
 function RashiGrid({ rashis, selected, onSelect, lang }) {
   if (!rashis) return null;
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+    <div className="horoscope-rashi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
       {rashis.map((r) => {
         const isSelected = selected?.rashi_num === r.rashi_num;
         const scoreColor = SCORE_COLOR[r.score] || '#D4AF37';
@@ -190,7 +190,7 @@ function RashiDetail({ rashi, lang }) {
       </div>
 
       {/* Tab nav */}
-      <div style={{ display:'flex', gap:0, borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 24px' }}>
+      <div className="mobile-horizontal-scroll" style={{ display:'flex', gap:0, borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'0 24px' }}>
         {TABS.map((tb) => (
           <button key={tb.key} onClick={() => setTab(tb.key)} style={{
             padding:'10px 14px', background:'none', border:'none', cursor:'pointer',
@@ -213,7 +213,7 @@ function RashiDetail({ rashi, lang }) {
             </p>
 
             {/* Advice + Caution */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+            <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
               <div style={{ padding:'12px 14px', background:'rgba(34,197,94,0.06)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:10 }}>
                 <div style={{ fontSize:10, fontWeight:700, color:'#22C55E', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
                   ✓ {t(lang,'Today\'s Guidance','आज का मार्गदर्शन')}
@@ -335,7 +335,7 @@ function RashiDetail({ rashi, lang }) {
                 )}
               </p>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               {[
                 { icon:'📿', en:'Daily Mantra', hi:'दैनिक मंत्र', val_en: remedy.mantra, val_hi: remedy.mantra_hi },
                 { icon:'🔵', en:'Lucky Color Today', hi:'आज का शुभ रंग', val_en: remedy.color, val_hi: remedy.color_hi },
@@ -517,7 +517,7 @@ export default function DailyHoroscope() {
         )}
 
         {/* ── Main Grid: Selector + Detail ── */}
-        <div style={{ display:'grid', gridTemplateColumns:'minmax(260px,1fr) 2fr', gap:20, alignItems:'start' }}>
+        <div className="horoscope-main-grid" style={{ display:'grid', gridTemplateColumns:'minmax(260px,1fr) 2fr', gap:20, alignItems:'start' }}>
 
           {/* Rashi Selector */}
           <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.1 }}>

@@ -120,7 +120,7 @@ function CareerTab({ data, lang }) {
               {t(lang,`Business Score: ${career.business_score} | Job Score: ${career.job_score}`, `व्यापार: ${career.business_score} | नौकरी: ${career.job_score}`)}
             </span>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+          <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
             <ScoreBar score={career.business_score} label={t(lang,'Business','व्यापार')} color="#FBBF24" />
             <ScoreBar score={career.job_score} label={t(lang,'Job','नौकरी')} color="#60A5FA" />
           </div>
@@ -250,7 +250,7 @@ function RelationshipsTab({ data, lang, marriageTiming }) {
               </span>
             )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:8 }}>
+          <div className="responsive-three-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6, marginBottom:8 }}>
             <ScoreBar score={relationships.venus_score} label={t(lang,'Venus','शुक्र')} color="#F472B6" />
             <ScoreBar score={relationships.fifth_lord_score} label={t(lang,'5th Lord','5वां स्वामी')} color="#A78BFA" />
             <ScoreBar score={relationships.seventh_lord_score} label={t(lang,'7th Lord','7वां स्वामी')} color="#60A5FA" />
@@ -276,7 +276,7 @@ function RelationshipsTab({ data, lang, marriageTiming }) {
               </span>
             )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
+          <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
             <ScoreBar score={marriage.seventh_lord_score} label={t(lang,`7th Lord (${marriage.seventh_lord})`,`7वें स्वामी (${marriage.seventh_lord})`)} color="#F472B6" />
             <ScoreBar score={marriage.venus_score} label={t(lang,'Venus','शुक्र')} color="#A78BFA" />
           </div>
@@ -338,7 +338,7 @@ function FamilyTab({ data, lang }) {
               </span>
             )}
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
+          <div className="responsive-two-column" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:8 }}>
             <ScoreBar score={children.fifth_lord_score} label={t(lang,`5th Lord (${children.fifth_lord})`,`5वें स्वामी (${children.fifth_lord})`)} color="#FBBF24" />
             <ScoreBar score={children.jupiter_score} label={t(lang,'Jupiter ♃','गुरु ♃')} color="#F59E0B" />
           </div>

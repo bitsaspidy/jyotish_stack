@@ -100,7 +100,7 @@ export default function UpgradeModal({ onClose, used = 0, limit = 1, plan = 'fre
         </div>
 
         {/* Plan cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
+        <div className="responsive-three-column" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
           {PLANS.map((p) => (
             <div key={p.key} style={{
               background: p.bg, border: `1px solid ${p.border}`,

@@ -74,7 +74,7 @@ export default function BirthFields({ form, onChange, lang, showName = true, sho
   });
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+    <div className="birth-fields-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
       {showName && (
         <div style={{ gridColumn: showGender ? 'auto' : '1 / -1' }}>
           <label className="text-ivory/70 text-xs">{t('Full Name', 'पूरा नाम')} *</label>
@@ -103,7 +103,7 @@ export default function BirthFields({ form, onChange, lang, showName = true, sho
 
       <div style={{ gridColumn:'1 / -1', position:'relative' }} ref={searchRef}>
         <label className="text-ivory/70 text-xs">{t('Birth Place', 'जन्म स्थान')} *</label>
-        <div style={{ display:'flex', gap:8, marginTop:4 }}>
+        <div className="birth-location-row" style={{ display:'flex', gap:8, marginTop:4 }}>
           <input className="input-royal w-full" value={locQuery} onChange={(e) => setLocQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleLocationSearch(e); }}
             placeholder={t('e.g. Jodhpur, Rajasthan, India', 'जैसे: जोधपुर, राजस्थान, भारत')} />

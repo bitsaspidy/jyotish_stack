@@ -4,14 +4,24 @@
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 @layer base {
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    max-width: 100%;
+    overflow-x: clip;
+  }
 
   body {
     @apply antialiased;
     background: radial-gradient(ellipse at top, #242A4D 0%, #171B34 55%, #101324 100%);
     color: #F5F0E8;
     min-height: 100vh;
+    max-width: 100%;
+    overflow-x: clip;
   }
+
+  img, video, iframe, svg { max-width: 100%; }
+  input, select, textarea, button { min-width: 0; }
+  pre { max-width: 100%; overflow-x: auto; }
 
   ::selection      { background: rgba(212,175,55,0.25); color: #F0D060; }
   ::-webkit-scrollbar       { width: 5px; height: 5px; }
@@ -233,6 +243,148 @@
   margin: 1.25rem 0;
 }
 .prose-legal .warn-box p { margin: 0; color: rgba(252,165,165,0.85); }
+
+/* ── Responsive foundations ──────────────────────────────────────────────── */
+.mobile-horizontal-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.email-manager-mobile-toolbar { display: none; }
+
+@media (max-width: 767px) {
+  .admin-sidebar { width: 60px !important; }
+  .admin-sidebar-brand-copy,
+  .admin-sidebar-section,
+  .admin-sidebar-link-label,
+  .admin-sidebar-active-dot,
+  .admin-sidebar-profile,
+  .admin-sidebar-logout-label,
+  .admin-sidebar-toggle { display: none !important; }
+  .admin-sidebar-link {
+    justify-content: center !important;
+    padding: 10px 0 !important;
+    gap: 0 !important;
+  }
+  .admin-sidebar-logo-row { justify-content: center !important; padding: 0 !important; }
+  .admin-sidebar-brand { justify-content: center !important; gap: 0 !important; }
+  .admin-shell-header {
+    left: 60px !important;
+    padding: 0 12px !important;
+  }
+  .admin-shell-main { margin-left: 60px !important; }
+  .admin-shell-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 18px 12px !important;
+    overflow-x: hidden;
+  }
+  .admin-shell-content > * { min-width: 0; max-width: 100%; }
+  .admin-header-prefix,
+  .admin-header-identity-copy { display: none !important; }
+  .admin-header-page-title {
+    display: block;
+    max-width: calc(100vw - 132px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-responsive-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-auto-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .admin-bottom-nav {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 10px;
+  }
+  .admin-bottom-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .admin-card { padding: 14px; }
+
+  .email-manager-root {
+    height: calc(100dvh - 74px) !important;
+    flex-direction: column;
+  }
+  .email-manager-mobile-toolbar {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    padding: 8px;
+    border-bottom: 1px solid rgba(212,175,55,0.12);
+    flex: 0 0 auto;
+  }
+  .email-manager-mobile-toolbar button,
+  .email-manager-mobile-toolbar select {
+    max-width: 100%;
+    border: 1px solid rgba(212,175,55,0.24);
+    border-radius: 6px;
+    background: #111428;
+    color: #F5F0E8;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+  .email-manager-sidebar { display: none !important; }
+  .email-manager-list,
+  .email-manager-detail { width: 100% !important; flex: 1 1 auto !important; }
+  .email-manager-mobile-hidden { display: none !important; }
+  .email-compose-modal {
+    width: calc(100vw - 20px) !important;
+    height: calc(100dvh - 90px) !important;
+    margin: 10px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .responsive-two-column,
+  .responsive-three-column,
+  .responsive-four-column,
+  .horoscope-main-grid,
+  .varshphal-main-grid,
+  .birth-fields-grid { grid-template-columns: minmax(0, 1fr) !important; }
+
+  .profile-page { padding: 80px 12px 48px !important; }
+  .profile-header-card { padding: 20px 16px 0 !important; }
+  .profile-content-card { padding: 18px 14px !important; }
+  .profile-tabs {
+    margin-left: -16px !important;
+    margin-right: -16px !important;
+    padding-left: 0 !important;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tabs > button {
+    flex: 1 0 auto;
+    padding: 12px 14px !important;
+    font-size: 12px !important;
+  }
+  .profile-identity { gap: 12px !important; }
+  .profile-email { overflow-wrap: anywhere; }
+
+  .birth-location-row { flex-direction: column; }
+  .birth-location-row > button { min-height: 42px; }
+}
+
+@media (max-width: 480px) {
+  .card-royal { backdrop-filter: blur(8px); }
+  .btn-gold, .btn-outline-gold { max-width: 100%; }
+  [style*="minmax(390px"],
+  [style*="minmax(300px"],
+  [style*="minmax(280px"],
+  [style*="minmax(260px"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .horoscope-rashi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
 
 /* ── Print styles for Simple Report tab ──────────────────────────────────── */
 @media print {

@@ -65,7 +65,7 @@ export default function EmailBlast() {
         <p style={{ color:'rgba(245,240,232,0.38)', fontSize:13 }}>Send bulk emails to users or segments</p>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:16, alignItems:'start' }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:16, alignItems:'start' }}>
         {/* ── Compose Panel ─────────────────────────────────────────────── */}
         <div style={{ background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, overflow:'hidden' }}>
           {/* Tabs */}

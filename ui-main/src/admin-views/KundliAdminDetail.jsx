@@ -160,7 +160,7 @@ function AdminStrengthSection({ uuid, lang = 'en' }) {
           </div>
         )}
         {/* Strengths + needs care */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+        <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
           <div>
             <p style={{ color:'rgba(16,185,129,0.8)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>{T('Where life supports you', 'जहां जीवन साथ देता है')}</p>
             {(sf.topStrengths || []).map(item => {
@@ -242,7 +242,7 @@ function AdminStrengthSection({ uuid, lang = 'en' }) {
       </div>
 
       {/* Sub-scores row */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:20 }}>
+      <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:20 }}>
         {[
           { l:T('Planet Avg','ग्रह औसत'),   v: data.planet_avg  ?? '—' },
           { l:T('Yoga Score','योग स्कोर'),   v: data.yoga_score  ?? '—' },
@@ -914,7 +914,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
             )} color="#F97316" />
           </AdminGuide>
 
-          <div style={{ display:'grid', gridTemplateColumns:'2fr 3fr', gap:24 }}>
+          <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'2fr 3fr', gap:24 }}>
             {/* Left col */}
             <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
               {/* Chart */}
@@ -952,7 +952,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
               {/* Quick stats */}
               {chart && (
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
                   {[
                     { l: lang==='hi' ? 'लग्न'    : 'Ascendant', v: lang==='hi' ? (chart.ascendant.rashi_hi  || chart.ascendant.rashi_en)      : chart.ascendant.rashi_en,      s: chart.ascendant.degree_in_sign_dms,        c:'#D4AF37' },
                     { l: lang==='hi' ? 'नक्षत्र' : 'Nakshatra', v: lang==='hi' ? (chart.nakshatra.hi        || chart.nakshatra.en)             : chart.nakshatra.en,             s: `${lang==='hi'?'पाद':'Pada'} ${chart.nakshatra.pada}`, c:'#A78BFA' },
@@ -1150,7 +1150,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
 
               {/* Mangal Dosha + Gochar */}
               {chart && (
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+                <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
                   <div style={{ background:'rgba(17,20,40,0.8)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:16 }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
                       <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:13, fontWeight:700 }}>Mangal Dosha</h2>
@@ -1164,7 +1164,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
                     <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, marginBottom:10 }}>
                       {chart.mangal_dosha?.summary_en || 'Not calculated'}
                     </p>
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                    <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
                       {(chart.mangal_dosha?.checks || []).map(check => (
                         <div key={check.basis} style={{ borderRadius:7, border: check.has_dosha ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(212,175,55,0.12)', background: check.has_dosha ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)', padding:'7px', textAlign:'center' }}>
                           <p style={{ fontSize:10, color:'#64748B' }}>{check.basis}</p>
@@ -1198,7 +1198,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
               {chart?.houses && (
                 <div style={{ background:'rgba(17,20,40,0.8)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:12, padding:20 }}>
                   <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:14, fontWeight:700, marginBottom:14 }}>🏠 12 Houses (Whole Sign)</h2>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                  <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
                     {Object.values(chart.houses).map(h => (
                       <div key={h.house_num} style={{
                         border: h.rashi_num === chart.ascendant.rashi_num ? '1px solid rgba(212,175,55,0.4)' : '1px solid rgba(212,175,55,0.1)',
@@ -1457,7 +1457,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
               <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:15, fontWeight:700, marginBottom:16 }}>
                 🧭 Graha Digbala — Directional Strength
               </h2>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
+              <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:12 }}>
                 {Object.values(chart.digbala).map(d => {
                   const meta     = PLANET_META[d.planet] || {};
                   const barColor = d.has_digbala ? '#22C55E' : d.has_digbala_loss ? '#EF4444' : '#D4AF37';
@@ -1520,7 +1520,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
               <h2 style={{ color:'#D4AF37', fontFamily:'Georgia,serif', fontSize:15, fontWeight:700, marginBottom:16 }}>
                 🪐 Bhav Karak Grahas — Natural Significators
               </h2>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+              <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
                 {Object.values(chart.bhav_karak).map(bk => (
                   <div key={bk.house} style={{ border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:12 }}>
                     <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
@@ -1589,7 +1589,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
               {chart.drishti.by_house_detail && (
                 <div style={{ marginBottom:20 }}>
                   <p style={{ color:'rgba(212,175,55,0.6)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Plain-Language Effects</p>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                     {Object.values(chart.drishti.by_house_detail).map(item => (
                       <DrishtiHouseCard key={item.house} item={item} lang={lang} />
                     ))}
@@ -1598,7 +1598,7 @@ export default function KundliAdminDetail({ kundliUuid }) {
               )}
 
               <p style={{ color:'rgba(212,175,55,0.6)', fontSize:10, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Planet → Houses Aspected</p>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:20 }}>
+              <div className="admin-responsive-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:20 }}>
                 {Object.entries(chart.drishti.by_planet || {}).map(([planet, info]) => {
                   const meta       = PLANET_META[planet] || {};
                   const hasSpecial = info.aspects.length > 1;
@@ -1733,12 +1733,12 @@ export default function KundliAdminDetail({ kundliUuid }) {
       )}
 
       {/* Bottom navigation */}
-      <div style={{ marginTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', background:'#111428', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:'12px 16px' }}>
+      <div className="admin-bottom-nav" style={{ marginTop:24, display:'flex', justifyContent:'space-between', alignItems:'center', background:'#111428', border:'1px solid rgba(212,175,55,0.1)', borderRadius:8, padding:'12px 16px' }}>
         <button onClick={() => router.push('/admin/kundlis')}
           style={{ padding:'7px 16px', borderRadius:6, background:'rgba(212,175,55,0.08)', border:'1px solid rgba(212,175,55,0.2)', color:'rgba(212,175,55,0.7)', fontSize:12, cursor:'pointer' }}>
           ← All Kundli Profiles
         </button>
-        <div style={{ display:'flex', gap:8 }}>
+        <div className="admin-bottom-tabs" style={{ display:'flex', gap:8 }}>
           {MAIN_TABS.map(tab => (
             activeTab === tab.key ? null : (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}

@@ -147,7 +147,7 @@ export default function AdminTestimonials() {
           <p>No testimonials yet.</p>
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
+        <div className="admin-auto-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:14 }}>
           {items.map(t => (
             <div key={t.id} style={{ background:'rgba(255,255,255,0.02)',
               border:`1px solid ${t.is_featured ? 'rgba(212,175,55,0.35)' : 'rgba(212,175,55,0.1)'}`,
