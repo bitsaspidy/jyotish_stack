@@ -4,8 +4,10 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import StarField from '../components/StarField';
 import PlanetaryTransitChart from '../components/PlanetaryTransitChart';
+import { ChartToggle } from '../components/kundli/KundliChart';
 import { useLang } from '../context/LangContext';
-import { t, planetName } from '../lib/astroI18n';
+import { t, planetName, chartStyleLabel } from '../lib/astroI18n';
+import { normalizePlanetaryChartStyle } from '../lib/planetaryChart.mjs';
 import api from '../lib/api';
 
 const GOLD  = '#D4AF37';
@@ -32,6 +34,26 @@ export default function PlanetaryPositions({ initialDate }) {
   const [date, setDate] = useState(initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate) ? initialDate : todayIST());
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [chartStyle, setChartStyle] = useState('south');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('kundli_chart_style');
+      setChartStyle(normalizePlanetaryChartStyle(saved));
+    } catch {
+      // The chart still works when browser storage is unavailable.
+    }
+  }, []);
+
+  const handleChartStyleChange = (nextStyle) => {
+    const normalizedStyle = normalizePlanetaryChartStyle(nextStyle);
+    setChartStyle(normalizedStyle);
+    try {
+      localStorage.setItem('kundli_chart_style', normalizedStyle);
+    } catch {
+      // Keep the in-page selection even when persistence is unavailable.
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -79,20 +101,33 @@ export default function PlanetaryPositions({ initialDate }) {
             style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 390px), 1fr))', gap:16, alignItems:'start' }}
           >
             <section className="card-royal p-4" aria-label={t(lang, 'Chart', 'चार्ट')}>
+              <ChartToggle style={chartStyle} onChange={handleChartStyleChange} lang={lang} />
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:12 }}>
                 <div>
                   <p style={{ color:GOLD, fontFamily:'Georgia,serif', fontSize:15, fontWeight:700 }}>
-                    ◈ {t(lang, 'Chart', 'चार्ट')}
+                    {chartStyle === 'north' ? '◇' : '◈'} {t(lang, 'Chart', 'चार्ट')}
                   </p>
                   <p style={{ color:MUTED, fontSize:10, marginTop:3 }}>
-                    {t(lang, 'Planetary Positions', 'ग्रह स्थिति')} · {t(lang, 'Signs fixed', 'राशियां स्थिर')}
+                    {t(lang, 'Planetary Positions', 'ग्रह स्थिति')} · {chartStyleLabel(chartStyle, lang)}
                   </p>
                 </div>
                 <span style={{ color:'rgba(245,240,232,0.35)', fontSize:9, textAlign:'right' }}>
                   {t(lang, 'Retrograde', 'वक्री')} = ℞
                 </span>
               </div>
-              <PlanetaryTransitChart positions={data.positions} date={data.date || date} lang={lang} />
+              <motion.div
+                key={chartStyle}
+                initial={{ opacity:0, scale:0.98 }}
+                animate={{ opacity:1, scale:1 }}
+                transition={{ duration:0.18 }}
+              >
+                <PlanetaryTransitChart
+                  positions={data.positions}
+                  date={data.date || date}
+                  lang={lang}
+                  style={chartStyle}
+                />
+              </motion.div>
             </section>
 
             <section className="card-royal p-4" aria-label={t(lang, 'Planetary Positions', 'ग्रह स्थिति')}>

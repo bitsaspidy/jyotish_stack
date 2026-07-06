@@ -325,9 +325,18 @@ export function ChartToggle({ style, onChange, lang }) {
     { value:'north', label:t(lang, 'North Indian', 'उत्तर भारतीय'), icon:'◇' },
   ];
   return (
-    <div style={{ display:'flex', gap:4, justifyContent:'center', marginBottom:12 }}>
+    <div
+      role="tablist"
+      aria-label={t(lang, 'Chart style', 'चार्ट शैली')}
+      style={{ display:'flex', gap:4, justifyContent:'center', marginBottom:12 }}
+    >
       {opts.map(o => (
-        <button key={o.value} onClick={() => onChange(o.value)}
+        <button
+          key={o.value}
+          type="button"
+          role="tab"
+          aria-selected={style === o.value}
+          onClick={() => onChange(o.value)}
           style={{
             display:'flex', alignItems:'center', gap:6,
             padding:'5px 12px', borderRadius:20, fontSize:11, fontWeight:600, cursor:'pointer',

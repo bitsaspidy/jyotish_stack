@@ -1,6 +1,12 @@
 'use client';
 
 import { t, planetName } from '../lib/astroI18n';
+import {
+  NORTH_TRANSIT_SIGN_SLOTS,
+  NORTH_TRANSIT_SIZE,
+  groupPlanetPositionsByRashi,
+} from '../lib/planetaryChart.mjs';
+import { RASHI_SHORT_EN, RASHI_SHORT_HI } from './kundli/kundliConstants';
 
 const PLANET_META = {
   Sun:     { icon:'☉', color:'#F59E0B' },
@@ -42,11 +48,99 @@ function fullPlanetLabel(position, lang) {
   return `${meta.icon || ''} ${planetName(position.planet, lang)} · ${rashi} ${position.degree_dms || degreeInSign(position)}${retro}`;
 }
 
-export default function PlanetaryTransitChart({ positions = [], date, lang = 'en' }) {
-  const byRashi = Object.fromEntries(Array.from({ length:12 }, (_, i) => [i + 1, []]));
-  for (const position of positions) {
-    if (byRashi[position?.rashi_num]) byRashi[position.rashi_num].push(position);
-  }
+function pointString(points) {
+  return points.map(([x, y]) => `${x},${y}`).join(' ');
+}
+
+function pointCentre(points) {
+  return {
+    x: points.reduce((sum, [x]) => sum + x, 0) / points.length,
+    y: points.reduce((sum, [, y]) => sum + y, 0) / points.length,
+  };
+}
+
+function NorthIndianTransitChart({ byRashi, formattedDate, lang }) {
+  return (
+    <div className="north-transit-shell">
+      <svg
+        className="north-transit-chart"
+        viewBox={`0 0 ${NORTH_TRANSIT_SIZE} ${NORTH_TRANSIT_SIZE}`}
+        role="img"
+        aria-label={t(lang, 'North Indian planetary positions chart', 'उत्तर भारतीय ग्रह स्थिति चार्ट')}
+      >
+        <defs>
+          <filter id="north-transit-shadow" x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.3" floodColor="#000000" floodOpacity="0.95" />
+          </filter>
+        </defs>
+        <rect width={NORTH_TRANSIT_SIZE} height={NORTH_TRANSIT_SIZE} rx="8" fill="rgba(10,13,34,0.96)" />
+
+        {NORTH_TRANSIT_SIGN_SLOTS.map(({ sign, points }) => {
+          const rashi = RASHI_META[sign];
+          const centre = pointCentre(points);
+          const planets = byRashi[sign] || [];
+          const visibleTokens = planets.slice(0, 6).map((position) => {
+            const meta = PLANET_META[position.planet] || {};
+            return `${meta.icon || ''}${degreeInSign(position)}${position.is_retrograde ? '℞' : ''}`;
+          });
+          const tokenRows = [visibleTokens.slice(0, 2), visibleTokens.slice(2, 4), visibleTokens.slice(4, 6)]
+            .filter((row) => row.length);
+          if (planets.length > 6 && tokenRows.length) tokenRows[tokenRows.length - 1].push(`+${planets.length - 6}`);
+          const isKendra = [1, 4, 7, 10].includes(sign);
+          const rashiLabel = lang === 'hi' ? RASHI_SHORT_HI[sign] : RASHI_SHORT_EN[sign];
+
+          return (
+            <g key={sign}>
+              <title>{`${t(lang, rashi.en, rashi.hi)}: ${planets.map((p) => fullPlanetLabel(p, lang)).join(', ') || t(lang, 'No planets', 'कोई ग्रह नहीं')}`}</title>
+              <polygon
+                points={pointString(points)}
+                fill={isKendra ? 'rgba(61,53,128,0.30)' : 'rgba(255,255,255,0.045)'}
+                stroke="rgba(212,175,55,0.48)"
+                strokeWidth="1"
+              />
+              <text
+                x={centre.x}
+                y={centre.y - (isKendra ? 13 : 9)}
+                textAnchor="middle"
+                fill="#F0D060"
+                fontSize={isKendra ? 10 : 8.5}
+                fontWeight="700"
+                fontFamily="Inter, sans-serif"
+                filter="url(#north-transit-shadow)"
+              >
+                {rashi.symbol} {rashiLabel} · {sign}
+              </text>
+              {tokenRows.map((row, rowIndex) => (
+                <text
+                  key={`${sign}-${rowIndex}`}
+                  x={centre.x}
+                  y={centre.y + 3 + rowIndex * 10}
+                  textAnchor="middle"
+                  fill="rgba(245,240,232,0.96)"
+                  fontSize={isKendra ? 8 : 7}
+                  fontWeight="700"
+                  fontFamily="Inter, sans-serif"
+                  filter="url(#north-transit-shadow)"
+                >
+                  {row.join('  ')}
+                </text>
+              ))}
+            </g>
+          );
+        })}
+
+        <rect width={NORTH_TRANSIT_SIZE} height={NORTH_TRANSIT_SIZE} rx="8" fill="none" stroke="rgba(212,175,55,0.75)" strokeWidth="1.6" />
+      </svg>
+      <div className="north-transit-caption">
+        <span>{formattedDate} · 12:00 IST</span>
+        <span>{t(lang, 'Rashi positions · No birth ascendant used', 'राशि स्थिति · जन्म लग्न का उपयोग नहीं')}</span>
+      </div>
+    </div>
+  );
+}
+
+export default function PlanetaryTransitChart({ positions = [], date, lang = 'en', style = 'south' }) {
+  const byRashi = groupPlanetPositionsByRashi(positions);
 
   const formattedDate = date
     ? new Date(`${date}T12:00:00Z`).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
@@ -56,7 +150,10 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
 
   return (
     <div className="transit-chart-shell">
-      <div className="transit-chart" role="img" aria-label={t(lang, 'Planetary Positions', 'ग्रह स्थिति')}>
+      {style === 'north' ? (
+        <NorthIndianTransitChart byRashi={byRashi} formattedDate={formattedDate} lang={lang} />
+      ) : (
+      <div className="transit-chart" role="img" aria-label={t(lang, 'South Indian planetary positions chart', 'दक्षिण भारतीय ग्रह स्थिति चार्ट')}>
         {Object.entries(RASHI_META).map(([rashiNum, rashi]) => {
           const planets = byRashi[rashiNum] || [];
           return (
@@ -98,6 +195,7 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
           <span className="centre-time">12:00 IST</span>
         </div>
       </div>
+      )}
 
       <div className="planet-legend" aria-label={t(lang, 'Planet', 'ग्रह')}>
         {positions.map((position) => {
@@ -115,6 +213,25 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
       <style jsx>{`
         .transit-chart-shell {
           width: 100%;
+        }
+        .north-transit-shell {
+          width: 100%;
+        }
+        .north-transit-chart {
+          display: block;
+          width: 100%;
+          aspect-ratio: 1;
+          border-radius: 14px;
+          background: radial-gradient(circle at center, rgba(61,53,128,0.25), rgba(8,11,30,0.96) 70%);
+          box-shadow: inset 0 0 42px rgba(15,18,45,0.9), 0 18px 45px rgba(0,0,0,0.2);
+        }
+        .north-transit-caption {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          margin-top: 8px;
+          color: rgba(245,240,232,0.48);
+          font-size: 9px;
         }
         .transit-chart {
           display: grid;
@@ -265,6 +382,7 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
           font-weight: 800;
         }
         @media (max-width: 520px) {
+          .north-transit-caption { flex-direction: column; text-align: center; }
           .rashi-cell { padding: 5px; }
           .rashi-name { font-size: 8px; }
           .rashi-symbol { font-size: 11px; }
