@@ -37,7 +37,7 @@ INTENTS = (
     IntentDefinition("marriage", "marriage_timing", "marriage_timing", "the likely timing of marriage", "विवाह का संभावित समय", ("when will i marry", "marriage timing", "शादी कब", "विवाह कब"), ("when", "marry", "timing", "कब", "शादी", "विवाह")),
     IntentDefinition("finance", "general", "finance_general", "income, savings and financial growth", "आय, बचत और आर्थिक विकास", ("improve finances", "financial growth", "increase income", "धन कैसे बढ़े", "आय बढ़ाना", "आर्थिक स्थिति"), ("finance", "finances", "income", "savings", "wealth", "आय", "बचत", "धन")),
     IntentDefinition("finance", "investment", "finance_investment", "whether this financial commitment is suitable", "यह निवेश या आर्थिक निर्णय उचित है या नहीं", ("should i invest", "investment", "buy shares", "निवेश करना", "पैसा लगाना", "शेयर खरीद"), ("invest", "investment", "return", "loan", "निवेश", "पैसा", "ऋण", "लाभ")),
-    IntentDefinition("property", "property_purchase", "property_purchase", "whether to buy or commit to this property", "यह संपत्ति खरीदना या तय करना उचित है या नहीं", ("buy property", "buy house", "purchase land", "घर खरीद", "जमीन खरीद", "संपत्ति खरीद"), ("property", "house", "land", "flat", "संपत्ति", "घर", "जमीन", "फ्लैट")),
+    IntentDefinition("property", "property_purchase", "property_purchase", "whether this is a suitable period to buy a home or property", "घर या संपत्ति खरीदने के लिए यह समय उपयुक्त है या नहीं", ("buy a home", "buy home", "purchase a home", "home purchase", "buy property", "buy house", "purchase land", "घर खरीद", "जमीन खरीद", "संपत्ति खरीद"), ("property", "home", "house", "land", "flat", "apartment", "real estate", "संपत्ति", "घर", "जमीन", "फ्लैट")),
     IntentDefinition("education", "general", "education_general", "education, learning and skill development", "शिक्षा, अध्ययन और कौशल विकास", ("education path", "what should i study", "learning direction", "क्या पढ़ना चाहिए", "शिक्षा की दिशा", "कौशल विकास"), ("education", "study", "learning", "शिक्षा", "पढ़ाई", "अध्ययन")),
     IntentDefinition("education", "exam", "education_exam", "the examination outcome and preparation decision", "परीक्षा के परिणाम और तैयारी का निर्णय", ("pass exam", "exam result", "clear exam", "परीक्षा पास", "एग्जाम पास", "परीक्षा परिणाम"), ("exam", "admission", "परीक्षा", "प्रवेश")),
     IntentDefinition("travel", "relocation", "travel_relocation", "whether travel or relocation is suitable", "यात्रा या स्थान परिवर्तन उचित है या नहीं", ("move abroad", "relocate", "move to", "विदेश जाना", "स्थान बदल", "शहर बदल"), ("travel", "relocate", "abroad", "visa", "यात्रा", "विदेश", "स्थान")),
@@ -68,7 +68,7 @@ CATEGORY_FALLBACK = {
 
 
 YES_NO_MARKERS = ("should i", "is this", "will it", "can i", "क्या", "चाहिए", "होगा", "होगी")
-TIMING_MARKERS = ("when", "how long", "right time", "कब", "कितना समय", "सही समय")
+TIMING_MARKERS = ("when", "how long", "right time", "good period", "suitable period", "कब", "कितना समय", "सही समय")
 COMPARISON_MARKERS = ("or", "versus", "better than", "या", "बेहतर")
 
 

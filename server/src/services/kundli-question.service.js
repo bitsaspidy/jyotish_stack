@@ -216,7 +216,12 @@ function buildKundliQuestionAnswer({ chart, profile, question, analysis, include
   };
   const [answerEn, answerHi] = answers[tone];
 
-  const reasons = lenses.slice(0, 2).map((lens) => ({
+  // D1 establishes the foundation, but a question-specific divisional chart
+  // gives the user the most relevant explanation (D4/D16 for property, D10
+  // for career, D9 for marriage, and so on).
+  const specialistLenses = lenses.filter((lens) => lens.slug !== 'd1');
+  const evidenceLenses = specialistLenses.length ? specialistLenses.slice(0, 2) : lenses.slice(0, 2);
+  const reasons = evidenceLenses.map((lens) => ({
     titleEn:lens.titleEn,
     titleHi:lens.titleHi,
     textEn:lens.summaryEn,

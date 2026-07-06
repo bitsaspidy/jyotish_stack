@@ -46,6 +46,25 @@ test('routes education questions through D24 and returns the relevant timing win
   assert.ok(result.nextSteps.length >= 3);
 });
 
+test('answers a home-purchase question with property charts and specialist evidence', () => {
+  const chart = chartFixture();
+  const question = 'Is this a good period to buy a home?';
+  const analysis = fallbackAnalysis(question, 'general', 'kundli');
+  const result = buildKundliQuestionAnswer({ chart, profile:{ name:'Home Buyer' }, question, analysis });
+
+  assert.equal(result.question.category, 'property');
+  assert.equal(result.question.subtype, 'property_purchase');
+  assert.deepEqual(result.chartLenses.map((item) => item.slug), ['d1','d4','d16']);
+  assert.match(result.reasons[0].titleEn, /home.*D4/i);
+  assert.match(result.reasons[1].titleEn, /comfort.*D16/i);
+  assert.match(result.question.understoodAsEn, /buy a home or property/i);
+  assert.match(result.nextSteps[0].en, /title, approvals, dues/i);
+  assert.doesNotMatch(
+    [result.answer.textEn, ...result.reasons.map((item) => item.textEn)].join(' '),
+    /marriage|navamsha|relationship/i,
+  );
+});
+
 test('technical routing factors are exposed only when explicitly requested for admin', () => {
   const chart = chartFixture();
   const analysis = fallbackAnalysis('Should I accept this job offer?', 'career', 'kundli');

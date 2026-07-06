@@ -39,6 +39,32 @@ test('uses a safe deterministic fallback when Python is unavailable', async () =
   assert.deepEqual(result.chartSlugs, ['d1','d10']);
 });
 
+test('fallback recognizes a home purchase and selects property charts', () => {
+  const result = fallbackAnalysis('Is this a good period to buy a home?', 'general', 'kundli');
+  assert.equal(result.detectedCategory, 'property');
+  assert.equal(result.subtype, 'property_purchase');
+  assert.equal(result.actionKey, 'property_purchase');
+  assert.equal(result.decisionMode, 'timing');
+  assert.equal(result.isAmbiguous, false);
+  assert.deepEqual(result.chartSlugs, ['d1','d4','d16']);
+  assert.match(result.understoodAsEn, /buy a home or property/i);
+});
+
+test('fallback keeps every Kundli example on its intended topic', () => {
+  const examples = [
+    ['Should I accept this job offer?', 'career_job_offer', ['d1','d10']],
+    ['When is a supportive period for marriage?', 'marriage_timing', ['d1','d9']],
+    ['Is this a good period to buy a home?', 'property_purchase', ['d1','d4','d16']],
+    ['How should I prepare for my examination?', 'education_exam', ['d1','d24']],
+  ];
+  for (const [question, actionKey, charts] of examples) {
+    const result = fallbackAnalysis(question, 'general', 'kundli');
+    assert.equal(result.actionKey, actionKey, question);
+    assert.deepEqual(result.chartSlugs, charts, question);
+    assert.equal(result.isAmbiguous, false, question);
+  }
+});
+
 test('drops unsafe or unknown chart-routing values from Python', () => {
   const result = normalizeAnalysis({
     detected_category:'education', chart_slugs:['d1','d24','d99','../../secret'],

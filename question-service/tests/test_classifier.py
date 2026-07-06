@@ -62,6 +62,16 @@ class QuestionClassifierTests(unittest.TestCase):
         self.assertEqual(result["subtype"], "general")
         self.assertIn("d2", result["chart_slugs"])
 
+    def test_kundli_home_purchase_routes_to_property_charts(self):
+        result = analyze_question("Is this a good period to buy a home?", "general", "kundli")
+        self.assertEqual(result["detected_category"], "property")
+        self.assertEqual(result["subtype"], "property_purchase")
+        self.assertEqual(result["action_key"], "property_purchase")
+        self.assertEqual(result["decision_mode"], "timing")
+        self.assertEqual(result["chart_slugs"], ["d1", "d4", "d16"])
+        self.assertEqual(result["timing_key"], "finance")
+        self.assertFalse(result["is_ambiguous"])
+
 
 if __name__ == "__main__":
     unittest.main()

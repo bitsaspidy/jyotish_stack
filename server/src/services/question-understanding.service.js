@@ -18,13 +18,37 @@ const FALLBACK_ROUTES = {
   family:{ charts:['d1','d12'], houses:[2,4,9], planets:['Moon','Sun','Jupiter'], timingKey:'relationships', safetyNoteKey:'family' },
 };
 
+const FALLBACK_INTENTS = [
+  {
+    category:'property', subtype:'property_purchase', actionKey:'property_purchase',
+    pattern:/(?:buy|purchase|बुक|खरीद).*(?:home|house|property|flat|apartment|land|real\s*estate|घर|मकान|संपत्ति|फ्लैट|जमीन)|(?:home|house|property|flat|apartment|land|real\s*estate|घर|मकान|संपत्ति|फ्लैट|जमीन).*(?:buy|purchase|बुक|खरीद)/i,
+    en:'whether this is a suitable period to buy a home or property',
+    hi:'घर या संपत्ति खरीदने के लिए यह समय उपयुक्त है या नहीं',
+  },
+  {
+    category:'career', subtype:'job_offer', actionKey:'career_job_offer',
+    pattern:/job\s*offer|offer\s*letter|accept.*offer|नौकरी.*प्रस्ताव|ऑफर.*स्वीकार/i,
+    en:'whether to accept the job offer', hi:'नौकरी का प्रस्ताव स्वीकार करना चाहिए या नहीं',
+  },
+  {
+    category:'marriage', subtype:'marriage_timing', actionKey:'marriage_timing',
+    pattern:/(?:when|period|time|timing).*(?:marriage|marry|wedding)|(?:marriage|marry|wedding).*(?:when|period|time|timing)|(?:कब|समय).*(?:शादी|विवाह)|(?:शादी|विवाह).*(?:कब|समय)/i,
+    en:'the likely timing of marriage', hi:'विवाह का संभावित समय',
+  },
+  {
+    category:'education', subtype:'exam', actionKey:'education_exam',
+    pattern:/exam|examination|admission|परीक्षा|एग्जाम|प्रवेश/i,
+    en:'the examination outcome and preparation decision', hi:'परीक्षा के परिणाम और तैयारी का निर्णय',
+  },
+];
+
 function detectFallbackCategory(text, selectedCategory) {
   if (selectedCategory !== 'general') return selectedCategory;
   const patterns = [
     ['career', /job|career|promotion|business|salary|नौकरी|करियर|प्रमोशन|व्यवसाय/i],
     ['marriage', /marriage|relationship|partner|wedding|शादी|विवाह|रिश्ता/i],
     ['finance', /money|invest|loan|income|wealth|पैसा|निवेश|ऋण|धन/i],
-    ['property', /property|house|land|flat|संपत्ति|जमीन|फ्लैट|घर खरीद/i],
+    ['property', /property|home|house|land|flat|apartment|real\s*estate|संपत्ति|मकान|जमीन|फ्लैट|घर खरीद/i],
     ['education', /exam|study|education|admission|परीक्षा|पढ़ाई|शिक्षा|प्रवेश/i],
     ['health', /health|recover|treatment|illness|स्वास्थ्य|सेहत|इलाज/i],
     ['travel', /travel|abroad|visa|relocat|यात्रा|विदेश|स्थान बदल/i],
@@ -37,22 +61,23 @@ function detectFallbackCategory(text, selectedCategory) {
 function fallbackAnalysis(question, selectedCategory = 'general', analysisMode = 'prashna') {
   const text = String(question || '').toLowerCase();
   const category = VALID_CATEGORIES.has(selectedCategory) ? selectedCategory : 'general';
-  const detectedCategory = detectFallbackCategory(text, category);
-  const jobOffer = /job\s*offer|offer\s*letter|accept.*offer|नौकरी.*प्रस्ताव|ऑफर.*स्वीकार/i.test(text);
-  const understood = jobOffer
-    ? { en:'whether to accept the job offer', hi:'नौकरी का प्रस्ताव स्वीकार करना चाहिए या नहीं', subtype:'job_offer', actionKey:'career_job_offer' }
-    : { en:`the ${detectedCategory.replace('_', ' ')} question`, hi:'आपके प्रश्न से जुड़े जीवन क्षेत्र की दिशा', subtype:'general', actionKey:`${detectedCategory}_general` };
-  const routing = FALLBACK_ROUTES[jobOffer ? 'career' : detectedCategory] || FALLBACK_ROUTES.general;
+  const specificIntent = FALLBACK_INTENTS.find((intent) => intent.pattern.test(text));
+  const detectedCategory = specificIntent?.category || detectFallbackCategory(text, category);
+  const understood = specificIntent || {
+    en:`the ${detectedCategory.replace('_', ' ')} question`, hi:'आपके प्रश्न से जुड़े जीवन क्षेत्र की दिशा',
+    subtype:'general', actionKey:`${detectedCategory}_general`,
+  };
+  const routing = FALLBACK_ROUTES[detectedCategory] || FALLBACK_ROUTES.general;
   return {
     version:'question-understanding-fallback-v1',
-    detectedCategory:jobOffer ? 'career' : detectedCategory,
+    detectedCategory,
     selectedCategory:category,
     subtype:understood.subtype,
     actionKey:understood.actionKey,
-    decisionMode:/when|right time|कब|सही समय/i.test(text) ? 'timing' : 'decision',
+    decisionMode:/when|right time|good period|suitable period|कब|सही समय/i.test(text) ? 'timing' : 'decision',
     language:/[\u0900-\u097F]/.test(question || '') ? 'hi' : 'en',
-    confidence:jobOffer ? 0.75 : 0.45,
-    isAmbiguous:!jobOffer && String(question || '').trim().split(/\s+/).length < 5,
+    confidence:specificIntent ? 0.78 : 0.45,
+    isAmbiguous:!specificIntent && String(question || '').trim().split(/\s+/).length < 5,
     understoodAsEn:understood.en,
     understoodAsHi:understood.hi,
     needsClarificationEn:'',
