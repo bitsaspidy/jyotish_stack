@@ -366,8 +366,8 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
       : [];
     const signMap    = Object.fromEntries(signs.map((s) => [s.id, s]));
     const planetRows = await db('planets')
-      .select('id','name','name_hi','guna','guna_hi','varna','varna_hi','court_role','court_role_hi','deity','deity_hi','characteristics',
-              ...regionalCols(['name','guna','varna','court_role','deity']));
+      .select('id','name','name_hi','guna','guna_hi','varna','varna_hi','court_role','court_role_hi','deity','deity_hi','characteristics','characteristics_hi',
+              ...regionalCols(['name','guna','varna','court_role','deity','characteristics']));
     const planet_meta = Object.fromEntries(planetRows.map((p) => [p.name, p]));
     const houses_meta = await db('houses')
       .select('id','name','name_hi','keywords_en','keywords_hi','topics_en','topics_hi',

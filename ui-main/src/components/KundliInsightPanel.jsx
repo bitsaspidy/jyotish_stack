@@ -595,7 +595,7 @@ function PlanetsTab({ chart, enrichment, lang }) {
                 borderTop:'1px solid rgba(212,175,55,0.08)', paddingTop:8 }}>
                 🔮 {t(lang, 'Controls:', 'नियंत्रित करता है:')}{' '}
                 <ExpandableText
-                  text={dbMeta.characteristics}
+                  text={dbT(dbMeta, 'characteristics', lang)}
                   lang={lang}
                   limit={160}
                   textStyle={{ color:'rgba(245,240,232,0.4)', fontSize:10.5, lineHeight:1.6 }}
