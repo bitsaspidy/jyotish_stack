@@ -104,16 +104,17 @@ async function fetchNakshatraInsight(nakNum) {
   if (!nakNum) return null;
   try {
     const row = await db('nakshatras').where({ id: nakNum })
-      .select('name','name_hi','deity_en','deity_hi','guna','general_nature',
+      .select('name','name_hi','deity','deity_hi','guna','general_nature',
               'characteristics_en','characteristics_hi',
               'negative_traits_en','negative_traits_hi',
               'professions_en','professions_hi',
               'health_issues_en','health_issues_hi',
               'health_root_cause_en','health_root_cause_hi',
-              'health_guidance_en','health_guidance_hi')
+              'health_guidance_en','health_guidance_hi',
+              ...regionalCols(['name','deity','characteristics','negative_traits','professions','health_issues','health_root_cause','health_guidance']))
       .first();
     if (!row) return null;
-    ['professions_en','professions_hi'].forEach((k) => {
+    ['professions_en','professions_hi', ...regionalCols(['professions'])].forEach((k) => {
       if (row[k] && typeof row[k] === 'string') {
         try { row[k] = JSON.parse(row[k]); } catch { row[k] = []; }
       }

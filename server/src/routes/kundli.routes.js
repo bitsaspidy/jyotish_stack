@@ -297,22 +297,22 @@ async function fetchNakshatraInsight(nakNum) {
     const row = await db('nakshatras')
       .where({ id: nakNum })
       .select(
-        'name','name_hi','deity_en','deity_hi','guna','general_nature',
+        'name','name_hi','deity','deity_hi','guna','general_nature',
         'characteristics_en','characteristics_hi',
         'negative_traits_en','negative_traits_hi',
         'professions_en','professions_hi',
         'health_issues_en','health_issues_hi',
         'health_root_cause_en','health_root_cause_hi',
-        'health_guidance_en','health_guidance_hi'
+        'health_guidance_en','health_guidance_hi',
+        ...regionalCols(['name','deity','characteristics','negative_traits','professions','health_issues','health_root_cause','health_guidance'])
       )
       .first();
     if (!row) return null;
     // professions are stored as JSON strings
-    if (row.professions_en && typeof row.professions_en === 'string') {
-      try { row.professions_en = JSON.parse(row.professions_en); } catch { row.professions_en = []; }
-    }
-    if (row.professions_hi && typeof row.professions_hi === 'string') {
-      try { row.professions_hi = JSON.parse(row.professions_hi); } catch { row.professions_hi = []; }
+    for (const key of ['professions_en','professions_hi', ...regionalCols(['professions'])]) {
+      if (row[key] && typeof row[key] === 'string') {
+        try { row[key] = JSON.parse(row[key]); } catch { row[key] = []; }
+      }
     }
     return row;
   } catch { return null; }

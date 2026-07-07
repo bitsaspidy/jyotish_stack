@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { t } from '../../lib/astroI18n';
+import { t, dbT } from '../../lib/astroI18n';
 
 const PI_TABS = [
   { key:'traits',  label:'Traits',  label_hi:'स्वभाव'    },
@@ -13,8 +13,8 @@ export default function PersonalityInsights({ insight, chart, lang }) {
   const [tab, setTab] = useState('traits');
   if (!insight) return null;
 
-  const nakName   = lang === 'hi' ? insight.name_hi    : insight.name;
-  const deityName = lang === 'hi' ? insight.deity_hi   : insight.deity_en;
+  const nakName   = dbT(insight, 'name', lang) || insight.name;
+  const deityName = dbT(insight, 'deity', lang) || insight.deity;
   const professions = lang === 'hi'
     ? (insight.professions_hi || [])
     : (insight.professions_en || []);
@@ -57,7 +57,7 @@ export default function PersonalityInsights({ insight, chart, lang }) {
               {lang==='hi' ? '✅ मुख्य गुण' : '✅ Core Traits'}
             </p>
             <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
-              {lang==='hi' ? insight.characteristics_hi : insight.characteristics_en}
+              {dbT(insight, 'characteristics', lang)}
             </p>
           </div>
           {(insight.negative_traits_en || insight.negative_traits_hi) && (
@@ -66,7 +66,7 @@ export default function PersonalityInsights({ insight, chart, lang }) {
                 {lang==='hi' ? '⚠️ सावधानियां' : '⚠️ What to Avoid'}
               </p>
               <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
-                {lang==='hi' ? insight.negative_traits_hi : insight.negative_traits_en}
+                {dbT(insight, 'negative_traits', lang)}
               </p>
             </div>
           )}
@@ -108,7 +108,7 @@ export default function PersonalityInsights({ insight, chart, lang }) {
                 {lang==='hi' ? '🔶 स्वास्थ्य समस्याएं' : '🔶 Common Health Issues'}
               </p>
               <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
-                {lang==='hi' ? insight.health_issues_hi : insight.health_issues_en}
+                {dbT(insight, 'health_issues', lang)}
               </p>
             </div>
           )}
@@ -118,7 +118,7 @@ export default function PersonalityInsights({ insight, chart, lang }) {
                 {lang==='hi' ? '🔍 मूल कारण' : '🔍 Root Cause'}
               </p>
               <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
-                {lang==='hi' ? insight.health_root_cause_hi : insight.health_root_cause_en}
+                {dbT(insight, 'health_root_cause', lang)}
               </p>
             </div>
           )}
@@ -128,7 +128,7 @@ export default function PersonalityInsights({ insight, chart, lang }) {
                 {lang==='hi' ? '💚 स्वास्थ्य मार्गदर्शन' : '💚 Health Guidance'}
               </p>
               <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.7, fontFamily:'var(--font-devanagari),Inter,sans-serif' }}>
-                {lang==='hi' ? insight.health_guidance_hi : insight.health_guidance_en}
+                {dbT(insight, 'health_guidance', lang)}
               </p>
             </div>
           )}
