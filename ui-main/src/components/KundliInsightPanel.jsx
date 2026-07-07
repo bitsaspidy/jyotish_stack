@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { dbT } from '../lib/astroI18n';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -227,12 +228,12 @@ function SummaryTab({ chart, enrichment, lang }) {
               {t(lang,'Lagna','लग्न')}
             </p>
             <p style={{ color:'#D4AF37', fontSize:15, fontFamily:'Georgia,serif', fontWeight:700, marginTop:2 }}>
-              {lang === 'hi' ? lagna.name_hi : lagna.name}
+              {dbT(lagna, 'name', lang) || lagna.name}
             </p>
             {lagnaLord && lagnaLordPl && lagnaLordHouse && (
               <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, marginTop:3 }}>
                 {t(lang,'Lord:','स्वामी:')} <span style={{ color: PLANET_META[lagnaLord]?.color }}>
-                  {lang === 'hi' ? PLANET_META[lagnaLord]?.hi : lagnaLord}
+                  {dbT(enrichment?.planet_meta?.[lagnaLord], 'name', lang) || (lang === 'hi' ? PLANET_META[lagnaLord]?.hi : lagnaLord) || lagnaLord}
                 </span>
                 {' '}{t(lang,'in House','भाव में')} <strong style={{ color:'rgba(245,240,232,0.7)' }}>
                   {lagnaLordHouse}
@@ -251,7 +252,7 @@ function SummaryTab({ chart, enrichment, lang }) {
               {t(lang,'Moon Sign','चन्द्र राशि')}
             </p>
             <p style={{ color:'#94A3B8', fontSize:15, fontFamily:'Georgia,serif', fontWeight:700, marginTop:2 }}>
-              {lang === 'hi' ? moon.name_hi : moon.name}
+              {dbT(moon, 'name', lang) || moon.name}
             </p>
             {nak?.en && (
               <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, marginTop:3 }}>
@@ -270,7 +271,7 @@ function SummaryTab({ chart, enrichment, lang }) {
               {t(lang,'Current Dasha','वर्तमान दशा')}
             </p>
             <p style={{ color: dashaColor, fontSize:15, fontFamily:'Georgia,serif', fontWeight:700, marginTop:2 }}>
-              {lang === 'hi' ? PLANET_META[curDasha.lord]?.hi : curDasha.lord}
+              {dbT(enrichment?.planet_meta?.[curDasha.lord], 'name', lang) || (lang === 'hi' ? PLANET_META[curDasha.lord]?.hi : curDasha.lord) || curDasha.lord}
             </p>
             <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, marginTop:3 }}>
               {dashaLabel} · {t(lang,'ends','समाप्त')} {curDasha.end}
@@ -286,7 +287,7 @@ function SummaryTab({ chart, enrichment, lang }) {
           <SectionTitle icon="🔺">{t(lang, 'Your Ascendant (Lagna) — The Real You', 'आपका लग्न — आपका असली स्वरूप')}</SectionTitle>
           {lagna.key_traits_en && (
             <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:10 }}>
-              {(lang === 'hi' ? lagna.key_traits_hi : lagna.key_traits_en)
+              {dbT(lagna, 'key_traits', lang)
                 ?.split(',').map((trait, i) => (
                 <Badge key={i} bg="rgba(212,175,55,0.08)" color="#D4AF37">
                   {trait.trim()}
@@ -294,11 +295,11 @@ function SummaryTab({ chart, enrichment, lang }) {
               ))}
             </div>
           )}
-          {(lang === 'hi' ? lagna.detailed_description_hi : lagna.detailed_description_en) && (
+          {dbT(lagna, 'detailed_description', lang) && (
             <p style={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.8,
               borderTop:'1px solid rgba(212,175,55,0.1)', paddingTop:10, marginTop:6 }}>
               <ExpandableText
-                text={lang === 'hi' ? lagna.detailed_description_hi : lagna.detailed_description_en}
+                text={dbT(lagna, 'detailed_description', lang)}
                 lang={lang}
                 textStyle={{ color:'rgba(245,240,232,0.65)', fontSize:12, lineHeight:1.8 }}
               />
@@ -333,7 +334,7 @@ function SummaryTab({ chart, enrichment, lang }) {
           <SectionTitle icon="🌙">{t(lang, 'Your Moon Sign — Your Inner World', 'आपकी चन्द्र राशि — आपका आंतरिक जगत')}</SectionTitle>
           {moon.key_traits_en && (
             <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:10 }}>
-              {(lang === 'hi' ? moon.key_traits_hi : moon.key_traits_en)
+              {dbT(moon, 'key_traits', lang)
                 ?.split(',').map((trait, i) => (
                 <Badge key={i} bg="rgba(148,163,184,0.1)" color="#94A3B8">
                   {trait.trim()}
@@ -343,7 +344,7 @@ function SummaryTab({ chart, enrichment, lang }) {
           )}
           <p style={{ color:'rgba(245,240,232,0.55)', fontSize:12, lineHeight:1.8 }}>
             <ExpandableText
-              text={lang === 'hi' ? moon.detailed_description_hi : moon.detailed_description_en}
+              text={dbT(moon, 'detailed_description', lang)}
               lang={lang}
               textStyle={{ color:'rgba(245,240,232,0.55)', fontSize:12, lineHeight:1.8 }}
             />
@@ -373,7 +374,7 @@ function SummaryTab({ chart, enrichment, lang }) {
           <SectionTitle icon="⏳">{t(lang, 'Your Current Life Period (Dasha)', 'आपका वर्तमान जीवन काल (दशा)')}</SectionTitle>
           <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10, flexWrap:'wrap' }}>
             <span style={{ color: dashaColor, fontSize:18, fontFamily:'Georgia,serif', fontWeight:700 }}>
-              {lang === 'hi' ? PLANET_META[curDasha.lord]?.hi : curDasha.lord} {t(lang,'Mahadasha','महादशा')}
+              {dbT(enrichment?.planet_meta?.[curDasha.lord], 'name', lang) || (lang === 'hi' ? PLANET_META[curDasha.lord]?.hi : curDasha.lord) || curDasha.lord} {t(lang,'Mahadasha','महादशा')}
             </span>
             <Badge bg={`${dashaColor}18`} color={dashaColor}>{dashaLabel}</Badge>
             <span style={{ color:'rgba(245,240,232,0.73)', fontSize:11 }}>
@@ -384,7 +385,7 @@ function SummaryTab({ chart, enrichment, lang }) {
             <p style={{ color:'rgba(245,240,232,0.55)', fontSize:11, marginBottom:10 }}>
               {t(lang,'Sub-period (Antardasha):','उप-काल (अंतर्दशा):')}
               {' '}<strong style={{ color: PLANET_META[curAntar.lord]?.color || dashaColor }}>
-                {lang === 'hi' ? PLANET_META[curAntar.lord]?.hi : curAntar.lord}
+                {dbT(enrichment?.planet_meta?.[curAntar.lord], 'name', lang) || (lang === 'hi' ? PLANET_META[curAntar.lord]?.hi : curAntar.lord) || curAntar.lord}
               </strong>
               {' '}{t(lang,'until','तक')} {curAntar.end}
             </p>
@@ -439,7 +440,7 @@ function SummaryTab({ chart, enrichment, lang }) {
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <span style={{ color: PLANET_META[name]?.color, fontSize:13 }}>{PLANET_META[name]?.icon}</span>
                 <span style={{ color:'rgba(245,240,232,0.85)', fontSize:12, fontWeight:600 }}>
-                  {lang === 'hi' ? PLANET_META[name]?.hi : name}
+                  {dbT(enrichment?.planet_meta?.[name], 'name', lang) || (lang === 'hi' ? PLANET_META[name]?.hi : name) || name}
                 </span>
               </div>
               <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
@@ -461,7 +462,7 @@ function SummaryTab({ chart, enrichment, lang }) {
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                 <span style={{ color: PLANET_META[name]?.color, fontSize:13 }}>{PLANET_META[name]?.icon}</span>
                 <span style={{ color:'rgba(245,240,232,0.85)', fontSize:12, fontWeight:600 }}>
-                  {lang === 'hi' ? PLANET_META[name]?.hi : name}
+                  {dbT(enrichment?.planet_meta?.[name], 'name', lang) || (lang === 'hi' ? PLANET_META[name]?.hi : name) || name}
                 </span>
               </div>
               <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
@@ -515,19 +516,19 @@ function PlanetsTab({ chart, enrichment, lang }) {
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
                   <span style={{ color:'#F5F0E8', fontSize:14, fontWeight:700,
                     fontFamily:'var(--font-devanagari,Georgia),sans-serif' }}>
-                    {lang === 'hi' ? (meta.hi || name) : name}
+                    {dbT(dbMeta, 'name', lang) || (lang === 'hi' ? (meta.hi || name) : name)}
                   </span>
                   {dbMeta.deity && (
                     <span style={{ color:'rgba(245,240,232,0.45)', fontSize:10 }}>
-                      🙏 {lang === 'hi' ? (dbMeta.deity_hi || dbMeta.deity) : dbMeta.deity}
+                      🙏 {dbT(dbMeta, 'deity', lang)}
                     </span>
                   )}
                 </div>
                 {dbMeta.court_role && (
                   <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, marginTop:2, fontStyle:'italic' }}>
                     {lang === 'hi'
-                      ? `${dbMeta.court_role_hi || dbMeta.court_role}${courtRoleDesc(dbMeta.court_role, 'hi')}`
-                      : `${dbMeta.court_role}${courtRoleDesc(dbMeta.court_role, 'en')}`}
+                      ? `${dbT(dbMeta, 'court_role', lang)}${courtRoleDesc(dbMeta.court_role, 'hi')}`
+                      : `${dbT(dbMeta, 'court_role', lang)}${courtRoleDesc(dbMeta.court_role, 'en')}`}
                   </p>
                 )}
               </div>
@@ -653,7 +654,7 @@ function HousesTab({ chart, enrichment, lang }) {
                   </span>
                   <p style={{ color:'#F5F0E8', fontSize:12, fontWeight:600,
                     fontFamily:'var(--font-devanagari,Georgia),sans-serif', lineHeight:1.3, marginTop:2 }}>
-                    {lang === 'hi' ? house.keywords_hi : house.keywords_en}
+                    {dbT(house, 'keywords', lang)}
                   </p>
                 </div>
                 {/* Planet icons in this house */}
@@ -687,7 +688,7 @@ function HousesTab({ chart, enrichment, lang }) {
                   })}
                   {house.bhava_nature_en && (
                     <span style={{ color:'rgba(245,240,232,0.73)', fontSize:9, alignSelf:'center', marginLeft:2 }}>
-                      — {lang === 'hi' ? house.bhava_nature_hi : house.bhava_nature_en}
+                      — {dbT(house, 'bhava_nature', lang)}
                     </span>
                   )}
                 </div>
@@ -695,7 +696,7 @@ function HousesTab({ chart, enrichment, lang }) {
 
               {/* Topics covered */}
               <p style={{ color:'rgba(245,240,232,0.5)', fontSize:10.5, lineHeight:1.6, marginBottom:6 }}>
-                {(lang === 'hi' ? house.topics_hi : house.topics_en)?.split(',').slice(0,5).join(' · ')}
+                {dbT(house, 'topics', lang)?.split(',').slice(0,5).join(' · ')}
               </p>
 
               {/* Health organ */}
@@ -703,7 +704,7 @@ function HousesTab({ chart, enrichment, lang }) {
                 <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:4 }}>
                   <span style={{ fontSize:9 }}>🏥</span>
                   <span style={{ color:'rgba(245,240,232,0.73)', fontSize:10 }}>
-                    {lang === 'hi' ? house.health_organs_hi : house.health_organs_en}
+                    {dbT(house, 'health_organs', lang)}
                   </span>
                 </div>
               )}
@@ -712,7 +713,7 @@ function HousesTab({ chart, enrichment, lang }) {
               {hasplanets && (
                 <div style={{ marginTop:6, paddingTop:6, borderTop:'1px solid rgba(212,175,55,0.08)' }}>
                   <p style={{ color:'rgba(212,175,55,0.65)', fontSize:10 }}>
-                    {planetsHere.map(p => lang === 'hi' ? PLANET_META[p]?.hi : p).join(', ')}
+                    {planetsHere.map(p => dbT(enrichment?.planet_meta?.[p], 'name', lang) || (lang === 'hi' ? PLANET_META[p]?.hi : p) || p).join(', ')}
                     {' '}{t(lang, 'activate this area of life', 'इस जीवन क्षेत्र को सक्रिय करते हैं')}
                   </p>
                 </div>
@@ -769,19 +770,19 @@ function HealthTab({ chart, enrichment, lang }) {
                   {t(lang, `H${house.id}`, `भाव ${house.id}`)}
                 </p>
                 <p style={{ color:'rgba(245,240,232,0.65)', fontSize:10.5, fontWeight:600 }}>
-                  {(lang === 'hi' ? house.keywords_hi : house.keywords_en)?.split(',')[0].trim()}
+                  {dbT(house, 'keywords', lang)?.split(',')[0].trim()}
                 </p>
               </div>
 
               {/* Body organs */}
               <div>
                 <p style={{ color:'rgba(245,240,232,0.7)', fontSize:11 }}>
-                  🏥 {lang === 'hi' ? house.health_organs_hi : house.health_organs_en}
+                  🏥 {dbT(house, 'health_organs', lang)}
                 </p>
                 {planetsHere.length > 0 && (
                   <p style={{ color:'rgba(245,240,232,0.73)', fontSize:10, marginTop:2 }}>
                     {t(lang, 'Influenced by:', 'प्रभावित:')}
-                    {' '}{planetsHere.map(p => lang === 'hi' ? PLANET_META[p]?.hi : p).join(', ')}
+                    {' '}{planetsHere.map(p => dbT(enrichment?.planet_meta?.[p], 'name', lang) || (lang === 'hi' ? PLANET_META[p]?.hi : p) || p).join(', ')}
                   </p>
                 )}
               </div>

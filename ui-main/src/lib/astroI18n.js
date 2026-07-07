@@ -20,6 +20,20 @@ export function t(lang, en, hi) {
   return DICTS[lang]?.[en] || en;
 }
 
+// Picks a language-suffixed field from a DB row (e.g. field='name' with
+// lang='ta' reads row.name_ta), for content that's per-row translated rather
+// than looked up from the fixed UI dictionary. Falls back lang → hi → en →
+// bare field (some columns like zodiac_signs.name have no _en suffix).
+export function dbT(row, field, lang) {
+  if (!row) return '';
+  if (lang && lang !== 'en' && lang !== 'hi') {
+    const v = row[`${field}_${lang}`];
+    if (v) return v;
+  }
+  if (lang === 'hi') return row[`${field}_hi`] || row[`${field}_en`] || row[field] || '';
+  return row[`${field}_en`] || row[field] || row[`${field}_hi`] || '';
+}
+
 export function planetName(name, lang) {
   if (lang === 'hi') return PLANET_HI[name] || name;
   if (!lang || lang === 'en') return name;

@@ -16,6 +16,7 @@ const { computeKundliStrength } = require('./helpers/kundli-strength');
 const { generateJudgement }     = require('./judgement-engine');
 const { generatePersonalizedRemedies } = require('./remedy-engine');
 const { composeLifeReportUserFriendly } = require('./report-engine/life-report-humanizer');
+const { regionalCols } = require('./helpers/lang-fields');
 
 // BPHS house lordship (1=Aries lagna offset)
 const RASHI_LORD = {
@@ -360,17 +361,20 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
     const rashiIds = [...new Set([ascRashiNum, moonRashiNum].filter(Boolean))];
     const signs    = rashiIds.length
       ? await db('zodiac_signs').whereIn('id', rashiIds)
-          .select('id','name','name_hi','key_traits_en','key_traits_hi','detailed_description_en','detailed_description_hi')
+          .select('id','name','name_hi','key_traits_en','key_traits_hi','detailed_description_en','detailed_description_hi',
+                  ...regionalCols(['name','key_traits','detailed_description']))
       : [];
     const signMap    = Object.fromEntries(signs.map((s) => [s.id, s]));
     const planetRows = await db('planets')
-      .select('id','name','name_hi','guna','guna_hi','varna','varna_hi','court_role','court_role_hi','deity','deity_hi','characteristics');
+      .select('id','name','name_hi','guna','guna_hi','varna','varna_hi','court_role','court_role_hi','deity','deity_hi','characteristics',
+              ...regionalCols(['name','guna','varna','court_role','deity']));
     const planet_meta = Object.fromEntries(planetRows.map((p) => [p.name, p]));
     const houses_meta = await db('houses')
       .select('id','name','name_hi','keywords_en','keywords_hi','topics_en','topics_hi',
               'health_organs_en','health_organs_hi','detailed_notes_en','detailed_notes_hi',
               'bhava_type','bhava_groups','bhava_nature_en','bhava_nature_hi',
-              'is_kendra','is_trikona','is_dusthana','is_upachaya','is_maarak')
+              'is_kendra','is_trikona','is_dusthana','is_upachaya','is_maarak',
+              ...regionalCols(['name','keywords','topics','health_organs','detailed_notes','bhava_nature']))
       .orderBy('id');
     const housesWithGroups = houses_meta.map((h) => {
       let groups = [];

@@ -26,6 +26,7 @@ const { composePredictionUserFriendly } = require('../services/report-engine/pre
 const { analyzeQuestion } = require('../services/question-understanding.service');
 const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
+const { regionalCols } = require('../services/helpers/lang-fields');
 
 router.use(authenticate);
 
@@ -169,13 +170,15 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
       ? await db('zodiac_signs')
           .whereIn('id', rashiIds)
           .select('id','name','name_hi','key_traits_en','key_traits_hi',
-                  'detailed_description_en','detailed_description_hi')
+                  'detailed_description_en','detailed_description_hi',
+                  ...regionalCols(['name','key_traits','detailed_description']))
       : [];
     const signMap = Object.fromEntries(signs.map((s) => [s.id, s]));
 
     const planetRows = await db('planets')
       .select('id','name','name_hi','guna','guna_hi','varna','varna_hi',
-              'court_role','court_role_hi','deity','deity_hi','characteristics');
+              'court_role','court_role_hi','deity','deity_hi','characteristics',
+              ...regionalCols(['name','guna','varna','court_role','deity']));
     const planet_meta = Object.fromEntries(planetRows.map((p) => [p.name, p]));
 
     const houses_meta = await db('houses')
@@ -183,7 +186,8 @@ async function fetchChartEnrichment(ascRashiNum, moonRashiNum) {
               'topics_en','topics_hi','health_organs_en','health_organs_hi',
               'detailed_notes_en','detailed_notes_hi',
               'bhava_type','bhava_groups','bhava_nature_en','bhava_nature_hi',
-              'is_kendra','is_trikona','is_dusthana','is_upachaya','is_maarak')
+              'is_kendra','is_trikona','is_dusthana','is_upachaya','is_maarak',
+              ...regionalCols(['name','keywords','topics','health_organs','detailed_notes','bhava_nature']))
       .orderBy('id');
 
     // parse bhava_groups JSON string
