@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { t, planetName, categoryLabel, detailText, getYogaDoshaDetail, localizeAstroText, strengthLabel } from '../../lib/astroI18n';
+import { t, dbT, planetName, categoryLabel, detailText, getYogaDoshaDetail, localizeAstroText, strengthLabel } from '../../lib/astroI18n';
 import { PLANET_META, TIMING_STYLE, timingToneLabel } from './kundliConstants';
 
 const YOGA_STRENGTH_STYLE = {
@@ -156,13 +156,12 @@ export default function YogasAndDoshasPanel({ chart, lang, library, admin = fals
             if (!lib) return null;
             const refKey = `${type}-${index}`;
             const isOpen = openRef === refKey;
-            const pick = (en, hi) => (lang === 'hi' ? (hi || en) : en);
             const blocks = [
-              { label: t(lang, 'What is this', 'यह क्या है'),                txt: pick(lib.definition_en, lib.definition_hi),  color:'#D4AF37' },
-              { label: t(lang, 'Signs you may notice', 'संभावित लक्षण'),     txt: pick(lib.symptoms_en, lib.symptoms_hi),      color:'#60A5FA' },
-              { label: t(lang, 'Classical Effects', 'शास्त्रीय फल'),          txt: pick(lib.effects_en, lib.effects_hi),        color: isDosha ? '#F59E0B' : '#22C55E' },
-              !isDosha && { label: t(lang, 'Cancellation Rules', 'भंग नियम'), txt: pick(lib.cancellation_en, lib.cancellation_hi), color:'#22C55E' },
-              admin && isDosha && { label: t(lang, 'Technical Note (Astrologer)', 'तकनीकी नोट (ज्योतिषी)'), txt: pick(lib.technical_note_en, lib.technical_note_hi), color:'#A78BFA' },
+              { label: t(lang, 'What is this', 'यह क्या है'),                txt: dbT(lib, 'definition', lang),  color:'#D4AF37' },
+              { label: t(lang, 'Signs you may notice', 'संभावित लक्षण'),     txt: dbT(lib, 'symptoms', lang),      color:'#60A5FA' },
+              { label: t(lang, 'Classical Effects', 'शास्त्रीय फल'),          txt: dbT(lib, 'effects', lang),        color: isDosha ? '#F59E0B' : '#22C55E' },
+              !isDosha && { label: t(lang, 'Cancellation Rules', 'भंग नियम'), txt: dbT(lib, 'cancellation', lang), color:'#22C55E' },
+              admin && isDosha && { label: t(lang, 'Technical Note (Astrologer)', 'तकनीकी नोट (ज्योतिषी)'), txt: dbT(lib, 'technical_note', lang), color:'#A78BFA' },
             ].filter((b) => b && b.txt);
             if (!blocks.length) return null;
             return (

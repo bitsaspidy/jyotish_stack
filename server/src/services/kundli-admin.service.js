@@ -278,12 +278,13 @@ async function fetchYogaDoshaLibrary(chart) {
     const yogaNames  = (yd.yogas  || []).map((y) => y.name).filter(Boolean);
     const doshaNames = (yd.doshas || []).map((d) => d.name).filter(Boolean);
     const fields = ['name','name_hi','category','definition_en','definition_hi','formation_en','formation_hi',
-                    'symptoms_en','symptoms_hi','effects_en','effects_hi','source'];
+                    'symptoms_en','symptoms_hi','effects_en','effects_hi','source',
+                    ...regionalCols(['name','definition','symptoms','effects'])];
     const [yogaRows, doshaRows] = await Promise.all([
       yogaNames.length  ? db('yogas_library').whereIn('name', yogaNames)
-          .select([...fields, 'cancellation_en', 'cancellation_hi']) : [],
+          .select([...fields, 'cancellation_en', 'cancellation_hi', ...regionalCols(['cancellation'])]) : [],
       doshaNames.length ? db('doshas_library').whereIn('name', doshaNames)
-          .select([...fields, 'technical_note_en', 'technical_note_hi']) : [],
+          .select([...fields, 'technical_note_en', 'technical_note_hi', ...regionalCols(['technical_note'])]) : [],
     ]);
     return {
       yogas:  Object.fromEntries(yogaRows.map((r) => [r.name, r])),
