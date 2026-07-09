@@ -2,9 +2,10 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 exports.seed = async function (knex) {
-  // App settings
-  await knex('app_settings').del();
-  await knex('app_settings').insert([
+  // App settings — insert-if-missing per key (key is UNIQUE). Never DELETE:
+  // this table holds live admin-edited config (razorpay keys, maintenance
+  // flags), so a re-seed must not wipe production values.
+  const appSettings = [
     { key: 'maintenance_mode', value: 'false', description: 'Enable/disable maintenance/coming-soon page' },
     { key: 'maintenance_title', value: 'Coming Soon', description: 'Title shown on maintenance page' },
     { key: 'maintenance_message', value: 'We are crafting something extraordinary. Jyotish Stack AI is launching soon.', description: 'Message shown on maintenance page' },
@@ -16,7 +17,11 @@ exports.seed = async function (knex) {
     { key: 'razorpay_enabled',    value: 'false', description: 'Enable Razorpay payments' },
     { key: 'razorpay_key_id',     value: '',      description: 'Razorpay Key ID (rzp_live_... or rzp_test_...)' },
     { key: 'razorpay_key_secret', value: '',      description: 'Razorpay Key Secret — stored securely, never exposed in API' },
-  ]);
+  ];
+  for (const s of appSettings) {
+    const exists = await knex('app_settings').where({ key: s.key }).first();
+    if (!exists) await knex('app_settings').insert(s);
+  }
 
   // Default accounts — upsert so re-running seeds never wipes real user accounts
   const adminEmail = 'admin@jyotishstack.com';
@@ -43,9 +48,11 @@ exports.seed = async function (knex) {
     });
   }
 
-  // Subscription plans
-  await knex('subscription_plans').del();
-  await knex('subscription_plans').insert([
+  // Subscription plans — match-by-name upsert. Never DELETE: user_subscriptions
+  // has a RESTRICT foreign key on plan_id, so deleting plans referenced by a
+  // real subscription fails on production. Matching by name preserves each
+  // plan's id (and thus existing subscriptions).
+  const plans = [
     {
       name: 'Basic',
       name_hi: 'आधारभूत',
@@ -76,5 +83,10 @@ exports.seed = async function (knex) {
       features: JSON.stringify(['Up to 50 Kundli profiles', 'PDF download', 'All prediction types', 'Priority support', 'Muhurta calculator', 'Remedies & gemstone advice']),
       is_active: true,
     },
-  ]);
+  ];
+  for (const p of plans) {
+    const existing = await knex('subscription_plans').where({ name: p.name }).first();
+    if (existing) await knex('subscription_plans').where({ id: existing.id }).update(p);
+    else await knex('subscription_plans').insert(p);
+  }
 };
