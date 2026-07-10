@@ -237,7 +237,8 @@ async function fetchAstaVakriAnalysis(chart) {
     const parse = (v) => { try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return v; } };
     const byCat = {};
     rows.forEach((r) => {
-      r.effects_en = parse(r.effects_en); r.effects_hi = parse(r.effects_hi); r.extra_data = parse(r.extra_data);
+      for (const l of ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'pa', 'gu']) r[`effects_${l}`] = parse(r[`effects_${l}`]);
+      r.extra_data = parse(r.extra_data);
       (byCat[r.category] = byCat[r.category] || {})[r.item_key] = r;
     });
 

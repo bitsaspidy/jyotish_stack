@@ -19,7 +19,19 @@ function Badge({ children, color }) {
 export default function AstaVakriPanel({ data, lang = 'en' }) {
   const [showRules, setShowRules] = useState(false);
   const T = (en, hi) => (lang === 'hi' ? hi : en);
-  const pick = (r, en, hi) => (r ? (lang === 'hi' ? (r[hi] || r[en]) : r[en]) : null);
+  // Regional DB langs (seed 030): derive the base column from the _en name and
+  // read the regional column with EN fallback. en/hi keep hi→en fallback.
+  const REG = ['ta','te','bn','mr','pa','gu'].includes(lang);
+  const pick = (r, en, hi) => {
+    if (!r) return null;
+    if (REG) { const base = en.replace(/_en$/, ''); return r[`${base}_${lang}`] || r[en]; }
+    return lang === 'hi' ? (r[hi] || r[en]) : r[en];
+  };
+  const pickArr = (r, base) => {
+    if (!r) return null;
+    if (REG) return r[`${base}_${lang}`]?.length ? r[`${base}_${lang}`] : r[`${base}_en`];
+    return lang === 'hi' ? (r[`${base}_hi`] || r[`${base}_en`]) : r[`${base}_en`];
+  };
   if (!data || (!data.combust?.length && !data.retro?.length)) return null;
 
   return (
@@ -52,7 +64,7 @@ export default function AstaVakriPanel({ data, lang = 'en' }) {
                 {pick(c.planet_effects, 'description_en', 'description_hi')}
               </p>
             )}
-            {(lang === 'hi' ? c.planet_effects?.effects_hi : c.planet_effects?.effects_en)?.map((e, i) => (
+            {pickArr(c.planet_effects, 'effects')?.map((e, i) => (
               <p key={i} className="text-ivory/70 text-[10.5px] leading-relaxed font-devanagari">▸ {e}</p>
             ))}
             {c.planet_effects?.extra_data?.exception_en && (
@@ -108,9 +120,9 @@ export default function AstaVakriPanel({ data, lang = 'en' }) {
           {data.special_remedies.map((sr) => (
             <div key={sr.item_key} style={{ background:'rgba(34,197,94,0.04)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:8, padding:'9px 11px' }}>
               <p style={{ color:'#22C55E', fontSize:10, fontWeight:700, marginBottom:4 }} className="font-devanagari">
-                {lang === 'hi' ? sr.title_hi : sr.title_en}
+                {pick(sr, 'title_en', 'title_hi')}
               </p>
-              {(lang === 'hi' ? sr.effects_hi : sr.effects_en)?.map((e, i) => (
+              {pickArr(sr, 'effects')?.map((e, i) => (
                 <p key={i} className="text-ivory/60 text-[9.5px] leading-relaxed font-devanagari">• {e}</p>
               ))}
             </div>
@@ -128,10 +140,10 @@ export default function AstaVakriPanel({ data, lang = 'en' }) {
           {(data.rules || []).map((r) => (
             <div key={r.item_key} style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'8px 11px' }}>
               <p style={{ color:'#D4AF37', fontSize:10.5, fontWeight:700, marginBottom:3 }} className="font-devanagari">
-                {lang === 'hi' ? (r.title_hi || r.title_en) : r.title_en}
+                {pick(r, 'title_en', 'title_hi')}
               </p>
               <p className="text-ivory/62 text-[10px] leading-relaxed font-devanagari">
-                {lang === 'hi' ? (r.description_hi || r.description_en) : r.description_en}
+                {pick(r, 'description_en', 'description_hi')}
               </p>
               {r.source && <p className="text-ivory/30 text-[8.5px] italic mt-1">— {r.source}</p>}
             </div>
@@ -139,10 +151,10 @@ export default function AstaVakriPanel({ data, lang = 'en' }) {
           {(data.misconceptions || []).map((m) => (
             <div key={m.item_key} style={{ background:'rgba(239,68,68,0.03)', border:'1px solid rgba(239,68,68,0.15)', borderRadius:8, padding:'8px 11px' }}>
               <p style={{ color:'#EF4444', fontSize:10.5, fontWeight:700, marginBottom:3 }} className="font-devanagari">
-                ✕ {lang === 'hi' ? (m.title_hi || m.title_en) : m.title_en}
+                ✕ {pick(m, 'title_en', 'title_hi')}
               </p>
               <p className="text-ivory/62 text-[10px] leading-relaxed font-devanagari">
-                {lang === 'hi' ? (m.description_hi || m.description_en) : m.description_en}
+                {pick(m, 'description_en', 'description_hi')}
               </p>
             </div>
           ))}
