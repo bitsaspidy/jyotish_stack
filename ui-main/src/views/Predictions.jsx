@@ -278,6 +278,15 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
   const hasSuite        = remedyData?.suite?.items?.length > 0;
   const hasFallback     = fallbackRemedies?.length > 0;
 
+  // Regional DB languages (seed 028). Primary text uses the regional column with
+  // English fallback; the secondary reference line stays English. en/hi keep the
+  // original bilingual-pair behaviour (primary=selected lang, secondary=the other).
+  const isReg = ['ta','te','bn','mr','pa','gu'].includes(lang);
+  const rPrimary   = (o, base) => isReg ? (o?.[`${base}_${lang}`] || o?.[`${base}_en`]) : (lang === 'hi' ? (o?.[`${base}_hi`] || o?.[`${base}_en`]) : o?.[`${base}_en`]);
+  const rSecondary = (o, base) => isReg ? o?.[`${base}_en`] : (lang === 'hi' ? o?.[`${base}_en`] : o?.[`${base}_hi`]);
+  const rPrimaryArr   = (o, base) => (isReg ? (o?.[`${base}_${lang}`]?.length ? o[`${base}_${lang}`] : o?.[`${base}_en`]) : (lang === 'hi' ? (o?.[`${base}_hi`]?.length ? o[`${base}_hi`] : o?.[`${base}_en`]) : o?.[`${base}_en`])) || [];
+  const rSecondaryArr = (o, base) => (isReg ? o?.[`${base}_en`] : (lang === 'hi' ? o?.[`${base}_en`] : o?.[`${base}_hi`])) || [];
+
   if (!hasLifeIshta && !hasDashaRemedy && !hasFallback) return null;
 
   const tabs = [
@@ -323,8 +332,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
 
   const renderPlanetCard = (planet) => {
     if (!planet) return null;
-    const mantras = lang === 'hi' ? (planet.mantras_hi || planet.mantras_en || []) : (planet.mantras_en || []);
-    const secondaryMantras = lang === 'hi' ? (planet.mantras_en || []) : (planet.mantras_hi || []);
+    const mantras = rPrimaryArr(planet, 'mantras');
+    const secondaryMantras = rSecondaryArr(planet, 'mantras');
     return (
       <div className="space-y-4">
         {/* Planetary remedy devata */}
@@ -332,8 +341,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
           <span style={{ fontSize:22, flexShrink:0 }}>🙏</span>
           <div>
             <p style={{ color:'rgba(245,240,232,0.58)', fontSize:9, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:3 }}>{chooseText(lang, 'Remedy Devata', 'उपाय देवता')}</p>
-            <p style={{ color:'#D4AF37', fontSize:15, fontWeight:700, fontFamily:'Georgia,serif' }}>{lang === 'hi' ? planet.ishta_devata_hi : planet.ishta_devata_en}</p>
-            <p style={{ color:'rgba(245,240,232,0.5)', fontSize:11, marginTop:2, fontFamily:'var(--font-devanagari),sans-serif' }}>{lang === 'hi' ? planet.ishta_devata_en : planet.ishta_devata_hi}</p>
+            <p style={{ color:'#D4AF37', fontSize:15, fontWeight:700, fontFamily:'Georgia,serif' }}>{rPrimary(planet, 'ishta_devata')}</p>
+            <p style={{ color:'rgba(245,240,232,0.5)', fontSize:11, marginTop:2, fontFamily:'var(--font-devanagari),sans-serif' }}>{rSecondary(planet, 'ishta_devata')}</p>
           </div>
         </div>
 
@@ -363,8 +372,8 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
         {planet.special_notes_en && (
           <div style={{ padding:'10px 12px', borderRadius:8, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(212,175,55,0.08)' }}>
             <p style={{ color:'#F59E0B', fontSize:10, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:5 }}>📌 {chooseText(lang, 'Important Note', 'महत्वपूर्ण नोट')}</p>
-            <p style={{ color:'rgba(245,240,232,0.7)', fontSize:12, lineHeight:1.75 }}>{lang === 'hi' ? planet.special_notes_hi : planet.special_notes_en}</p>
-            <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, marginTop:5, lineHeight:1.7, fontFamily:'var(--font-devanagari),sans-serif' }}>{lang === 'hi' ? planet.special_notes_en : planet.special_notes_hi}</p>
+            <p style={{ color:'rgba(245,240,232,0.7)', fontSize:12, lineHeight:1.75 }}>{rPrimary(planet, 'special_notes')}</p>
+            <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, marginTop:5, lineHeight:1.7, fontFamily:'var(--font-devanagari),sans-serif' }}>{rSecondary(planet, 'special_notes')}</p>
           </div>
         )}
       </div>
@@ -439,12 +448,12 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
             {chooseText(lang, 'Specific life problems and their classical planetary remedies — devata, mantras and method.', 'विशिष्ट जीवन समस्याएं और उनके शास्त्रीय ग्रह उपाय — देवता, मंत्र और विधि।')}
           </p>
           {remedyData.problems.map((pr) => {
-            const mantras = lang === 'hi' ? (pr.mantras_hi?.length ? pr.mantras_hi : pr.mantras_en) : pr.mantras_en;
+            const mantras = rPrimaryArr(pr, 'mantras');
             return (
               <div key={pr.id} style={{ padding:'12px 14px', borderRadius:8, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(212,175,55,0.12)' }}>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <p style={{ color:'#D4AF37', fontSize:13, fontWeight:700, fontFamily:'var(--font-devanagari),Georgia,serif' }}>
-                    {lang === 'hi' ? (pr.problem_hi || pr.problem_en) : pr.problem_en}
+                    {rPrimary(pr, 'problem')}
                   </p>
                   <span style={{ fontSize:9, color:'#A78BFA', background:'rgba(167,139,250,0.1)', borderRadius:10, padding:'2px 8px', fontWeight:700, whiteSpace:'nowrap' }}>
                     {pr.planet}
@@ -452,7 +461,7 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
                 </div>
                 {(pr.devata_en || pr.devata_hi) && (
                   <p style={{ color:'rgba(245,240,232,0.7)', fontSize:11, marginBottom:6, fontFamily:'var(--font-devanagari),sans-serif' }}>
-                    🙏 {chooseText(lang, 'Devata', 'देवता')}: {lang === 'hi' ? (pr.devata_hi || pr.devata_en) : pr.devata_en}
+                    🙏 {chooseText(lang, 'Devata', 'देवता')}: {rPrimary(pr, 'devata')}
                   </p>
                 )}
                 {mantras?.length > 0 && mantras.map((m, i) => (
@@ -462,7 +471,7 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
                 ))}
                 {(pr.notes_en || pr.notes_hi) && (
                   <p style={{ color:'rgba(245,240,232,0.5)', fontSize:10.5, lineHeight:1.65, marginTop:5, fontFamily:'var(--font-devanagari),sans-serif' }}>
-                    📌 {lang === 'hi' ? (pr.notes_hi || pr.notes_en) : pr.notes_en}
+                    📌 {rPrimary(pr, 'notes')}
                   </p>
                 )}
               </div>
@@ -493,12 +502,12 @@ function RemediesCard({ remedyData, fallbackRemedies, lifeIshtaDevata, lang, del
               </div>
               <div>
                 <p style={{ color: step.is_conditional ? '#FB923C' : '#D4AF37', fontSize:12, fontWeight:700, marginBottom:4 }}>
-                  {lang === 'hi' ? step.action_hi : step.action_en}
+                  {rPrimary(step, 'action')}
                   {step.is_conditional && <span style={{ fontSize:9, marginLeft:6, opacity:0.7 }}>{chooseText(lang, '(Conditional)', '(शर्त अनुसार)')}</span>}
                 </p>
-                <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, fontFamily:'var(--font-devanagari),sans-serif', marginBottom:4 }}>{lang === 'hi' ? step.action_en : step.action_hi}</p>
-                <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.75 }}>{lang === 'hi' ? step.description_hi : step.description_en}</p>
-                <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, lineHeight:1.7, marginTop:5, fontFamily:'var(--font-devanagari),sans-serif' }}>{lang === 'hi' ? step.description_en : step.description_hi}</p>
+                <p style={{ color:'rgba(245,240,232,0.4)', fontSize:10, fontFamily:'var(--font-devanagari),sans-serif', marginBottom:4 }}>{rSecondary(step, 'action')}</p>
+                <p style={{ color:'rgba(245,240,232,0.75)', fontSize:12, lineHeight:1.75 }}>{rPrimary(step, 'description')}</p>
+                <p style={{ color:'rgba(245,240,232,0.4)', fontSize:11, lineHeight:1.7, marginTop:5, fontFamily:'var(--font-devanagari),sans-serif' }}>{rSecondary(step, 'description')}</p>
               </div>
             </div>
           ))}

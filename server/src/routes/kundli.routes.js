@@ -147,10 +147,14 @@ async function fetchDashaRemedies(dashaLord, lagnaLord) {
     const rows = await db('remedy_planets').whereIn('planet', planets);
     const pujaSteps = await db('remedy_puja_steps').orderBy('sort_order');
 
-    const parsed = rows.map((r) => {
-      const parse = (v) => { try { return JSON.parse(v); } catch { return []; } };
-      return { ...r, mantras_en: parse(r.mantras_en), mantras_hi: parse(r.mantras_hi) };
-    });
+    const MANTRA_LANGS = ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'pa', 'gu'];
+    const parseMantras = (r) => {
+      const parse = (v) => { try { return JSON.parse(v); } catch { return Array.isArray(v) ? v : []; } };
+      const out = { ...r };
+      for (const l of MANTRA_LANGS) out[`mantras_${l}`] = parse(r[`mantras_${l}`]);
+      return out;
+    };
+    const parsed = rows.map(parseMantras);
     const stepsOut = pujaSteps.map((s) => ({ ...s }));
 
     return {

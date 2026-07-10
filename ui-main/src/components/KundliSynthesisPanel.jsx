@@ -164,13 +164,16 @@ function getKeyRemedies(profile, lang) {
   if (rd.lagna_planet) planets.push(rd.lagna_planet);
   return planets
     .filter((p, i, arr) => arr.findIndex(q => q.planet === p.planet) === i) // dedupe
-    .map((p) => ({
-      planet: p.planet,
-      mantra: lang === 'hi'
-        ? (p.mantras_hi?.[0] || p.mantras_en?.[0])
-        : p.mantras_en?.[0],
-      devata: lang === 'hi' ? (p.ishta_devata_hi || p.ishta_devata_en) : p.ishta_devata_en,
-    }));
+    .map((p) => {
+      const reg = ['ta','te','bn','mr','pa','gu'].includes(lang);
+      const pick = (base) => reg ? (p[`${base}_${lang}`] || p[`${base}_en`]) : (lang === 'hi' ? (p[`${base}_hi`] || p[`${base}_en`]) : p[`${base}_en`]);
+      const pickArr = (base) => reg ? (p[`${base}_${lang}`]?.length ? p[`${base}_${lang}`] : p[`${base}_en`]) : (lang === 'hi' ? (p[`${base}_hi`]?.length ? p[`${base}_hi`] : p[`${base}_en`]) : p[`${base}_en`]);
+      return {
+        planet: reg ? (p[`planet_${lang}`] || p.planet) : (lang === 'hi' ? (p.planet_hi || p.planet) : p.planet),
+        mantra: pickArr('mantras')?.[0],
+        devata: pick('ishta_devata'),
+      };
+    });
 }
 
 function getCharaKarakaHighlight(profile, lang) {

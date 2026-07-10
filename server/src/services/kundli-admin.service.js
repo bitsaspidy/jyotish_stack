@@ -129,8 +129,10 @@ async function fetchDashaRemedies(dashaLord, lagnaLord) {
     const rows      = await db('remedy_planets').whereIn('planet', planets);
     const pujaSteps = await db('remedy_puja_steps').orderBy('sort_order');
     const parsed = rows.map((r) => {
-      const parse = (v) => { try { return JSON.parse(v); } catch { return []; } };
-      return { ...r, mantras_en: parse(r.mantras_en), mantras_hi: parse(r.mantras_hi) };
+      const parse = (v) => { try { return JSON.parse(v); } catch { return Array.isArray(v) ? v : []; } };
+      const out = { ...r };
+      for (const l of ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'pa', 'gu']) out[`mantras_${l}`] = parse(r[`mantras_${l}`]);
+      return out;
     });
     return {
       dasha_planet: parsed.find((r) => r.planet === dashaLord) || null,
@@ -301,7 +303,11 @@ async function fetchProblemRemedies() {
   try {
     const rows = await db('remedy_problems').orderBy('id');
     const parse = (v) => { try { return JSON.parse(v); } catch { return Array.isArray(v) ? v : []; } };
-    return rows.map((r) => ({ ...r, mantras_en: parse(r.mantras_en), mantras_hi: parse(r.mantras_hi) }));
+    return rows.map((r) => {
+      const out = { ...r };
+      for (const l of ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'pa', 'gu']) out[`mantras_${l}`] = parse(r[`mantras_${l}`]);
+      return out;
+    });
   } catch { return null; }
 }
 
