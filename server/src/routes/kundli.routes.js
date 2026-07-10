@@ -225,6 +225,18 @@ const PLANET_NAME_MAP = {
   Venus:'Venus',Saturn:'Saturn',Rahu:'Rahu',Ketu:'Ketu',
 };
 
+// Pass the regional (seed 031) lord_name / house_signification / interpretation
+// columns through to BhavaLordPanel, which picks them per UI language.
+function regionalReadingFields(row) {
+  const out = {};
+  for (const lang of ['ta', 'te', 'bn', 'mr', 'pa', 'gu']) {
+    out[`lord_name_${lang}`] = row[`lord_name_${lang}`] || null;
+    out[`house_signification_${lang}`] = row[`house_signification_${lang}`] || null;
+    out[`interpretation_${lang}`] = row[`interpretation_${lang}`] || null;
+  }
+  return out;
+}
+
 async function fetchBhavaLordReadings(chart) {
   if (!chart?.ascendant?.rashi_num || !chart?.planets) return null;
   try {
@@ -264,7 +276,8 @@ async function fetchBhavaLordReadings(chart) {
         'lord_name_en','lord_name_hi',
         'house_signification_en','house_signification_hi',
         'interpretation_en','interpretation_hi',
-        'overall_effect','forms_viparita_yoga'
+        'overall_effect','forms_viparita_yoga',
+        ...regionalCols(['lord_name','house_signification','interpretation'])
       );
 
     const rowMap = {};
@@ -284,6 +297,7 @@ async function fetchBhavaLordReadings(chart) {
         house_signification_hi: row.house_signification_hi || null,
         interpretation_en:    row.interpretation_en || null,
         interpretation_hi:    row.interpretation_hi || null,
+        ...regionalReadingFields(row),
         overall_effect:       row.overall_effect || 'neutral',
         forms_viparita_yoga:  row.forms_viparita_yoga || false,
       };

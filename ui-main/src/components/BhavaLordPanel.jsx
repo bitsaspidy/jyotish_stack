@@ -38,12 +38,21 @@ function BhavaLordCard({ reading, lang, index }) {
   const placedOrdEN = HOUSE_ORDINAL[reading.placed_in_house] || `${reading.placed_in_house}th`;
   const placedOrdHI = HOUSE_ORDINAL_HI[reading.placed_in_house] || `${reading.placed_in_house}वें`;
 
+  // Regional DB langs (seed 031): regional column with EN fallback. lord_name and
+  // house_signification fall back to the ordinal label when unseeded.
+  const reg = ['ta','te','bn','mr','pa','gu'].includes(lang);
+  const pickReg = (base) => reg ? (reading[`${base}_${lang}`] || reading[`${base}_en`]) : null;
+
   const lordNameEN = reading.lord_name_en || `${houseOrdEN} Lord`;
   const lordNameHI = reading.lord_name_hi || `${houseOrdHI} भावेश`;
+  const lordName   = reg ? (reading[`lord_name_${lang}`] || lordNameEN) : t(lang, lordNameEN, lordNameHI);
+  const houseSig   = reg ? pickReg('house_signification') : t(lang, reading.house_signification_en, reading.house_signification_hi || reading.house_signification_en);
 
-  const interpretation = lang === 'hi'
-    ? (reading.interpretation_hi || reading.interpretation_en || '')
-    : (reading.interpretation_en || '');
+  const interpretation = reg
+    ? (reading[`interpretation_${lang}`] || reading.interpretation_en || '')
+    : (lang === 'hi'
+        ? (reading.interpretation_hi || reading.interpretation_en || '')
+        : (reading.interpretation_en || ''));
 
   return (
     <div style={{
@@ -76,7 +85,7 @@ function BhavaLordCard({ reading, lang, index }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: '#F1F5F9' }}>
-              {t(lang, lordNameEN, lordNameHI)}
+              {lordName}
             </span>
             {/* Planet badge */}
             <span style={{
@@ -135,7 +144,7 @@ function BhavaLordCard({ reading, lang, index }) {
                 {t(lang, `HOUSE ${reading.house_number} GOVERNS`, `भाव ${reading.house_number} का कारकत्व`)}
               </div>
               <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.5 }}>
-                {t(lang, reading.house_signification_en, reading.house_signification_hi || reading.house_signification_en)}
+                {houseSig}
               </div>
             </div>
           )}

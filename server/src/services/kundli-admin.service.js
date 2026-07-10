@@ -423,7 +423,8 @@ async function fetchBhavaLordReadings(chart) {
       .where(function () { pairs.forEach(([hl, ph]) => this.orWhere({ house_lord: hl, placed_in_house: ph })); })
       .select('house_lord','placed_in_house','title','title_hi','lord_name_en','lord_name_hi',
               'house_signification_en','house_signification_hi','interpretation_en','interpretation_hi',
-              'overall_effect','forms_viparita_yoga');
+              'overall_effect','forms_viparita_yoga',
+              ...regionalCols(['lord_name','house_signification','interpretation']));
     const rowMap = Object.fromEntries(rows.map((r) => [`${r.house_lord}_${r.placed_in_house}`, r]));
     return lookups.map((l) => {
       const row = rowMap[`${l.house_lord}_${l.placed_in_house}`] || {};
@@ -436,6 +437,11 @@ async function fetchBhavaLordReadings(chart) {
         house_signification_hi: row.house_signification_hi || null,
         interpretation_en: row.interpretation_en || null,
         interpretation_hi: row.interpretation_hi || null,
+        ...Object.fromEntries(['ta','te','bn','mr','pa','gu'].flatMap((lang) => [
+          [`lord_name_${lang}`, row[`lord_name_${lang}`] || null],
+          [`house_signification_${lang}`, row[`house_signification_${lang}`] || null],
+          [`interpretation_${lang}`, row[`interpretation_${lang}`] || null],
+        ])),
         overall_effect: row.overall_effect || 'neutral',
         forms_viparita_yoga: row.forms_viparita_yoga || false,
       };
