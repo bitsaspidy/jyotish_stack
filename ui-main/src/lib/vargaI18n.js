@@ -233,14 +233,20 @@ function fallbackFor(definition) {
   return VARGA_HI[definition?.code] || {};
 }
 
+// Regional DB languages (seed 027). For these, use the seeded regional column
+// when present, otherwise fall back to English (never the Hindi static dict).
+const REGIONAL = new Set(['ta', 'te', 'bn', 'mr', 'pa', 'gu']);
+
 export function vargaName(definition, lang) {
   if (!definition) return lang === 'hi' ? 'वर्ग' : 'Varga';
+  if (REGIONAL.has(lang)) return definition[`name_${lang}`] || definition.name_en || definition.code;
   if (lang === 'hi') return definition.name_hi || fallbackFor(definition).name || definition.name_en || definition.code;
   return definition.name_en || definition.code;
 }
 
 export function vargaDomain(definition, lang) {
   if (!definition) return '';
+  // primary_domain has no regional column; keep English for regional langs.
   return lang === 'hi'
     ? fallbackFor(definition).domain || localizeAstroText(definition.primary_domain, lang)
     : definition.primary_domain;
@@ -248,18 +254,24 @@ export function vargaDomain(definition, lang) {
 
 export function vargaSignifies(definition, lang) {
   if (!definition) return '';
+  if (REGIONAL.has(lang)) return definition[`signifies_${lang}`] || definition.signifies_en;
   if (lang === 'hi') return definition.signifies_hi || fallbackFor(definition).signifies || localizeAstroText(definition.signifies_en, lang);
   return definition.signifies_en;
 }
 
 export function vargaDescription(definition, lang) {
   if (!definition) return '';
+  if (REGIONAL.has(lang)) return definition[`description_${lang}`] || definition.description_en;
   if (lang === 'hi') return definition.description_hi || fallbackFor(definition).description || localizeAstroText(definition.description_en, lang);
   return definition.description_en;
 }
 
 export function vargaKeyUses(definition, lang) {
   if (!definition) return [];
+  if (REGIONAL.has(lang)) {
+    const seeded = Array.isArray(definition[`key_uses_${lang}`]) ? definition[`key_uses_${lang}`].filter(Boolean) : [];
+    return seeded.length ? seeded : (Array.isArray(definition.key_uses_en) ? definition.key_uses_en : []);
+  }
   if (lang === 'hi') {
     const seeded = Array.isArray(definition.key_uses_hi) ? definition.key_uses_hi.filter(Boolean) : [];
     return seeded.length ? seeded : (fallbackFor(definition).keyUses || []);

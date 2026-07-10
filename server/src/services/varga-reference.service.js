@@ -1,5 +1,22 @@
 'use strict';
 
+const REGIONAL_LANGS = ['ta', 'te', 'bn', 'mr', 'pa', 'gu'];
+
+// Passes the 6 regional string columns through unchanged (name_ta, signifies_ta,
+// description_ta, …) and parses the regional key_uses JSON arrays. en/hi are
+// already handled explicitly above; this only appends the regional layer so
+// vargaI18n.js can pick ta/te/bn/mr/pa/gu when the UI language is regional.
+function regionalVargaFields(row) {
+  const out = {};
+  for (const lang of REGIONAL_LANGS) {
+    out[`name_${lang}`] = row[`name_${lang}`] || null;
+    out[`signifies_${lang}`] = row[`signifies_${lang}`] || null;
+    out[`description_${lang}`] = row[`description_${lang}`] || null;
+    out[`key_uses_${lang}`] = parseJsonArray(row[`key_uses_${lang}`]);
+  }
+  return out;
+}
+
 function parseJsonArray(value) {
   if (!value) return [];
   if (Array.isArray(value)) return value;
@@ -41,6 +58,7 @@ function normalizeVargaReferenceRows({ charts = [], relationships = [], familyRe
       description_hi: row.description_hi || null,
       key_uses_en: parseJsonArray(row.key_uses_en),
       key_uses_hi: parseJsonArray(row.key_uses_hi),
+      ...regionalVargaFields(row),
       calculation_rule: row.calculation_rule,
       precision_note: row.precision_note || null,
       is_high_precision: Boolean(row.is_high_precision),
