@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
-
-const t = (lang, en, hi) => (lang === 'hi' ? hi : en);
+import { t } from '../lib/astroI18n';        // dictionary-backed (regional-aware) inline labels
+import { pickLang } from '../lib/reportI18n'; // picks server humanizer regional fields
 
 const PLANET_META = {
   Sun:     { icon:'☉', color:'#FBBF24', hi:'सूर्य'    },
@@ -188,7 +188,7 @@ function FriendlyScoreCard({ card, lang }) {
       border:`1px solid ${color}22`, borderRadius:10, flex:'1 1 140px',
     }}>
       <div style={{ fontSize:10, color:'#64748B', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:6 }}>
-        {t(lang, card.titleEn, card.titleHi)}
+        {pickLang(card, 'title', lang)}
       </div>
       <div style={{ display:'flex', alignItems:'baseline', gap:4, marginBottom:6 }}>
         <span style={{ fontSize:22, fontWeight:900, color, lineHeight:1 }}>{card.score}</span>
@@ -196,7 +196,7 @@ function FriendlyScoreCard({ card, lang }) {
       </div>
       <ScoreBar val={card.score} height={4} />
       <p style={{ fontSize:11, color:'rgba(245,240,232,0.65)', lineHeight:1.6, margin:'8px 0 0' }}>
-        {t(lang, card.simpleMeaningEn, card.simpleMeaningHi)}
+        {pickLang(card, 'simpleMeaning', lang)}
       </p>
     </div>
   );
@@ -213,10 +213,10 @@ function FriendlyStrengthItem({ item, lang, type }) {
       <span style={{ color:pm.color, fontSize:18, flexShrink:0 }}>{pm.icon}</span>
       <div>
         <div style={{ fontSize:12, fontWeight:700, color:pm.color, marginBottom:3 }}>
-          {t(lang, item.planet, item.planetHi)}
+          {pickLang(item, 'planetName', lang) || t(lang, item.planet, item.planetHi)}
         </div>
         <p style={{ fontSize:11, color:'rgba(245,240,232,0.72)', lineHeight:1.7, margin:0 }}>
-          {t(lang, item.simpleMeaningEn, item.simpleMeaningHi)}
+          {pickLang(item, 'simpleMeaning', lang)}
         </p>
       </div>
       <span style={{ fontSize:9, fontWeight:700, color, marginLeft:'auto', flexShrink:0, alignSelf:'flex-start', padding:'2px 6px', background:`${color}15`, borderRadius:6 }}>
@@ -234,14 +234,14 @@ function FriendlyDomainCard({ d, lang }) {
     }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
         <div style={{ fontSize:12, fontWeight:600, color:'#E2E8F0' }}>
-          {t(lang, d.titleEn, d.titleHi)}
+          {pickLang(d, 'title', lang)}
         </div>
         <span style={{
           fontSize:9, fontWeight:700, color:d.color,
           textTransform:'uppercase', letterSpacing:'0.05em',
           background:`${d.color}18`, padding:'2px 7px', borderRadius:8, flexShrink:0, marginLeft:6,
         }}>
-          {t(lang, d.labelEn, d.labelHi)}
+          {pickLang(d, 'label', lang)}
         </span>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
@@ -249,7 +249,7 @@ function FriendlyDomainCard({ d, lang }) {
         <div style={{ flex:1 }}><ScoreBar val={d.score} height={4} /></div>
       </div>
       <p style={{ fontSize:11, color:'rgba(245,240,232,0.6)', lineHeight:1.6, margin:0 }}>
-        {t(lang, d.simpleMeaningEn, d.simpleMeaningHi)}
+        {pickLang(d, 'simpleMeaning', lang)}
       </p>
     </div>
   );
@@ -276,7 +276,7 @@ function DashaSummaryCard({ dasha, lang }) {
               {t(lang,'Mahadasha','महादशा')}
             </div>
             <div style={{ fontSize:14, fontWeight:700, color:mahaM.color }}>
-              {t(lang, dasha.mahaLord, dasha.mahaLordHi)}
+              {pickLang(dasha, 'mahaLord', lang) || t(lang, dasha.mahaLord, dasha.mahaLordHi)}
             </div>
             {dasha.mahaEndDate && <div style={{ fontSize:9, color:'#475569' }}>{t(lang,'Until','तक')} {dasha.mahaEndDate}</div>}
           </div>
@@ -291,7 +291,7 @@ function DashaSummaryCard({ dasha, lang }) {
                   {t(lang,'Antardasha','अंतर्दशा')}
                 </div>
                 <div style={{ fontSize:14, fontWeight:700, color:antarM.color }}>
-                  {t(lang, dasha.antarLord, dasha.antarLordHi)}
+                  {pickLang(dasha, 'antarLord', lang) || t(lang, dasha.antarLord, dasha.antarLordHi)}
                 </div>
                 {dasha.antarEndDate && <div style={{ fontSize:9, color:'#475569' }}>{t(lang,'Until','तक')} {dasha.antarEndDate}</div>}
               </div>
@@ -306,10 +306,10 @@ function DashaSummaryCard({ dasha, lang }) {
         </span>
       </div>
       <p style={{ fontSize:12, color:'rgba(245,240,232,0.78)', lineHeight:1.8, margin:'0 0 8px' }}>
-        {t(lang, dasha.simpleMeaningEn, dasha.simpleMeaningHi)}
+        {pickLang(dasha, 'simpleMeaning', lang)}
       </p>
       <p style={{ fontSize:11, color:'rgba(245,240,232,0.5)', lineHeight:1.6, margin:0, fontStyle:'italic' }}>
-        → {t(lang, dasha.adviceEn, dasha.adviceHi)}
+        → {pickLang(dasha, 'advice', lang)}
       </p>
     </div>
   );
@@ -396,10 +396,10 @@ function FriendlyView({ sf, st, natalPlanets, lang, admin, onToggleTech }) {
       <div style={{ paddingTop: admin ? 8 : 20, marginBottom:20 }}>
         <div style={{ padding:'16px', background:`${color}08`, border:`1px solid ${color}22`, borderRadius:12 }}>
           <p style={{ fontSize:13, color:'rgba(245,240,232,0.88)', lineHeight:1.9, margin:'0 0 8px' }}>
-            {t(lang, sf.overall.simpleMeaningEn, sf.overall.simpleMeaningHi)}
+            {pickLang(sf.overall, 'simpleMeaning', lang)}
           </p>
           <p style={{ fontSize:11, color:'rgba(245,240,232,0.5)', fontStyle:'italic', margin:0 }}>
-            → {t(lang, sf.overall.adviceEn, sf.overall.adviceHi)}
+            → {pickLang(sf.overall, 'advice', lang)}
           </p>
         </div>
       </div>
@@ -420,7 +420,7 @@ function FriendlyView({ sf, st, natalPlanets, lang, admin, onToggleTech }) {
           <Heading>✦ {t(lang,'Auspicious Combinations','शुभ संयोजन')}</Heading>
           <div style={{ padding:'12px 16px', background:'rgba(212,175,55,0.05)', border:'1px solid rgba(212,175,55,0.15)', borderRadius:10 }}>
             <p style={{ fontSize:12, color:'rgba(245,240,232,0.78)', lineHeight:1.8, margin:0 }}>
-              {t(lang, sf.yogaSummaryEn, sf.yogaSummaryHi)}
+              {pickLang(sf, 'yogaSummary', lang)}
             </p>
           </div>
         </div>
@@ -629,10 +629,11 @@ export default function KundliStrengthPanel({ kundliUuid, natalPlanets, lang = '
 
   const showFriendly = sf && viewMode === 'friendly';
 
-  // Header label — friendly label when in friendly mode, technical otherwise
-  const headerLabelEn = showFriendly ? (sf.overall?.labelEn || st.label?.en) : st.label?.en;
-  const headerLabelHi = showFriendly ? (sf.overall?.labelHi || st.label?.hi) : st.label?.hi;
-  const headerColor   = showFriendly ? (sf.overall?.color || color) : color;
+  // Header label — friendly label (regional-aware) when in friendly mode, technical otherwise
+  const headerLabel = showFriendly
+    ? (pickLang(sf.overall, 'label', lang) || t(lang, st.label?.en, st.label?.hi))
+    : t(lang, st.label?.en, st.label?.hi);
+  const headerColor = showFriendly ? (sf.overall?.color || color) : color;
 
   return (
     <div style={{ borderRadius:14, overflow:'hidden', border:`1px solid ${headerColor}35` }}>
@@ -656,7 +657,7 @@ export default function KundliStrengthPanel({ kundliUuid, natalPlanets, lang = '
               {t(lang,'Kundli Strength Report','कुंडली बल रिपोर्ट')}
             </div>
             <div style={{ fontSize:12, color:headerColor, fontWeight:600, marginTop:2 }}>
-              {t(lang, headerLabelEn, headerLabelHi)} — {st.overall_score}/100
+              {headerLabel} — {st.overall_score}/100
             </div>
           </div>
         </div>
