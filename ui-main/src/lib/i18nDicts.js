@@ -25,6 +25,8 @@ export const LANGS = [
 export const DICTS = {
   // ═══════════════════════════ TAMIL ═══════════════════════════
   ta: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'கேள்வி கேளுங்கள்','Simple Report':'எளிய அறிக்கை','Life Report':'வாழ்க்கை அறிக்கை','Strength':'கிரக பலம்','Planet Impact':'கிரக தாக்கம்','Bhava Lords':'பாவ அதிபதிகள்','Guidance':'வழிகாட்டுதல்','GRB Report':'GRB அறிக்கை','Varga':'வர்க்க அட்டவணை','Digbala':'திக்பலம்','Bhav Karak':'பாவ காரகன்','Drishti':'திருஷ்டி','Yogas':'யோகம்-தோஷம்','Fav Days':'சுப நாட்கள்','Final Results':'இறுதி முடிவுகள்','Upagrahas':'உபகிரகங்கள்','Judgement':'தீர்ப்பு',
     'Excellent':'சிறப்பு','Difficult':'கடினம்',
     'Yearly Horoscope':'வருடாந்திர ராசிபலன்',
     'Sunday':'ஞாயிறு','Monday':'திங்கள்','Tuesday':'செவ்வாய்','Wednesday':'புதன்','Thursday':'வியாழன்','Friday':'வெள்ளி','Saturday':'சனிக்கிழமை',
@@ -173,6 +175,8 @@ export const DICTS = {
 
   // ═══════════════════════════ TELUGU ═══════════════════════════
   te: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'ప్రశ్న అడగండి','Simple Report':'సరళ నివేదిక','Life Report':'జీవిత నివేదిక','Strength':'గ్రహ బలం','Planet Impact':'గ్రహ ప్రభావం','Bhava Lords':'భావ అధిపతులు','Guidance':'మార్గదర్శకత్వం','GRB Report':'GRB నివేదిక','Varga':'వర్గ చార్ట్','Digbala':'దిగ్బలం','Bhav Karak':'భావ కారకుడు','Drishti':'దృష్టి','Yogas':'యోగాలు-దోషాలు','Fav Days':'శుభ దినాలు','Final Results':'తుది ఫలితాలు','Upagrahas':'ఉపగ్రహాలు','Judgement':'నిర్ణయం',
     'Excellent':'అద్భుతం','Difficult':'కష్టం',
     'Yearly Horoscope':'వార్షిక రాశి ఫలాలు',
     'Sunday':'ఆదివారం','Monday':'సోమవారం','Tuesday':'మంగళవారం','Wednesday':'బుధవారం','Thursday':'గురువారం','Friday':'శుక్రవారం','Saturday':'శనివారం',
@@ -309,6 +313,8 @@ export const DICTS = {
 
   // ═══════════════════════════ BENGALI ═══════════════════════════
   bn: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'প্রশ্ন করুন','Simple Report':'সরল রিপোর্ট','Life Report':'জীবন রিপোর্ট','Strength':'গ্রহ শক্তি','Planet Impact':'গ্রহ প্রভাব','Bhava Lords':'ভাব অধিপতি','Guidance':'দিকনির্দেশনা','GRB Report':'GRB রিপোর্ট','Varga':'বর্গ চার্ট','Digbala':'দিগবল','Bhav Karak':'ভাব কারক','Drishti':'দৃষ্টি','Yogas':'যোগ-দোষ','Fav Days':'শুভ দিন','Final Results':'চূড়ান্ত ফলাফল','Upagrahas':'উপগ্রহ','Judgement':'রায়',
     'Excellent':'চমৎকার','Difficult':'কঠিন',
     'Yearly Horoscope':'বার্ষিক রাশিফল',
     'Sunday':'রবিবার','Monday':'সোমবার','Tuesday':'মঙ্গলবার','Wednesday':'বুধবার','Thursday':'বৃহস্পতিবার','Friday':'শুক্রবার','Saturday':'শনিবার',
@@ -445,6 +451,8 @@ export const DICTS = {
 
   // ═══════════════════════════ MARATHI ═══════════════════════════
   mr: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'प्रश्न विचारा','Simple Report':'सोपा अहवाल','Life Report':'जीवन अहवाल','Strength':'ग्रह बल','Planet Impact':'ग्रह प्रभाव','Bhava Lords':'भाव स्वामी','Guidance':'मार्गदर्शन','GRB Report':'GRB अहवाल','Varga':'वर्ग चार्ट','Digbala':'दिग्बल','Bhav Karak':'भाव कारक','Drishti':'दृष्टी','Yogas':'योग-दोष','Fav Days':'शुभ दिवस','Final Results':'अंतिम निष्कर्ष','Upagrahas':'उपग्रह','Judgement':'निर्णय',
     'Excellent':'उत्कृष्ट','Difficult':'कठीण',
     'Yearly Horoscope':'वार्षिक राशिभविष्य',
     'Sunday':'रविवार','Monday':'सोमवार','Tuesday':'मंगळवार','Wednesday':'बुधवार','Thursday':'गुरुवार','Friday':'शुक्रवार','Saturday':'शनिवार',
@@ -581,6 +589,8 @@ export const DICTS = {
 
   // ═══════════════════════════ PUNJABI ═══════════════════════════
   pa: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'ਸਵਾਲ ਪੁੱਛੋ','Simple Report':'ਸਧਾਰਨ ਰਿਪੋਰਟ','Life Report':'ਜੀਵਨ ਰਿਪੋਰਟ','Strength':'ਗ੍ਰਹਿ ਬਲ','Planet Impact':'ਗ੍ਰਹਿ ਪ੍ਰਭਾਵ','Bhava Lords':'ਭਾਵ ਸੁਆਮੀ','Guidance':'ਮਾਰਗਦਰਸ਼ਨ','GRB Report':'GRB ਰਿਪੋਰਟ','Varga':'ਵਰਗ ਚਾਰਟ','Digbala':'ਦਿਗਬਲ','Bhav Karak':'ਭਾਵ ਕਾਰਕ','Drishti':'ਦ੍ਰਿਸ਼ਟੀ','Yogas':'ਯੋਗ-ਦੋਸ਼','Fav Days':'ਸ਼ੁਭ ਦਿਨ','Final Results':'ਅੰਤਿਮ ਨਤੀਜੇ','Upagrahas':'ਉਪਗ੍ਰਹਿ','Judgement':'ਨਿਰਣਾ',
     'Excellent':'ਸ਼ਾਨਦਾਰ','Difficult':'ਔਖਾ',
     'Yearly Horoscope':'ਸਾਲਾਨਾ ਰਾਸ਼ੀਫਲ',
     'Sunday':'ਐਤਵਾਰ','Monday':'ਸੋਮਵਾਰ','Tuesday':'ਮੰਗਲਵਾਰ','Wednesday':'ਬੁੱਧਵਾਰ','Thursday':'ਵੀਰਵਾਰ','Friday':'ਸ਼ੁੱਕਰਵਾਰ','Saturday':'ਸ਼ਨੀਵਾਰ',
@@ -729,6 +739,8 @@ export const DICTS = {
 
   // ═══════════════════════════ GUJARATI ═══════════════════════════
   gu: {
+    // Kundli page tab labels (Kundli & Varshphal already defined below)
+    'Ask a Question':'પ્રશ્ન પૂછો','Simple Report':'સરળ અહેવાલ','Life Report':'જીવન અહેવાલ','Strength':'ગ્રહ બળ','Planet Impact':'ગ્રહ પ્રભાવ','Bhava Lords':'ભાવ સ્વામી','Guidance':'માર્ગદર્શન','GRB Report':'GRB અહેવાલ','Varga':'વર્ગ ચાર્ટ','Digbala':'દિગ્બળ','Bhav Karak':'ભાવ કારક','Drishti':'દૃષ્ટિ','Yogas':'યોગ-દોષ','Fav Days':'શુભ દિવસ','Final Results':'અંતિમ પરિણામો','Upagrahas':'ઉપગ્રહ','Judgement':'નિર્ણય',
     'Excellent':'ઉત્તમ','Difficult':'કઠિન',
     'Yearly Horoscope':'વાર્ષિક રાશિફળ',
     'Sunday':'રવિવાર','Monday':'સોમવાર','Tuesday':'મંગળવાર','Wednesday':'બુધવાર','Thursday':'ગુરુવાર','Friday':'શુક્રવાર','Saturday':'શનિવાર',

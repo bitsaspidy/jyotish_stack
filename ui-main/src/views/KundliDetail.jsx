@@ -405,7 +405,7 @@ export default function KundliDetail({ uuid }) {
                   color: activeTab === tab.key ? '#D4AF37' : 'rgba(245,240,232,0.55)',
                   cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.15s',
                 }}>
-                {tab.icon} {lang === 'hi' ? tab.hi : tab.en}
+                {tab.icon} {t(lang, tab.en, tab.hi)}
               </button>
             ))}
           </div>
