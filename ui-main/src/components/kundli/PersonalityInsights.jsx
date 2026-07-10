@@ -15,9 +15,13 @@ export default function PersonalityInsights({ insight, chart, lang }) {
 
   const nakName   = dbT(insight, 'name', lang) || insight.name;
   const deityName = dbT(insight, 'deity', lang) || insight.deity;
-  const professions = lang === 'hi'
-    ? (insight.professions_hi || [])
-    : (insight.professions_en || []);
+  // professions is nested JSON ([{category, roles[]}]); each professions_<lang>
+  // column holds a fully-translated array. Pick regional → hi → en.
+  const professions =
+    (insight[`professions_${lang}`]?.length ? insight[`professions_${lang}`] : null)
+    || (insight.professions_hi?.length ? insight.professions_hi : null)
+    || insight.professions_en
+    || [];
 
   return (
     <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }}
