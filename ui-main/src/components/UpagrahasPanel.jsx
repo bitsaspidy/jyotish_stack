@@ -16,16 +16,21 @@ const NATURE_COLOR = (u) => u.is_malefic ? RED : GREEN;
 function UpagrahaCard({ u, lang, defaultOpen }) {
   const [open, setOpen] = useState(defaultOpen || false);
   const hi = lang === 'hi';
+  // Regional DB langs (seed 029): regional column with EN fallback; EN/HI keep
+  // their original hi→en fallback. rashi_* has no regional column, so regional
+  // langs read the English sign name.
+  const reg = ['ta','te','bn','mr','pa','gu'].includes(lang);
+  const pick = (base) => reg ? (u[`${base}_${lang}`] || u[`${base}_en`]) : (hi ? (u[`${base}_hi`] || u[`${base}_en`]) : u[`${base}_en`]);
 
-  const name       = hi ? (u.name_hi || u.name_en) : u.name_en;
-  const meaning    = hi ? (u.literal_meaning_hi || u.literal_meaning_en) : u.literal_meaning_en;
-  const nature     = hi ? (u.nature_hi || u.nature_en) : u.nature_en;
+  const name       = pick('name');
+  const meaning    = pick('literal_meaning');
+  const nature     = pick('nature');
   const sign       = hi ? (u.rashi_hi || u.rashi_en) : u.rashi_en;
-  const hEffect    = hi ? (u.house_effect_hi || u.house_effect_en) : u.house_effect_en;
-  const positive   = hi ? (u.positive_traits_hi || u.positive_traits_en) : u.positive_traits_en;
-  const negative   = hi ? (u.negative_traits_hi || u.negative_traits_en) : u.negative_traits_en;
-  const spiritual  = hi ? (u.spiritual_hi || u.spiritual_en) : u.spiritual_en;
-  const keyInd     = hi ? (u.key_indication_hi || u.key_indication_en) : u.key_indication_en;
+  const hEffect    = pick('house_effect');
+  const positive   = pick('positive_traits');
+  const negative   = pick('negative_traits');
+  const spiritual  = pick('spiritual');
+  const keyInd     = pick('key_indication');
   const nColor     = NATURE_COLOR(u);
   const icon       = NATURE_ICON[u.slug] || '🪐';
 
@@ -114,7 +119,7 @@ function UpagrahaCard({ u, lang, defaultOpen }) {
                 {hi ? 'युति-प्रभाव' : 'Conjunct Planet Effects'}
               </p>
               {u.conjunct_planets.map(cp => {
-                const cEff = hi ? (cp.effect_hi || cp.effect_en) : (cp.effect_en);
+                const cEff = reg ? (cp[`effect_${lang}`] || cp.effect_en) : (hi ? (cp.effect_hi || cp.effect_en) : cp.effect_en);
                 if (!cEff) return null;
                 return (
                   <div key={cp.planet} style={{

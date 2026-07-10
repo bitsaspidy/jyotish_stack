@@ -1,6 +1,20 @@
 'use strict';
 const db = require('../../config/db');
 
+const REGIONAL_LANGS = ['ta', 'te', 'bn', 'mr', 'pa', 'gu'];
+// Regional (seed 029) columns for the master fields UpagrahaCard renders, plus
+// the localized house-effect string. Conjunction effects already carry every
+// column (the row is spread wholesale below), so they need no explicit mapping.
+function regionalMasterFields(master, houseEffect) {
+  const out = {};
+  const bases = ['name', 'literal_meaning', 'nature', 'positive_traits', 'negative_traits', 'spiritual', 'key_indication'];
+  for (const lang of REGIONAL_LANGS) {
+    for (const base of bases) out[`${base}_${lang}`] = master[`${base}_${lang}`] || null;
+    out[`house_effect_${lang}`] = houseEffect?.[`effect_${lang}`] || null;
+  }
+  return out;
+}
+
 const RASHIS_EN = ['','Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
 const RASHIS_HI = ['','मेष','वृषभ','मिथुन','कर्क','सिंह','कन्या','तुला','वृश्चिक','धनु','मकर','कुम्भ','मीन'];
 const RASHI_LORDS = ['','Mars','Venus','Mercury','Moon','Sun','Mercury','Venus','Mars','Jupiter','Saturn','Saturn','Jupiter'];
@@ -126,6 +140,7 @@ async function computeAndLookupUpagrahas(chart) {
       house:               house,
       house_effect_en:     houseEffect?.effect_en || null,
       house_effect_hi:     houseEffect?.effect_hi || null,
+      ...regionalMasterFields(master, houseEffect),
       conjunct_planets:    conjunctEffects,
     });
   }
