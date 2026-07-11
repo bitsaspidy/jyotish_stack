@@ -62,7 +62,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     setMessage('');
     setAnswer(null);
     try {
-      const { data } = await api.post(`/kundli/${uuid}/ask-question`, { question:clean, category:'general' });
+      const { data } = await api.post(`/kundli/${uuid}/ask-question`, { question:clean, category:'general', lang });
       setAnswer(data.answer);
       setState('done');
     } catch (error) {
@@ -167,6 +167,16 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
               <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.85, marginTop:9 }}>{local(hi, answer.answer.textEn, answer.answer.textHi)}</p>
             </div>
           </article>
+
+          {answer.ai?.text && (
+            <article className="card-royal p-5 sm:p-7" style={{ border:'1px solid rgba(167,139,250,0.35)', background:'linear-gradient(145deg,rgba(167,139,250,0.08),rgba(17,20,40,0.97))' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:16 }}>✨</span>
+                <h3 className="font-serif text-lg font-bold" style={{ color:'#C4B5FD' }}>{hi ? 'एआई उत्तर' : 'AI Answer'}</h3>
+              </div>
+              <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>{answer.ai.text}</p>
+            </article>
+          )}
 
           <section className="card-royal p-5 sm:p-6">
             <h3 className="font-serif text-gold text-lg font-bold">🔭 {hi ? 'किन कुंडलियों को देखा गया' : 'Charts examined for this question'}</h3>

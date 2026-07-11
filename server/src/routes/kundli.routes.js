@@ -25,6 +25,7 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
 const { analyzeQuestion } = require('../services/question-understanding.service');
 const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
+const { buildKundliAiAnswer } = require('../services/kundli-question-ai.service');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 const { regionalCols } = require('../services/helpers/lang-fields');
 
@@ -879,9 +880,18 @@ router.post('/:id/ask-question', async (req, res) => {
     const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
     const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis, includeTechnical:isAdmin });
     if (!answer) return fail(res, 'The saved Kundli does not contain enough calculated data for this question. Please recalculate it and try again.', 422);
+
+    // AI final answer (Ollama/Qwen3) grounded in the rule-based analysis above.
+    // Non-blocking failure: if the local LLM is unavailable, the structured
+    // answer is still returned and the client just hides the AI card.
+    const aiLang = ['en','hi','ta','te','bn','mr','pa','gu'].includes(req.body?.lang)
+      ? req.body.lang : (analysis.language || 'en');
+    const ai = await buildKundliAiAnswer({ chart, profile, question:input.question, analysis, ruleAnswer:answer, lang:aiLang });
+    if (ai) answer.ai = ai;
+
     return ok(res, {
       answer,
-      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug) },
+      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug), ai_model:ai?.model || null },
     });
   } catch (e) {
     console.error('[KundliQuestion]', e.message);
