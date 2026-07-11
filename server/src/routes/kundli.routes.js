@@ -929,9 +929,8 @@ router.post('/:id/ask-question/ai-stream', async (req, res) => {
     res.flushHeaders?.();
 
     const result = await ollama.streamGenerate(
-      // Qwen3 spends tokens on hidden reasoning before the answer, so the budget
-      // must cover thinking + the full ~170-word reply.
-      { prompt:user, system, opts:{ num_predict:1200 } },
+      // Non-thinking model → the budget only needs to cover the ~170-word reply.
+      { prompt:user, system, opts:{ num_predict:500 } },
       (piece) => { res.write(piece); res.flush?.(); },
       // Heartbeat (0x01, filtered client-side) while the model is thinking so the
       // proxy connection doesn't idle-timeout before the answer starts.

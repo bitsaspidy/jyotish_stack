@@ -10,8 +10,11 @@
  */
 
 const OLLAMA_URL      = (process.env.OLLAMA_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
-const OLLAMA_MODEL    = process.env.OLLAMA_MODEL || 'qwen3:4b';
-const OLLAMA_TIMEOUT  = Number(process.env.OLLAMA_TIMEOUT_MS) || 150000;
+// Default to a NON-thinking model — Qwen3 always spends 60–110s on hidden
+// reasoning on CPU, which is the whole latency problem. qwen2.5:3b answers in
+// seconds and streams immediately. Override with OLLAMA_MODEL to use another.
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL || 'qwen2.5:3b';
+const OLLAMA_TIMEOUT  = Number(process.env.OLLAMA_TIMEOUT_MS) || 60000;
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || '10m';
 
 // Qwen3 is a "thinking" model; strip any reasoning block it may still emit.
