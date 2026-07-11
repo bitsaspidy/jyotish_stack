@@ -216,14 +216,29 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
                 <h3 className="font-serif text-lg font-bold" style={{ color:'#C4B5FD' }}>{hi ? 'एआई उत्तर' : 'AI Answer'}</h3>
                 {aiState === 'streaming' && (
                   <span style={{ color:MUTED, fontSize:10.5, marginLeft:'auto' }}>
-                    {hi ? 'लिखा जा रहा है…' : 'writing…'}
+                    {aiText ? (hi ? 'लिखा जा रहा है…' : 'writing…') : (hi ? 'सोच रहा है…' : 'thinking…')}
                   </span>
                 )}
               </div>
-              <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>
-                {aiText || (hi ? 'आपका उत्तर तैयार हो रहा है…' : 'Preparing your answer…')}
-                {aiState === 'streaming' && <span className="animate-pulse" style={{ color:'#C4B5FD', fontWeight:700 }}>▍</span>}
-              </p>
+
+              {aiText ? (
+                <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>
+                  {aiText}
+                  {aiState === 'streaming' && <span className="animate-pulse" style={{ color:'#C4B5FD', fontWeight:700 }}>▍</span>}
+                </p>
+              ) : (
+                /* thinking / first-token wait — visible animated loader */
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:14 }}>
+                  <span style={{ display:'inline-flex', gap:5 }}>
+                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'0ms' }} />
+                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'150ms' }} />
+                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'300ms' }} />
+                  </span>
+                  <span style={{ color:MUTED, fontSize:12 }}>
+                    {hi ? 'एआई आपका उत्तर तैयार कर रहा है…' : 'AI is preparing your answer…'}
+                  </span>
+                </div>
+              )}
             </article>
           )}
 

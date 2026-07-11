@@ -928,7 +928,7 @@ router.post('/:id/ask-question/ai-stream', async (req, res) => {
     res.flushHeaders?.();
 
     const result = await ollama.streamGenerate(
-      { prompt:user, system, opts:{ num_predict:420 } },
+      { prompt:user, system, opts:{ num_predict:512 } },
       (piece) => { res.write(piece); res.flush?.(); },
     );
     if (!result.ok) console.warn('[KundliQuestionAI:stream] no output:', result.error || 'empty');

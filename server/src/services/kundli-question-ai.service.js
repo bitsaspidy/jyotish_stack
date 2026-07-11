@@ -60,12 +60,14 @@ function buildPrompt({ chart, profile, question, analysis, ruleAnswer, lang }) {
   const verdict = verdictFacts(ruleAnswer, lang);
 
   const system = [
+    '/no_think',   // Qwen3 soft switch: answer directly, no chain-of-thought
     'You are a warm, grounded Vedic astrologer (Jyotish) answering a personal question.',
+    'Do NOT show any reasoning, planning, or thinking. Output ONLY the final answer text.',
     'Rules:',
     '1. Use ONLY the chart facts and engine analysis provided. Never invent planetary placements, houses, dashas, or dates.',
     '2. Stay faithful to the engine verdict and tone — do not flip a cautious verdict into a confident yes, or vice versa.',
     '3. Be encouraging and practical, never fear-based or deterministic. Frame it as tendencies and guidance, not fixed fate.',
-    `4. Answer in ${langName}. Warm, clear, second person. About 120–170 words. No headings, no markdown, no bullet symbols.`,
+    `4. Write the ENTIRE answer in ${langName} only. Warm, clear, second person. About 120–170 words. No headings, no markdown, no bullet symbols, no English.`,
     '5. End with one short sentence reminding this is astrological guidance, not a guarantee or a substitute for professional advice.',
   ].join('\n');
 
@@ -80,7 +82,7 @@ function buildPrompt({ chart, profile, question, analysis, ruleAnswer, lang }) {
     'ENGINE ANALYSIS (your source of truth):',
     verdict,
     '',
-    `Now write the final answer for ${name} in ${langName}.`,
+    `Now write the final answer for ${name} in ${langName} only. /no_think`,
   ].filter(Boolean).join('\n');
 
   return { system, user };
