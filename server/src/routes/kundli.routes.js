@@ -928,7 +928,9 @@ router.post('/:id/ask-question/ai-stream', async (req, res) => {
     res.flushHeaders?.();
 
     const result = await ollama.streamGenerate(
-      { prompt:user, system, opts:{ num_predict:512 } },
+      // Qwen3 spends tokens on hidden reasoning before the answer, so the budget
+      // must cover thinking + the full ~170-word reply.
+      { prompt:user, system, opts:{ num_predict:1200 } },
       (piece) => { res.write(piece); res.flush?.(); },
     );
     if (!result.ok) console.warn('[KundliQuestionAI:stream] no output:', result.error || 'empty');

@@ -11,15 +11,17 @@
 
 const OLLAMA_URL      = (process.env.OLLAMA_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '');
 const OLLAMA_MODEL    = process.env.OLLAMA_MODEL || 'qwen3:4b';
-const OLLAMA_TIMEOUT  = Number(process.env.OLLAMA_TIMEOUT_MS) || 60000;
+const OLLAMA_TIMEOUT  = Number(process.env.OLLAMA_TIMEOUT_MS) || 150000;
 const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || '10m';
 
 // Qwen3 is a "thinking" model; strip any reasoning block it may still emit.
 function stripThinking(text) {
-  return String(text || '')
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<\/?think>/gi, '')
-    .trim();
+  let s = String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '');
+  // Stray closing tag (reasoning leaked without an opening tag, the think:false
+  // quirk): keep only what follows the last </think>.
+  const idx = s.lastIndexOf('</think>');
+  if (idx !== -1) s = s.slice(idx + 8);
+  return s.replace(/<\/?think>/gi, '').trim();
 }
 
 /**
@@ -41,7 +43,10 @@ async function generate(prompt, opts = {}) {
         prompt,
         system: opts.system || undefined,
         stream: false,
-        think:  false,                       // disable Qwen3 chain-of-thought
+        // NOTE: do NOT send think:false — on Ollama 0.31.x it disables the
+        // thinking PARSER (so Qwen3's reasoning leaks into `response`) without
+        // actually stopping the model from thinking. Leaving it unset keeps
+        // reasoning in the separate `thinking` field and `response` clean.
         keep_alive: OLLAMA_KEEP_ALIVE,        // keep model resident between questions
         options:{
           temperature: opts.temperature ?? 0.6,
@@ -74,7 +79,10 @@ async function streamGenerate({ prompt, system, opts = {} }, onToken) {
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs || OLLAMA_TIMEOUT);
   let chars = 0;
   let inThink = false;
-  // Defensive incremental <think> filter (think:false usually prevents any).
+  // Defensive incremental think filter. Primary cleanliness comes from Ollama
+  // routing reasoning to the separate `thinking` field (we only read `response`);
+  // this is a backup for builds that inline it. Handles a normal <think>…</think>
+  // pair AND a stray leading …</think> with no opening tag (the think:false quirk).
   const filterEmit = (piece) => {
     let out = '';
     let rest = piece;
@@ -84,7 +92,10 @@ async function streamGenerate({ prompt, system, opts = {} }, onToken) {
         if (close === -1) return out;              // still inside think block
         rest = rest.slice(close + 8); inThink = false;
       } else {
-        const open = rest.indexOf('<think>');
+        const open  = rest.indexOf('<think>');
+        const close = rest.indexOf('</think>');
+        // stray close before any open → everything before it was reasoning; drop it
+        if (close !== -1 && (open === -1 || close < open)) { out = ''; rest = rest.slice(close + 8); continue; }
         if (open === -1) { out += rest; rest = ''; }
         else { out += rest.slice(0, open); rest = rest.slice(open + 7); inThink = true; }
       }
@@ -101,7 +112,8 @@ async function streamGenerate({ prompt, system, opts = {} }, onToken) {
         prompt,
         system: system || undefined,
         stream: true,
-        think:  false,
+        // think left unset on purpose — see note in generate(). Reasoning goes to
+        // the `thinking` stream field (ignored below); `response` stays clean.
         keep_alive: OLLAMA_KEEP_ALIVE,
         options:{ temperature: opts.temperature ?? 0.6, top_p: opts.top_p ?? 0.9, num_predict: opts.num_predict ?? 420 },
       }),
