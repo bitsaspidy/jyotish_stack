@@ -62,6 +62,74 @@ async function generate(prompt, opts = {}) {
   }
 }
 
+/**
+ * Streaming generate. Calls onToken(textPiece) for each chunk as it arrives.
+ * Returns { ok, chars } when the stream ends. Swallows failures.
+ * @param {object} p { prompt, system, opts }
+ * @param {(piece:string)=>void} onToken
+ */
+async function streamGenerate({ prompt, system, opts = {} }, onToken) {
+  if (!prompt) return { ok:false, error:'empty prompt' };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs || OLLAMA_TIMEOUT);
+  let chars = 0;
+  let inThink = false;
+  // Defensive incremental <think> filter (think:false usually prevents any).
+  const filterEmit = (piece) => {
+    let out = '';
+    let rest = piece;
+    while (rest) {
+      if (inThink) {
+        const close = rest.indexOf('</think>');
+        if (close === -1) return out;              // still inside think block
+        rest = rest.slice(close + 8); inThink = false;
+      } else {
+        const open = rest.indexOf('<think>');
+        if (open === -1) { out += rest; rest = ''; }
+        else { out += rest.slice(0, open); rest = rest.slice(open + 7); inThink = true; }
+      }
+    }
+    return out;
+  };
+  try {
+    const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      signal:controller.signal,
+      body:JSON.stringify({
+        model:  opts.model || OLLAMA_MODEL,
+        prompt,
+        system: system || undefined,
+        stream: true,
+        think:  false,
+        keep_alive: OLLAMA_KEEP_ALIVE,
+        options:{ temperature: opts.temperature ?? 0.6, top_p: opts.top_p ?? 0.9, num_predict: opts.num_predict ?? 420 },
+      }),
+    });
+    if (!res.ok || !res.body) return { ok:false, error:`ollama ${res.status}` };
+    const decoder = new TextDecoder();
+    let buf = '';
+    for await (const chunk of res.body) {
+      buf += decoder.decode(chunk, { stream:true });
+      let nl;
+      while ((nl = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        if (!line) continue;
+        let obj; try { obj = JSON.parse(line); } catch { continue; }
+        const piece = obj.response ? filterEmit(obj.response) : '';
+        if (piece) { chars += piece.length; onToken(piece); }
+        if (obj.done) return { ok: chars > 0, chars };
+      }
+    }
+    return { ok: chars > 0, chars };
+  } catch (e) {
+    return { ok:false, error: e.name === 'AbortError' ? 'timeout' : e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Lightweight health probe for admin/diagnostics.
 async function health() {
   const controller = new AbortController();
@@ -76,4 +144,4 @@ async function health() {
   }
 }
 
-module.exports = { generate, health, OLLAMA_MODEL, OLLAMA_URL };
+module.exports = { generate, streamGenerate, health, OLLAMA_MODEL, OLLAMA_URL };

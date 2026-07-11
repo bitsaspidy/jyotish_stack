@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import api from '../lib/api';
 
 const GOLD = '#D4AF37';
@@ -49,6 +49,41 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   const [state, setState] = useState('idle');
   const [answer, setAnswer] = useState(null);
   const [message, setMessage] = useState('');
+  const [aiText, setAiText] = useState('');
+  const [aiState, setAiState] = useState('idle');   // idle | streaming | done
+  const aiAbort = useRef(null);
+
+  // Stream the AI "Final Answer" token-by-token from the server (typing effect).
+  const startAiStream = async (q) => {
+    aiAbort.current?.abort();
+    const controller = new AbortController();
+    aiAbort.current = controller;
+    setAiText('');
+    setAiState('streaming');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const res = await fetch(`/api/kundli/${uuid}/ask-question/ai-stream`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', ...(token ? { Authorization:`Bearer ${token}` } : {}) },
+        credentials:'include',
+        body:JSON.stringify({ question:q, category:'general', lang }),
+        signal:controller.signal,
+      });
+      if (!res.ok || !res.body || res.status === 204) { setAiState('idle'); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let got = false;
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream:true });
+        if (chunk) { got = true; setAiText((prev) => prev + chunk); }
+      }
+      setAiState(got ? 'done' : 'idle');
+    } catch (e) {
+      if (e.name !== 'AbortError') setAiState((s) => (aiText ? 'done' : 'idle'));
+    }
+  };
 
   const submit = async (event) => {
     event?.preventDefault();
@@ -61,10 +96,13 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     setState('loading');
     setMessage('');
     setAnswer(null);
+    setAiText('');
+    setAiState('idle');
     try {
       const { data } = await api.post(`/kundli/${uuid}/ask-question`, { question:clean, category:'general', lang });
       setAnswer(data.answer);
       setState('done');
+      startAiStream(clean);   // begin live AI answer once the structured answer is shown
     } catch (error) {
       setMessage(error.response?.data?.message || (hi ? 'अभी उत्तर नहीं बन पाया। कृपया फिर प्रयास करें।' : 'The answer could not be prepared right now. Please try again.'));
       setState('error');
@@ -72,10 +110,13 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   };
 
   const askAnother = () => {
+    aiAbort.current?.abort();
     setQuestion('');
     setAnswer(null);
     setMessage('');
     setState('idle');
+    setAiText('');
+    setAiState('idle');
   };
 
   return (
@@ -168,13 +209,21 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
             </div>
           </article>
 
-          {answer.ai?.text && (
+          {(aiState === 'streaming' || aiText) && (
             <article className="card-royal p-5 sm:p-7" style={{ border:'1px solid rgba(167,139,250,0.35)', background:'linear-gradient(145deg,rgba(167,139,250,0.08),rgba(17,20,40,0.97))' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:16 }}>✨</span>
                 <h3 className="font-serif text-lg font-bold" style={{ color:'#C4B5FD' }}>{hi ? 'एआई उत्तर' : 'AI Answer'}</h3>
+                {aiState === 'streaming' && (
+                  <span style={{ color:MUTED, fontSize:10.5, marginLeft:'auto' }}>
+                    {hi ? 'लिखा जा रहा है…' : 'writing…'}
+                  </span>
+                )}
               </div>
-              <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>{answer.ai.text}</p>
+              <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>
+                {aiText || (hi ? 'आपका उत्तर तैयार हो रहा है…' : 'Preparing your answer…')}
+                {aiState === 'streaming' && <span className="animate-pulse" style={{ color:'#C4B5FD', fontWeight:700 }}>▍</span>}
+              </p>
             </article>
           )}
 

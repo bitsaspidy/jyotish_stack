@@ -25,7 +25,8 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
 const { analyzeQuestion } = require('../services/question-understanding.service');
 const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
-const { buildKundliAiAnswer } = require('../services/kundli-question-ai.service');
+const { buildPrompt } = require('../services/kundli-question-ai.service');
+const ollama = require('../services/ollama.service');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 const { regionalCols } = require('../services/helpers/lang-fields');
 
@@ -880,22 +881,61 @@ router.post('/:id/ask-question', async (req, res) => {
     const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
     const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis, includeTechnical:isAdmin });
     if (!answer) return fail(res, 'The saved Kundli does not contain enough calculated data for this question. Please recalculate it and try again.', 422);
-
-    // AI final answer (Ollama/Qwen3) grounded in the rule-based analysis above.
-    // Non-blocking failure: if the local LLM is unavailable, the structured
-    // answer is still returned and the client just hides the AI card.
-    const aiLang = ['en','hi','ta','te','bn','mr','pa','gu'].includes(req.body?.lang)
-      ? req.body.lang : (analysis.language || 'en');
-    const ai = await buildKundliAiAnswer({ chart, profile, question:input.question, analysis, ruleAnswer:answer, lang:aiLang });
-    if (ai) answer.ai = ai;
-
+    // The natural-language AI "Final Answer" is streamed separately (see the
+    // /ask-question/ai-stream route) so this structured answer returns instantly.
     return ok(res, {
       answer,
-      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug), ai_model:ai?.model || null },
+      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug), ai_available:true },
     });
   } catch (e) {
     console.error('[KundliQuestion]', e.message);
     return fail(res, 'Unable to answer from this Kundli right now. Please try again.', 500);
+  }
+});
+
+// ── POST /api/kundli/:id/ask-question/ai-stream — live-typed AI Final Answer ──
+// Streams Ollama/Qwen3 tokens as plain UTF-8 text so the client can render them
+// live. Grounded in the same rule-based analysis. If the LLM is unavailable the
+// stream simply closes empty and the client hides the AI card.
+router.post('/:id/ask-question/ai-stream', async (req, res) => {
+  const input = parseKundliQuestion(req.body);
+  if (input.error) return res.status(400).end();
+  try {
+    const profile = await db('kundli_profiles')
+      .where({ uuid: req.params.id, user_id: req.user.id })
+      .first();
+    if (!profile) return res.status(404).end();
+
+    const chart = await ensureCalculatedChart(profile);
+    if (!chart) return res.status(500).end();
+
+    const analysis = await analyzeQuestion(input.question, input.category, { mode:'kundli' });
+    if (analysis.isAmbiguous) return res.status(204).end();
+
+    const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis });
+    if (!answer) return res.status(204).end();
+
+    const lang = ['en','hi','ta','te','bn','mr','pa','gu'].includes(req.body?.lang)
+      ? req.body.lang : (analysis.language || 'en');
+    const { system, user } = buildPrompt({ chart, profile, question:input.question, analysis, ruleAnswer:answer, lang });
+
+    res.writeHead(200, {
+      'Content-Type':'text/plain; charset=utf-8',
+      'Cache-Control':'no-cache, no-transform',
+      'Connection':'keep-alive',
+      'X-Accel-Buffering':'no',          // disable proxy buffering (nginx/Apache)
+    });
+    res.flushHeaders?.();
+
+    const result = await ollama.streamGenerate(
+      { prompt:user, system, opts:{ num_predict:420 } },
+      (piece) => { res.write(piece); res.flush?.(); },
+    );
+    if (!result.ok) console.warn('[KundliQuestionAI:stream] no output:', result.error || 'empty');
+    return res.end();
+  } catch (e) {
+    console.error('[KundliQuestionAI:stream]', e.message);
+    try { return res.end(); } catch { /* already closed */ }
   }
 });
 
