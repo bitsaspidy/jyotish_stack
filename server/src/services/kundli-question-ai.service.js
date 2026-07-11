@@ -18,6 +18,26 @@ const LANG_NAME = {
 
 const pick = (en, hi, lang) => (lang === 'hi' ? (hi || en) : en);
 
+// Common Hindi words written in Roman script (Hinglish signal).
+const HINGLISH = /\b(kya|kyu|kyun|kyon|kaise|kaisa|kaisi|kab|kahan|kaha|kitna|kitni|kaun|kaunsa|konsa|hai|hain|hoga|hogi|honge|raha|rahega|rahegi|rahegi|mera|meri|mere|mujhe|mujhko|hume|humein|aap|tum|tumhara|apna|apni|kar|karna|karu|karun|karein|karke|nahi|nahin|acha|accha|theek|sahi|shaadi|vivah|shadi|naukri|nokri|paisa|paise|dhan|jeevan|zindagi|kismat|bhagya|graha|grah|kundli|kundali|rashi|raashi|dasha|shubh|ashubh|batao|bataye|bataiye|milega|milegi|chahiye|hona|hoga|ka|ki|ke|se|mein|par|aur|lekin|kyunki|jeevan|jindagi)\b/i;
+
+/**
+ * Detect the language to answer in FROM THE QUESTION TEXT (so the reply follows
+ * what the user typed, not the UI toggle): English → 'en'; Hindi or Hinglish
+ * (Roman Hindi) → 'hi'; regional Indic scripts → their code.
+ */
+function detectQuestionLang(text, fallback = 'en') {
+  const t = String(text || '');
+  if (/[஀-௿]/.test(t)) return 'ta';   // Tamil
+  if (/[ఀ-౿]/.test(t)) return 'te';   // Telugu
+  if (/[ঀ-৿]/.test(t)) return 'bn';   // Bengali
+  if (/[਀-੿]/.test(t)) return 'pa';   // Gurmukhi (Punjabi)
+  if (/[઀-૿]/.test(t)) return 'gu';   // Gujarati
+  if (/[ऀ-ॿ]/.test(t)) return 'hi';   // Devanagari → Hindi
+  if (HINGLISH.test(t)) return 'hi';            // Roman Hindi (Hinglish) → Hindi
+  return fallback;                              // plain Latin → English
+}
+
 // Compact, factual snapshot the model is allowed to rely on.
 function chartFacts(chart, lang) {
   const L = [];
@@ -102,4 +122,4 @@ async function buildKundliAiAnswer({ chart, profile, question, analysis, ruleAns
   return { text:out.text, model:out.model, lang };
 }
 
-module.exports = { buildKundliAiAnswer, buildPrompt };
+module.exports = { buildKundliAiAnswer, buildPrompt, detectQuestionLang };

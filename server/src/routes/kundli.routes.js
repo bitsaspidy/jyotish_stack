@@ -25,7 +25,7 @@ const { composeStrengthUserFriendly }   = require('../services/report-engine/str
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
 const { analyzeQuestion } = require('../services/question-understanding.service');
 const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
-const { buildPrompt } = require('../services/kundli-question-ai.service');
+const { buildPrompt, detectQuestionLang } = require('../services/kundli-question-ai.service');
 const ollama = require('../services/ollama.service');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 const { regionalCols } = require('../services/helpers/lang-fields');
@@ -915,8 +915,9 @@ router.post('/:id/ask-question/ai-stream', async (req, res) => {
     const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis });
     if (!answer) return res.status(204).end();
 
-    const lang = ['en','hi','ta','te','bn','mr','pa','gu'].includes(req.body?.lang)
-      ? req.body.lang : (analysis.language || 'en');
+    // Reply in the language the user TYPED (English → en, Hinglish/Hindi → hi,
+    // regional scripts → their code), not the UI toggle. Falls back to English.
+    const lang = detectQuestionLang(input.question, 'en');
     const { system, user } = buildPrompt({ chart, profile, question:input.question, analysis, ruleAnswer:answer, lang });
 
     res.writeHead(200, {
