@@ -26,6 +26,26 @@ const TONE_STYLE = {
 
 function local(hi, en, hindi) { return hi ? (hindi || en) : (en || hindi); }
 
+// Circular progress ring + live elapsed seconds shown while the AI is thinking.
+// Fills toward a typical duration; once it passes that it eases to a near-full
+// gentle wait state instead of implying it's stuck.
+function CircleTimer({ seconds, estimate = 32 }) {
+  const R = 26, SW = 4, C = 2 * Math.PI * R;
+  const frac = 1 - Math.exp(-seconds / estimate);     // asymptotic → never quite 100%
+  const dash = Math.min(frac, 0.985) * C;
+  return (
+    <svg width="66" height="66" viewBox="0 0 66 66" style={{ flexShrink:0 }}>
+      <circle cx="33" cy="33" r={R} fill="none" stroke="rgba(196,181,253,0.18)" strokeWidth={SW} />
+      <circle cx="33" cy="33" r={R} fill="none" stroke="#C4B5FD" strokeWidth={SW} strokeLinecap="round"
+        strokeDasharray={`${dash} ${C}`} transform="rotate(-90 33 33)"
+        style={{ transition:'stroke-dasharray 0.15s linear' }} />
+      <text x="33" y="35" textAnchor="middle" dominantBaseline="middle" fill="#C4B5FD" fontSize="15" fontWeight="700">
+        {seconds.toFixed(1)}s
+      </text>
+    </svg>
+  );
+}
+
 function dateLabel(value, hi) {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
@@ -51,7 +71,11 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   const [message, setMessage] = useState('');
   const [aiText, setAiText] = useState('');
   const [aiState, setAiState] = useState('idle');   // idle | streaming | done
+  const [elapsed, setElapsed] = useState(0);        // seconds since AI request began
   const aiAbort = useRef(null);
+  const aiTimer = useRef(null);
+
+  const stopTimer = () => { if (aiTimer.current) { clearInterval(aiTimer.current); aiTimer.current = null; } };
 
   // Stream the AI "Final Answer" token-by-token from the server (typing effect).
   const startAiStream = async (q) => {
@@ -60,6 +84,11 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     aiAbort.current = controller;
     setAiText('');
     setAiState('streaming');
+    // live elapsed timer during the "thinking" (pre-first-token) wait
+    setElapsed(0);
+    stopTimer();
+    const startedAt = Date.now();
+    aiTimer.current = setInterval(() => setElapsed((Date.now() - startedAt) / 1000), 100);
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       const res = await fetch(`/api/kundli/${uuid}/ask-question/ai-stream`, {
@@ -69,7 +98,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
         body:JSON.stringify({ question:q, category:'general', lang }),
         signal:controller.signal,
       });
-      if (!res.ok || !res.body || res.status === 204) { setAiState('idle'); return; }
+      if (!res.ok || !res.body || res.status === 204) { stopTimer(); setAiState('idle'); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let got = false;
@@ -77,11 +106,17 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
         const { value, done } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream:true });
-        if (chunk) { got = true; setAiText((prev) => prev + chunk); }
+        if (chunk) {
+          if (!got) stopTimer();   // first token arrived — stop the thinking timer
+          got = true;
+          setAiText((prev) => prev + chunk);
+        }
       }
+      stopTimer();
       setAiState(got ? 'done' : 'idle');
     } catch (e) {
-      if (e.name !== 'AbortError') setAiState((s) => (aiText ? 'done' : 'idle'));
+      stopTimer();
+      if (e.name !== 'AbortError') setAiState(() => (aiText ? 'done' : 'idle'));
     }
   };
 
@@ -111,12 +146,14 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
 
   const askAnother = () => {
     aiAbort.current?.abort();
+    stopTimer();
     setQuestion('');
     setAnswer(null);
     setMessage('');
     setState('idle');
     setAiText('');
     setAiState('idle');
+    setElapsed(0);
   };
 
   return (
@@ -227,16 +264,18 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
                   {aiState === 'streaming' && <span className="animate-pulse" style={{ color:'#C4B5FD', fontWeight:700 }}>▍</span>}
                 </p>
               ) : (
-                /* thinking / first-token wait — visible animated loader */
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:14 }}>
-                  <span style={{ display:'inline-flex', gap:5 }}>
-                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'0ms' }} />
-                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'150ms' }} />
-                    <span className="animate-bounce" style={{ width:8, height:8, borderRadius:'50%', background:'#C4B5FD', animationDelay:'300ms' }} />
-                  </span>
-                  <span style={{ color:MUTED, fontSize:12 }}>
-                    {hi ? 'एआई आपका उत्तर तैयार कर रहा है…' : 'AI is preparing your answer…'}
-                  </span>
+                /* thinking / first-token wait — circular timer + live elapsed time */
+                <div style={{ display:'flex', alignItems:'center', gap:14, marginTop:14 }}>
+                  <CircleTimer seconds={elapsed} />
+                  <div>
+                    <p style={{ color:IVORY, fontSize:12.5, fontWeight:600, margin:0 }}>
+                      {hi ? 'एआई आपका उत्तर तैयार कर रहा है…' : 'AI is preparing your answer…'}
+                    </p>
+                    <p style={{ color:MUTED, fontSize:10.5, margin:'4px 0 0' }}>
+                      {hi ? `बीता समय: ${elapsed.toFixed(1)} सेकंड` : `Elapsed: ${elapsed.toFixed(1)}s`}
+                      {elapsed > 40 && ` · ${hi ? 'लगभग तैयार…' : 'almost there…'}`}
+                    </p>
+                  </div>
                 </div>
               )}
             </article>
