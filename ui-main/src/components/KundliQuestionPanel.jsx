@@ -105,18 +105,20 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
-        const chunk = decoder.decode(value, { stream:true });
-        if (chunk) {
-          if (!got) stopTimer();   // first token arrived — stop the thinking timer
+        // 0x01 bytes are server heartbeats sent while the model is thinking —
+        // they keep the connection alive but carry no visible text.
+        const clean = decoder.decode(value, { stream:true }).split(String.fromCharCode(1)).join("");
+        if (clean) {
+          if (!got) stopTimer();   // first real token arrived — stop the thinking timer
           got = true;
-          setAiText((prev) => prev + chunk);
+          setAiText((prev) => prev + clean);
         }
       }
       stopTimer();
-      setAiState(got ? 'done' : 'idle');
+      setAiState(got ? 'done' : 'failed');
     } catch (e) {
       stopTimer();
-      if (e.name !== 'AbortError') setAiState(() => (aiText ? 'done' : 'idle'));
+      if (e.name !== 'AbortError') setAiState(() => (aiText ? 'done' : 'failed'));
     }
   };
 
@@ -246,7 +248,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
             </div>
           </article>
 
-          {(aiState === 'streaming' || aiText) && (
+          {(aiState === 'streaming' || aiText || aiState === 'failed') && (
             <article className="card-royal p-5 sm:p-7" style={{ border:'1px solid rgba(167,139,250,0.35)', background:'linear-gradient(145deg,rgba(167,139,250,0.08),rgba(17,20,40,0.97))' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:16 }}>✨</span>
@@ -262,6 +264,10 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
                 <p style={{ color:IVORY, fontSize:13.5, lineHeight:1.9, marginTop:11, whiteSpace:'pre-line' }}>
                   {aiText}
                   {aiState === 'streaming' && <span className="animate-pulse" style={{ color:'#C4B5FD', fontWeight:700 }}>▍</span>}
+                </p>
+              ) : aiState === 'failed' ? (
+                <p style={{ color:MUTED, fontSize:12, lineHeight:1.7, marginTop:12 }}>
+                  {hi ? 'एआई उत्तर अभी उपलब्ध नहीं है। ऊपर दिया गया कुंडली-आधारित उत्तर पूर्ण और मान्य है।' : 'The AI answer isn’t available right now. The Kundli-based answer above is complete and valid.'}
                 </p>
               ) : (
                 /* thinking / first-token wait — circular timer + live elapsed time */

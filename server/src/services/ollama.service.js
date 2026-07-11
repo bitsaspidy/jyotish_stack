@@ -71,9 +71,11 @@ async function generate(prompt, opts = {}) {
  * Streaming generate. Calls onToken(textPiece) for each chunk as it arrives.
  * Returns { ok, chars } when the stream ends. Swallows failures.
  * @param {object} p { prompt, system, opts }
- * @param {(piece:string)=>void} onToken
+ * @param {(piece:string)=>void} onToken     called with each answer text piece
+ * @param {()=>void} [onHeartbeat]           called on thinking/no-answer chunks
+ *                                           (keep the client connection alive)
  */
-async function streamGenerate({ prompt, system, opts = {} }, onToken) {
+async function streamGenerate({ prompt, system, opts = {} }, onToken, onHeartbeat) {
   if (!prompt) return { ok:false, error:'empty prompt' };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs || OLLAMA_TIMEOUT);
@@ -131,6 +133,7 @@ async function streamGenerate({ prompt, system, opts = {} }, onToken) {
         let obj; try { obj = JSON.parse(line); } catch { continue; }
         const piece = obj.response ? filterEmit(obj.response) : '';
         if (piece) { chars += piece.length; onToken(piece); }
+        else if (onHeartbeat) onHeartbeat();   // thinking / suppressed chunk → keep-alive
         if (obj.done) return { ok: chars > 0, chars };
       }
     }

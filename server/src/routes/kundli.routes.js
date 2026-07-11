@@ -932,6 +932,9 @@ router.post('/:id/ask-question/ai-stream', async (req, res) => {
       // must cover thinking + the full ~170-word reply.
       { prompt:user, system, opts:{ num_predict:1200 } },
       (piece) => { res.write(piece); res.flush?.(); },
+      // Heartbeat (0x01, filtered client-side) while the model is thinking so the
+      // proxy connection doesn't idle-timeout before the answer starts.
+      () => { res.write('\x01'); res.flush?.(); },
     );
     if (!result.ok) console.warn('[KundliQuestionAI:stream] no output:', result.error || 'empty');
     return res.end();
