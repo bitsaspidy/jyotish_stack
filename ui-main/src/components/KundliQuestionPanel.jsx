@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import api from '../lib/api';
 
 const GOLD = '#D4AF37';
@@ -69,6 +69,19 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   const [state, setState] = useState('idle');
   const [answer, setAnswer] = useState(null);
   const [message, setMessage] = useState('');
+  const [bank, setBank] = useState([]);          // suggestion categories
+  const [activeCat, setActiveCat] = useState(null);
+
+  // Load the suggestion bank + kick off background warming of the top questions
+  // so tapped chips return instantly.
+  useEffect(() => {
+    let alive = true;
+    api.get('/kundli/question-bank')
+      .then(({ data }) => { if (alive && data?.categories?.length) { setBank(data.categories); setActiveCat(data.categories[0].key); } })
+      .catch(() => {});
+    if (uuid) api.post(`/kundli/${uuid}/ask-question/prewarm`, { lang }).catch(() => {});
+    return () => { alive = false; };
+  }, [uuid, lang]);
   const [aiText, setAiText] = useState('');
   const [aiState, setAiState] = useState('idle');   // idle | streaming | done
   const [elapsed, setElapsed] = useState(0);        // seconds since AI request began
@@ -78,7 +91,8 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   const stopTimer = () => { if (aiTimer.current) { clearInterval(aiTimer.current); aiTimer.current = null; } };
 
   // Stream the AI "Final Answer" token-by-token from the server (typing effect).
-  const startAiStream = async (q) => {
+  // questionKey (from a suggestion chip) lets the server serve/store the cache.
+  const startAiStream = async (q, questionKey = null) => {
     aiAbort.current?.abort();
     const controller = new AbortController();
     aiAbort.current = controller;
@@ -95,7 +109,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
         method:'POST',
         headers:{ 'Content-Type':'application/json', ...(token ? { Authorization:`Bearer ${token}` } : {}) },
         credentials:'include',
-        body:JSON.stringify({ question:q, category:'general', lang }),
+        body:JSON.stringify({ question:q, category:'general', lang, questionKey }),
         signal:controller.signal,
       });
       if (!res.ok || !res.body || res.status === 204) { stopTimer(); setAiState('idle'); return; }
@@ -122,9 +136,10 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     }
   };
 
-  const submit = async (event) => {
-    event?.preventDefault();
-    const clean = question.replace(/\s+/g, ' ').trim();
+  // Run one question end-to-end: instant structured answer + live/cached AI answer.
+  // key is the suggestion-chip question key (enables the per-kundli cache).
+  const runQuestion = async (rawText, key = null) => {
+    const clean = String(rawText || '').replace(/\s+/g, ' ').trim();
     if (clean.length < 8) {
       setMessage(hi ? 'कृपया कम से कम 8 अक्षरों में एक स्पष्ट प्रश्न लिखें।' : 'Please write one clear question using at least 8 characters.');
       setState('error');
@@ -139,12 +154,15 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
       const { data } = await api.post(`/kundli/${uuid}/ask-question`, { question:clean, category:'general', lang });
       setAnswer(data.answer);
       setState('done');
-      startAiStream(clean);   // begin live AI answer once the structured answer is shown
+      startAiStream(clean, key);   // begin live/cached AI answer once structured answer shows
     } catch (error) {
       setMessage(error.response?.data?.message || (hi ? 'अभी उत्तर नहीं बन पाया। कृपया फिर प्रयास करें।' : 'The answer could not be prepared right now. Please try again.'));
       setState('error');
     }
   };
+
+  const submit = (event) => { event?.preventDefault(); runQuestion(question, null); };
+  const askSuggestion = (q) => { setQuestion(local(hi, q.en, q.hi)); runQuestion(local(hi, q.en, q.hi), q.key); };
 
   const askAnother = () => {
     aiAbort.current?.abort();
@@ -201,15 +219,44 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
           </div>
 
           <div style={{ marginTop:16 }}>
-            <p style={{ color:'#93C5FD', fontSize:9.5, fontWeight:800, marginBottom:8 }}>{hi ? 'उदाहरण प्रश्न' : 'Try an example'}</p>
-            <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
-              {EXAMPLES.map((example) => (
-                <button key={example.en} type="button" disabled={state === 'loading'} onClick={() => setQuestion(local(hi, example.en, example.hi))}
-                  style={{ color:'rgba(245,240,232,0.72)', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.035)', borderRadius:8, padding:'7px 10px', fontSize:9.5, cursor:'pointer', textAlign:'left' }}>
-                  {local(hi, example.en, example.hi)}
-                </button>
-              ))}
-            </div>
+            <p style={{ color:'#93C5FD', fontSize:9.5, fontWeight:800, marginBottom:8 }}>
+              {hi ? 'सुझाए गए प्रश्न — तुरंत उत्तर के लिए टैप करें' : 'Suggested questions — tap for an instant answer'}
+            </p>
+            {bank.length > 0 ? (
+              <>
+                {/* category tabs */}
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
+                  {bank.map((c) => {
+                    const on = c.key === activeCat;
+                    return (
+                      <button key={c.key} type="button" onClick={() => setActiveCat(c.key)}
+                        style={{ color:on ? '#0a0c1c' : 'rgba(245,240,232,0.7)', background:on ? GOLD : 'rgba(255,255,255,0.04)',
+                          border:`1px solid ${on ? GOLD : 'rgba(255,255,255,0.1)'}`, borderRadius:99, padding:'5px 11px', fontSize:9.5, fontWeight:on ? 800 : 500, cursor:'pointer' }}>
+                        {local(hi, c.en, c.hi)}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* questions in the active category */}
+                <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+                  {(bank.find((c) => c.key === activeCat)?.questions || []).map((q) => (
+                    <button key={q.key} type="button" disabled={state === 'loading'} onClick={() => askSuggestion(q)}
+                      style={{ color:'rgba(245,240,232,0.82)', border:'1px solid rgba(167,139,250,0.25)', background:'rgba(167,139,250,0.06)', borderRadius:8, padding:'7px 11px', fontSize:10, cursor:'pointer', textAlign:'left' }}>
+                      {local(hi, q.en, q.hi)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+                {EXAMPLES.map((example) => (
+                  <button key={example.en} type="button" disabled={state === 'loading'} onClick={() => setQuestion(local(hi, example.en, example.hi))}
+                    style={{ color:'rgba(245,240,232,0.72)', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.035)', borderRadius:8, padding:'7px 10px', fontSize:9.5, cursor:'pointer', textAlign:'left' }}>
+                    {local(hi, example.en, example.hi)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {state === 'error' && (
