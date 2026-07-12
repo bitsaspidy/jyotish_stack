@@ -29,6 +29,11 @@ const { buildPrompt, detectQuestionLang } = require('../services/kundli-question
 const ollama = require('../services/ollama.service');
 const questionBank = require('../services/question-bank');
 const aiCache = require('../services/kundli-ai-cache.service');
+const qa = require('../services/deterministic-qa');
+const qaRouting = require('../services/deterministic-qa/routing');
+const qaRepo = require('../services/deterministic-qa/catalogue-repository');
+const qaPilot = require('../services/deterministic-qa/pilot-rules');
+const qaConfig = require('../config/deterministic-qa.config');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 const { regionalCols } = require('../services/helpers/lang-fields');
 
@@ -568,9 +573,80 @@ router.get('/:id/report.pdf', async (req, res) => {
 });
 
 // ── GET /api/kundli/question-bank — Ask-a-Question suggestion chips ───────────
-// Defined BEFORE '/:id' so it isn't captured as an id.
-router.get('/question-bank', (req, res) => {
-  return ok(res, { categories: questionBank.grouped() });
+// Defined BEFORE '/:id' so it isn't captured as an id. Serves EXACTLY ONE
+// catalogue source (feature-flagged) — never the DB catalogue and the legacy
+// question-bank simultaneously.
+router.get('/question-bank', async (req, res) => {
+  try {
+    if (qaRouting.catalogueSource() === 'db') {
+      const categories = await qaRepo.getActiveCatalogueGrouped();
+      return ok(res, { categories, source: 'db' });
+    }
+    return ok(res, { categories: questionBank.grouped(), source: 'legacy' });
+  } catch (e) {
+    console.error('[QuestionBank] Error:', e.message);
+    // Fail safe to the legacy catalogue so the panel never breaks.
+    return ok(res, { categories: questionBank.grouped(), source: 'legacy' });
+  }
+});
+
+// ── POST /api/kundli/:id/qa/deterministic — no-LLM deterministic pilot answer ──
+// Gated by the QA_DETERMINISTIC_ANSWER flag AND limited to the 10 Phase-3 pilot
+// questions. Reuses the same ownership rule as every other Kundli route.
+function mapQaReason(res, reason) {
+  switch (reason) {
+    case 'invalid_id':            return fail(res, 'Invalid Kundli identifier.', 400);
+    case 'not_found':
+    case 'forbidden':             return fail(res, 'Kundli not found', 404);   // do not leak cross-user existence
+    case 'not_calculated':        return fail(res, 'This Kundli has no calculated chart yet. Please open it once and retry.', 422);
+    case 'invalid_question_code':
+    case 'unknown_legacy_key':
+    case 'question_not_found':    return fail(res, 'Question not found', 404);
+    case 'retired_legacy_key':    return fail(res, 'This question is no longer available.', 410, { code: 'QUESTION_RETIRED' });
+    case 'invalid_requirements':
+    case 'missing_requirements':  return fail(res, 'This question is not configured correctly yet.', 500);
+    default:                      return fail(res, 'Unable to answer this question right now.', 500);
+  }
+}
+
+router.post('/:id/qa/deterministic', async (req, res) => {
+  if (!qaConfig.FLAGS.deterministicAnswer) {
+    return fail(res, 'Deterministic answers are not enabled.', 403, { code: 'DETERMINISTIC_DISABLED' });
+  }
+  const lang = ['en', 'hi'].includes(req.body?.lang) ? req.body.lang : 'en';
+  try {
+    // Resolve the code first so we can enforce "pilot questions only" in Phase 3.
+    const resolved = await qa.resolveQuestion({ questionCode: req.body?.questionCode, legacyKey: req.body?.legacyKey });
+    if (!resolved.ok) return mapQaReason(res, resolved.reason);
+    if (!qaPilot.hasRule(resolved.question.code)) {
+      return fail(res, 'This question is not part of the current pilot yet.', 409, { code: 'NOT_IN_PILOT' });
+    }
+
+    const result = await qa.answerQuestion({
+      questionCode: resolved.question.code,
+      kundliUuid: req.params.id,
+      userId: req.user.id,
+      deps: { ensureChart: ensureCalculatedChart },
+    });
+    if (!result.ok) return mapQaReason(res, result.reason);
+
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    const body = {
+      answer: result.answer,
+      meta: { path: result.path, engine_version: qaConfig.RULE_ENGINE_VER, flags: qaRouting.snapshot() },
+    };
+    if (isAdmin) body.trace = result.trace;   // trace is admin-only, never for normal users
+
+    // Persist audit (fire-and-forget); kundli_id looked up cheaply for the row.
+    db('kundli_profiles').where({ uuid: req.params.id, user_id: req.user.id }).select('id').first()
+      .then((row) => qa.persistAudit(db, { userId: req.user.id, kundliId: row ? row.id : null, lang, audit: result.audit }))
+      .catch(() => {});
+
+    return ok(res, body);
+  } catch (e) {
+    console.error('[DeterministicQA]', e.message);
+    return fail(res, 'Unable to answer this question right now.', 500);
+  }
 });
 
 // ── GET /api/kundli/:id — fetch single (auto-calculates if needed) ────────────
