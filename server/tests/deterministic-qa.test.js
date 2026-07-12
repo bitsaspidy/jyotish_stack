@@ -42,18 +42,44 @@ function fixtureChart(overrides = {}) {
   };
 }
 
-function fakeDb(profiles) {
-  return function () {
+// Table-aware fake knex: db('table').where({...}).select(...).first() and the
+// thenable list form used by the template composer.
+function fakeDb(tables) {
+  const map = Array.isArray(tables) ? { kundli_profiles: tables } : tables;
+  return function (tableName) {
+    const rows = map[tableName] || [];
     const where = {};
     const qb = {
       where(obj) { Object.assign(where, obj); return qb; },
       select() { return qb; },
-      async first() {
-        return profiles.find((p) => Object.entries(where).every(([k, v]) => p[k] === v));
-      },
+      _filtered() { return rows.filter((r) => Object.entries(where).every(([k, v]) => r[k] === v)); },
+      async first() { return qb._filtered()[0]; },
+      then(resolve, reject) { return Promise.resolve(qb._filtered()).then(resolve, reject); },
     };
     return qb;
   };
+}
+
+// Minimal template fixture so the DB-free pipeline can compose from "DB" text.
+const STATES6 = ['highly_favourable', 'favourable', 'moderately_favourable', 'mixed', 'challenging', 'highly_challenging'];
+function templateFixtureTables(extra = {}) {
+  const answer_templates = [];
+  const answer_shared_blocks = [];
+  for (const lang of ['en', 'hi']) {
+    answer_templates.push({ question_code: 'Q001', section_key: 'direct_answer', answer_state: 'any', lang, condition_key: 'default', block_text: `DA(${lang}) lagna={{lagna_sign}}`, template_version: 1, active: true });
+    answer_templates.push({ question_code: 'Q001', section_key: 'headline', answer_state: 'any', lang, condition_key: 'default', block_text: `HL(${lang})`, template_version: 1, active: true });
+    const keys = [
+      'sec.kundli_indicates.support_and_caution', 'sec.kundli_indicates.support_only',
+      'sec.kundli_indicates.caution_only', 'sec.kundli_indicates.neutral',
+      'label.sec.direct_answer', 'label.sec.kundli_indicates', 'label.sec.important_note', 'label.sec.review_period',
+      'note.challenging_review',
+      ...STATES6.map((s) => `label.state.${s}`), 'label.state.insufficient_data',
+      'label.conf.high', 'label.conf.medium', 'label.conf.low',
+      ...STATES6.map((s) => `label.headline.${s}`),
+    ];
+    for (const k of keys) answer_shared_blocks.push({ block_key: k, lang, text: `[${k}:${lang}]`, version: 1, active: true });
+  }
+  return { answer_templates, answer_shared_blocks, ...extra };
 }
 
 const REQ = {
@@ -307,7 +333,7 @@ test('deterministic answer makes NO network/LLM call and is repeatable', async (
   try {
     const args = {
       questionCode: 'Q001', kundliUuid: OWN_UUID, userId: 42,
-      deps: { db: fakeDb(ownerProfiles) },
+      deps: { db: fakeDb(templateFixtureTables({ kundli_profiles: ownerProfiles })) },
     };
     const a = await qa.answerQuestion(args);
     const b = await qa.answerQuestion(args);
@@ -316,11 +342,64 @@ test('deterministic answer makes NO network/LLM call and is repeatable', async (
     // repeatable
     assert.deepStrictEqual(a.answer.sections, b.answer.sections);
     assert.strictEqual(a.answer.state, b.answer.state);
-    // user answer contains NO raw scores
+    // the answer text comes from the DB templates (interpolated), not from code
+    const direct = a.answer.sections.find((s) => s.key === 'direct_answer');
+    assert.strictEqual(direct.text_en, 'DA(en) lagna=Aries');
+    assert.ok(direct.text_hi.startsWith('DA(hi)'));
+    // user answer contains NO raw scores and no internal rule keys
     const dump = JSON.stringify(a.answer);
     assert.ok(!/"score"/.test(dump), 'user answer must not expose raw scores');
-    // trace (admin-only) DOES carry the numeric detail
+    assert.ok(!/rule_key|templates_used|matched_rule/.test(dump), 'no internal keys in user answer');
+    // trace (admin-only) DOES carry the numeric detail + template provenance
     assert.ok(typeof a.trace.initial_score === 'number');
+    assert.ok(Array.isArray(a.trace.templates_used) && a.trace.templates_used.length > 0);
+  } finally {
+    global.fetch = savedFetch;
+    Object.assign(repo, saved);
+  }
+});
+
+test('free-text questions are rejected — only catalogue codes are accepted', async () => {
+  const r1 = await qa.resolveQuestion({ questionCode: 'Should I change my job this year?' });
+  assert.strictEqual(r1.ok, false);
+  assert.strictEqual(r1.reason, 'invalid_question_code');
+  const r2 = await qa.resolveQuestion({ questionCode: 'क्या मुझे नौकरी बदलनी चाहिए?' });
+  assert.strictEqual(r2.ok, false);
+  assert.strictEqual(r2.reason, 'invalid_question_code');
+});
+
+test('missing required data returns the deterministic insufficient-data answer (no fallback generator)', async () => {
+  const repo = require('../src/services/deterministic-qa/catalogue-repository');
+  const saved = {
+    getActiveQuestionByCode: repo.getActiveQuestionByCode,
+    getRequirementsRow: repo.getRequirementsRow,
+    getSharedBlock: repo.getSharedBlock,
+  };
+  repo.getActiveQuestionByCode = async (code) => ({ code, category_code: 'career', short_title_en: 't', short_title_hi: 'त', disclaimer_type: 'general', min_data_policy: 'strict', rule_version: 1, template_version: 1, active: true });
+  repo.getRequirementsRow = async () => ({
+    question_code: 'Q012', houses: '[10]', house_lords: '[10]', planets: '["Saturn"]',
+    divisional_charts: '["d1","d10","d2","d9"]',   // d10/d2 missing from the fixture chart
+    dasha_levels: '["maha"]', answer_sections: '["direct_answer","important_note"]',
+    required_fields: '["ascendant","planets","dasha"]', needs_current_transit: false, needs_dated_transit: false,
+    needs_yoga: true, needs_remedy: false, shadbala_enhances: false, ashtakavarga_enhances: false,
+    missing_data_behaviour: 'block',
+  });
+  repo.getSharedBlock = async (key, lang) => `[${key}:${lang}]`;
+  const savedFetch = global.fetch;
+  global.fetch = () => { throw new Error('LLM fallback attempted on insufficient data'); };
+  try {
+    const chart = fixtureChart({ varga_charts: { d1: {}, d9: {} }, varga_analysis: { d1: {}, d9: {} } });
+    const r = await qa.answerQuestion({
+      questionCode: 'Q012', kundliUuid: OWN_UUID, userId: 42,
+      deps: { db: fakeDb({ kundli_profiles: [{ id: 9, uuid: OWN_UUID, user_id: 42, name: 'Owner', calculated_data: chart }] }) },
+    });
+    assert.ok(r.ok);
+    assert.strictEqual(r.answer.state, 'insufficient_data');
+    const direct = r.answer.sections.find((s) => s.key === 'direct_answer');
+    assert.strictEqual(direct.text_en, '[insufficient_data:en]');
+    assert.strictEqual(direct.text_hi, '[insufficient_data:hi]');
+    assert.strictEqual(r.answer.confidence.level, 'low');
+    assert.ok(r.trace.missing_inputs.length > 0, 'missing inputs identified internally');
   } finally {
     global.fetch = savedFetch;
     Object.assign(repo, saved);

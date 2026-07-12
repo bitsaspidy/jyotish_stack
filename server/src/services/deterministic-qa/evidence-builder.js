@@ -28,6 +28,8 @@ const CATEGORY_DOMAIN = {
   // personality + timing use the overall chart strength
 };
 
+const { planetName, statusWord, ORDINAL_HI, ordinalEn } = require('./vocab');
+
 const clamp = (v) => Math.max(-100, Math.min(100, Math.round(v)));
 const toSigned = (score0to100) => clamp((score0to100 - 50) * 2);
 
@@ -40,18 +42,22 @@ function natalEvidence({ requirement, loaded, strength, category }) {
   // relevant house-lords
   for (const [h, info] of Object.entries(loaded.selected.house_lords || {})) {
     if (info && info.lord && ps[info.lord] != null) {
-      layers.push({ key: `lord${h}:${info.lord}`, score: toSigned(ps[info.lord]), label: `${h}th-lord ${info.lord}` });
+      layers.push({
+        key: `lord${h}:${info.lord}`, score: toSigned(ps[info.lord]),
+        label: `${ordinalEn(Number(h))}-lord ${info.lord}`,
+        label_hi: `${ORDINAL_HI(Number(h))} भाव के स्वामी ${planetName(info.lord, 'hi')}`,
+      });
     }
   }
   // relevant planets
   for (const p of requirement.planets || []) {
-    if (ps[p] != null) layers.push({ key: `planet:${p}`, score: toSigned(ps[p]), label: p });
+    if (ps[p] != null) layers.push({ key: `planet:${p}`, score: toSigned(ps[p]), label: p, label_hi: planetName(p, 'hi') });
   }
   // life-domain (or overall) anchor
   const domainKey = CATEGORY_DOMAIN[category];
   const domain = domainKey && strength.life_domains ? strength.life_domains[domainKey] : null;
-  if (domain) layers.push({ key: `domain:${domainKey}`, score: toSigned(domain.score), label: domain.en, weight: 1.5 });
-  else if (strength.overall_score != null) layers.push({ key: 'overall', score: toSigned(strength.overall_score), label: 'overall chart', weight: 1.2 });
+  if (domain) layers.push({ key: `domain:${domainKey}`, score: toSigned(domain.score), label: domain.en, label_hi: domain.hi || domain.en, weight: 1.5 });
+  else if (strength.overall_score != null) layers.push({ key: 'overall', score: toSigned(strength.overall_score), label: 'overall chart', label_hi: 'समग्र कुंडली', weight: 1.2 });
 
   if (!layers.length) return { score: 0, present: false, layers: [] };
   const wsum = layers.reduce((s, l) => s + (l.weight || 1), 0);
@@ -65,7 +71,12 @@ function dchartEvidence({ loaded }) {
   const layers = [];
   for (const [slug, info] of Object.entries(avail)) {
     const s = STATUS_SIGNED[info.status];
-    if (s != null) layers.push({ key: `chart:${slug}`, score: s, label: `${slug.toUpperCase()} (${info.status})`, weight: slug === 'd1' ? 1 : 1.3 });
+    if (s != null) layers.push({
+      key: `chart:${slug}`, score: s,
+      label: `${slug.toUpperCase()} (${statusWord(info.status, 'en')})`,
+      label_hi: `${slug.toUpperCase()} (${statusWord(info.status, 'hi')})`,
+      weight: slug === 'd1' ? 1 : 1.3,
+    });
   }
   if (!layers.length) return { score: 0, present: false, layers: [] };
   const wsum = layers.reduce((s, l) => s + (l.weight || 1), 0);
@@ -77,14 +88,14 @@ function dchartEvidence({ loaded }) {
 function timingEvidence({ loaded, strength, transit }) {
   const layers = [];
   if (strength && strength.current_mahadasha) {
-    layers.push({ key: 'dasha:maha', score: toSigned(strength.current_mahadasha.score), label: `${strength.current_mahadasha.planet} Mahadasha`, weight: 1.4 });
+    layers.push({ key: 'dasha:maha', score: toSigned(strength.current_mahadasha.score), label: `${strength.current_mahadasha.planet} Mahadasha`, label_hi: `${planetName(strength.current_mahadasha.planet, 'hi')} महादशा`, weight: 1.4 });
   }
   if (strength && strength.current_antardasha) {
-    layers.push({ key: 'dasha:antar', score: toSigned(strength.current_antardasha.score), label: `${strength.current_antardasha.planet} Antardasha`, weight: 1 });
+    layers.push({ key: 'dasha:antar', score: toSigned(strength.current_antardasha.score), label: `${strength.current_antardasha.planet} Antardasha`, label_hi: `${planetName(strength.current_antardasha.planet, 'hi')} अंतर्दशा`, weight: 1 });
   }
   if (transit && transit.available) {
     const s = TRANSIT_SIGNED[transit.summary.overall];
-    if (s != null) layers.push({ key: 'transit:dated', score: s, label: `major transits (${transit.summary.overall})`, weight: 1.2 });
+    if (s != null) layers.push({ key: 'transit:dated', score: s, label: `major transits (${statusWord(transit.summary.overall, 'en')})`, label_hi: `प्रमुख गोचर (${statusWord(transit.summary.overall, 'hi')})`, weight: 1.2 });
   }
   if (!layers.length) return { score: 0, present: false, layers: [] };
   const wsum = layers.reduce((s, l) => s + (l.weight || 1), 0);

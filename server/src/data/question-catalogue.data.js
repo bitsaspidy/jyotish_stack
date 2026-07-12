@@ -215,11 +215,17 @@ function requirementsFor(item) {
 }
 
 // Build catalogue + requirement rows (adds disclaimer + min_data_policy).
+// TEMPORARY (Stage 1, owner-approved): only the 10 pilot questions are ACTIVE;
+// the other 90 stay inactive so normal users never see or query them. This
+// stands in for a dedicated readiness column (planned|pilot|under_review|ready|
+// disabled) until readiness tracking is added; admins see all 100 with a
+// computed readiness status via the qa/catalogue admin scope.
 function buildCatalogue() {
+  const pilot = new Set(PILOT_CODES);
   return QUESTIONS.map((item, i) => ({
     ...item,
     display_order: i + 1,
-    active: true,
+    active: pilot.has(item.code),
     disclaimer_type: DISCLAIMER_BY_CATEGORY[item.category] || 'general',
     min_data_policy: TIMING_CODES.has(item.code) ? 'strict' : 'lenient',
     fallback_block_key: 'insufficient_data',

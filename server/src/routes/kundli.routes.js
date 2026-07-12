@@ -33,6 +33,8 @@ const qa = require('../services/deterministic-qa');
 const qaRouting = require('../services/deterministic-qa/routing');
 const qaRepo = require('../services/deterministic-qa/catalogue-repository');
 const qaPilot = require('../services/deterministic-qa/pilot-rules');
+const qaReadiness = require('../services/deterministic-qa/template-readiness');
+const { loadRequirement: qaLoadRequirement } = require('../services/deterministic-qa/requirement-loader');
 const qaConfig = require('../config/deterministic-qa.config');
 const { normalizeMaritalStatus, isValidMaritalStatusInput } = require('../utils/marital-status');
 const { regionalCols } = require('../services/helpers/lang-fields');
@@ -590,6 +592,26 @@ router.get('/question-bank', async (req, res) => {
   }
 });
 
+// ── GET /api/kundli/qa/catalogue — deterministic question catalogue ───────────
+// Defined BEFORE '/:id'. Always DB-backed (question_catalogue). Normal users
+// receive ONLY questions that are active + rule-implemented + fully templated
+// (the 10 pilots during Stage 1); the other 90 are completely hidden. Admins
+// may request all 100 with computed readiness via ?scope=admin.
+router.get('/qa/catalogue', async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    if (req.query.scope === 'admin') {
+      if (!isAdmin) return fail(res, 'Not authorized', 403);
+      return ok(res, await qa.getAdminCatalogue());
+    }
+    const categories = await qa.getUserFacingCatalogue();
+    return ok(res, { categories, source: 'db' });
+  } catch (e) {
+    console.error('[QaCatalogue] Error:', e.message);
+    return fail(res, 'Unable to load the question catalogue right now.', 500);
+  }
+});
+
 // ── POST /api/kundli/:id/qa/deterministic — no-LLM deterministic pilot answer ──
 // Gated by the QA_DETERMINISTIC_ANSWER flag AND limited to the 10 Phase-3 pilot
 // questions. Reuses the same ownership rule as every other Kundli route.
@@ -620,6 +642,12 @@ router.post('/:id/qa/deterministic', async (req, res) => {
     if (!resolved.ok) return mapQaReason(res, resolved.reason);
     if (!qaPilot.hasRule(resolved.question.code)) {
       return fail(res, 'This question is not part of the current pilot yet.', 409, { code: 'NOT_IN_PILOT' });
+    }
+    // A question with incomplete bilingual templates must never reach users.
+    const requirementForCheck = await qaLoadRequirement(resolved.question.code);
+    const tReady = requirementForCheck ? await qaReadiness.checkTemplateReadiness(resolved.question, requirementForCheck) : { ready: false };
+    if (!tReady.ready) {
+      return fail(res, 'This question is not ready yet.', 409, { code: 'NOT_READY' });
     }
 
     const result = await qa.answerQuestion({

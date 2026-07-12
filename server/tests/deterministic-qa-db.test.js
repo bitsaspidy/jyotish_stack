@@ -93,8 +93,14 @@ test('catalogue response is bilingual (Hindi + English) and single-sourced', asy
   if (!guard(t)) return;
   const grouped = await repo.getActiveCatalogueGrouped();
   assert.strictEqual(grouped.length, 10, '10 active categories');
+  // Stage 1 (temporary approach): only the 10 pilot questions are ACTIVE; the
+  // other 90 stay in the catalogue but inactive and fully hidden from users.
   const totalQs = grouped.reduce((s, c) => s + c.questions.length, 0);
-  assert.strictEqual(totalQs, 100, '100 active questions');
+  assert.strictEqual(totalQs, 10, '10 active (pilot) questions');
+  const totalRows = Number((await db('question_catalogue').count('* as c').first()).c);
+  assert.strictEqual(totalRows, 100, 'all 100 questions remain in the catalogue');
+  const inactive = Number((await db('question_catalogue').where({ active: false }).count('* as c').first()).c);
+  assert.strictEqual(inactive, 90, '90 non-pilot questions are inactive');
   for (const c of grouped) {
     assert.ok(c.label_en && c.label_hi, `category ${c.code} bilingual label`);
     for (const q of c.questions) {

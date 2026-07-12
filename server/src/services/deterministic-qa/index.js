@@ -19,7 +19,8 @@ const { evaluateDatedTransits } = require('./dated-transit');
 const completeness = require('./completeness-evaluator');
 const { buildEvidence } = require('./evidence-builder');
 const { resolveState } = require('./state-engine');
-const composer = require('./answer-composer');
+const composer = require('./template-composer');
+const readiness = require('./template-readiness');
 const pilot = require('./pilot-rules');
 const { buildTrace } = require('./evaluation-trace');
 const cfg = require('../../config/deterministic-qa.config');
@@ -55,15 +56,23 @@ async function fetchLimitations(fallbacks) {
 }
 
 async function insufficientAnswer(question, requirement, comp, versions, loaded, transit, startedAt) {
-  const [insufEn, insufHi] = await Promise.all([repo.getSharedBlock('insufficient_data', 'en'), repo.getSharedBlock('insufficient_data', 'hi')]);
+  // All user-facing text (including titles and labels) comes from shared blocks.
+  const [insufEn, insufHi, dTitleEn, dTitleHi, nTitleEn, nTitleHi, sEn, sHi, cEn, cHi] = await Promise.all([
+    repo.getSharedBlock('insufficient_data', 'en'), repo.getSharedBlock('insufficient_data', 'hi'),
+    repo.getSharedBlock('label.sec.direct_answer', 'en'), repo.getSharedBlock('label.sec.direct_answer', 'hi'),
+    repo.getSharedBlock('label.sec.important_note', 'en'), repo.getSharedBlock('label.sec.important_note', 'hi'),
+    repo.getSharedBlock('label.state.insufficient_data', 'en'), repo.getSharedBlock('label.state.insufficient_data', 'hi'),
+    repo.getSharedBlock('label.conf.low', 'en'), repo.getSharedBlock('label.conf.low', 'hi'),
+  ]);
   const disclaimers = await fetchDisclaimers(question.disclaimer_type);
   const answer = {
     state: 'insufficient_data',
-    state_label: { en: 'not yet determinable', hi: 'अभी निर्धारित नहीं' },
-    confidence: { level: 'low', en: 'Low', hi: 'निम्न' },
+    state_label: { en: sEn || 'not yet determinable', hi: sHi || 'अभी निर्धारित नहीं' },
+    confidence: { level: 'low', en: cEn || 'Low', hi: cHi || 'निम्न' },
+    headline: { en: sEn || 'not yet determinable', hi: sHi || 'अभी निर्धारित नहीं' },
     sections: [
-      { key: 'direct_answer', title_en: 'Direct answer', title_hi: 'सीधा उत्तर', text_en: insufEn, text_hi: insufHi },
-      { key: 'important_note', title_en: 'Important note', title_hi: 'महत्वपूर्ण सूचना', text_en: disclaimers.en, text_hi: disclaimers.hi },
+      { key: 'direct_answer', title_en: dTitleEn || 'Direct answer', title_hi: dTitleHi || 'सीधा उत्तर', text_en: insufEn, text_hi: insufHi },
+      { key: 'important_note', title_en: nTitleEn || 'Important note', title_hi: nTitleHi || 'महत्वपूर्ण सूचना', text_en: disclaimers.en, text_hi: disclaimers.hi },
     ],
     limitations: [],
   };
@@ -147,7 +156,7 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
     suggestedConfidence: comp.suggested_confidence,
   });
 
-  // 8. pilot rule → question-specific facts
+  // 8. pilot rule → evaluation facts + interpolation variables (no user text)
   const rule = pilot.getRule(question.code);
   const ruleFacts = rule ? rule({ question, requirement, loaded, strength, transit, evidence, state: decision.state, confidence: decision.confidence }) : null;
 
@@ -157,17 +166,70 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
     fetchLimitations(loaded.chartLoad.fallbacks),
   ]);
 
-  // 10. compose human-readable answer
-  const answer = composer.compose({
+  // 10. compose the human-readable answer from DB-backed templates
+  const answer = await composer.compose({
     question, requirement, loaded, strength, transit,
     evidence, state: decision.state, confidence: decision.confidence,
-    ruleFacts, disclaimers, limitations, remedy: null,
-  });
+    ruleFacts, disclaimers, limitations,
+  }, deps.db || null);
+  const templatesUsed = answer.meta ? answer.meta.templates_used : [];
+  delete answer.meta;   // internal detail — belongs in the trace, not the user answer
 
   const ruleKeys = (ruleFacts && ruleFacts.rule_keys) || ['qa.state.v1'];
   const trace = buildTrace({ question, requirement, loaded, completeness: comp, evidence, decision, transit, versions, ruleKeys, durationMs: Date.now() - startedAt });
+  trace.templates_used = templatesUsed;
 
   return { ok: true, path: 'deterministic', answer, trace, audit: buildAudit(question, answer, comp, trace, decision) };
+}
+
+/**
+ * User-facing catalogue (Stage 1): ONLY questions that are active, have a
+ * deterministic rule implementation AND complete bilingual templates are
+ * returned. The 90 non-pilot questions are fully hidden from normal users.
+ */
+async function getUserFacingCatalogue() {
+  const grouped = await repo.getActiveCatalogueGrouped();
+  const out = [];
+  for (const cat of grouped) {
+    const questions = [];
+    for (const q of cat.questions) {
+      if (!pilot.hasRule(q.code)) continue;
+      let requirement;
+      try { requirement = await loadRequirement(q.code); } catch { continue; }
+      if (!requirement) continue;
+      const t = await readiness.checkTemplateReadiness(q, requirement);
+      if (!t.ready) continue;
+      questions.push({
+        code: q.code, category_code: q.category_code,
+        question_en: q.question_en, question_hi: q.question_hi,
+        short_title_en: q.short_title_en, short_title_hi: q.short_title_hi,
+      });
+    }
+    if (questions.length) out.push({ code: cat.code, label_en: cat.label_en, label_hi: cat.label_hi, questions });
+  }
+  return out;
+}
+
+/**
+ * Admin catalogue: all 100 questions with computed readiness status
+ * (temporary computed readiness in lieu of a dedicated column).
+ */
+async function getAdminCatalogue() {
+  const [cats, questions] = await Promise.all([
+    repo.getActiveCategories(),
+    require('../../config/db')('question_catalogue').orderBy(['category_code', 'display_order']).select(
+      'code', 'category_code', 'question_en', 'question_hi', 'short_title_en', 'short_title_hi',
+      'active', 'disclaimer_type', 'rule_version', 'template_version',
+    ),
+  ]);
+  const rows = [];
+  for (const q of questions) {
+    let requirement = null;
+    try { requirement = await loadRequirement(q.code); } catch { /* surfaced as planned */ }
+    const r = await readiness.readinessStatus(q, requirement);
+    rows.push({ ...q, readiness: r.status, has_rule: r.has_rule, templates_ready: r.templates_ready });
+  }
+  return { categories: cats, questions: rows };
 }
 
 // Optional audit persistence (fire-and-forget from the route).
@@ -198,4 +260,4 @@ async function persistAudit(db, { userId, kundliId, lang, audit, transitDate = n
   }
 }
 
-module.exports = { answerQuestion, resolveQuestion, persistAudit };
+module.exports = { answerQuestion, resolveQuestion, persistAudit, getUserFacingCatalogue, getAdminCatalogue };
