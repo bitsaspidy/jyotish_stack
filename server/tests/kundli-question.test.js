@@ -5,7 +5,9 @@ const assert = require('node:assert/strict');
 const { calculateVedicChart } = require('../src/services/vedic-calc.service');
 const { fallbackAnalysis, normalizeAnalysis } = require('../src/services/question-understanding.service');
 const { buildKundliQuestionAnswer, toneFromScore, safetyNote } = require('../src/services/kundli-question.service');
-const { parseKundliQuestion } = require('../src/routes/kundli.routes');
+// NOTE: these services are retained for the Prashna feature (prashna.routes.js);
+// the Kundli free-text route that also used them was removed in Stage 2 of the
+// no-LLM pivot, so this file doubles as the shared-service regression suite.
 
 function chartFixture() {
   return calculateVedicChart({
@@ -93,10 +95,6 @@ test('high-stakes topics include explicit safety boundaries', () => {
   assert.equal(toneFromScore(40), 'caution');
 });
 
-test('question route input trims whitespace and rejects invalid payloads', () => {
-  assert.deepEqual(parseKundliQuestion({ question:'  Should   I change my job now?  ' }), {
-    question:'Should I change my job now?', category:'general',
-  });
-  assert.match(parseKundliQuestion({ question:'Short' }).error, /between 8 and 500/);
-  assert.match(parseKundliQuestion({ question:'Should I change my job now?', category:'unknown' }).error, /category/i);
-});
+// (The free-text route-input test was removed with the route in Stage 2 —
+// arbitrary free-text Kundli questions are now rejected by the deterministic
+// endpoint itself; see deterministic-qa.test.js and no-llm-guard.test.js.)

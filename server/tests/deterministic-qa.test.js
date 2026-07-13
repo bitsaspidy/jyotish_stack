@@ -291,17 +291,14 @@ test('feature flags route to exactly one catalogue source (never both)', () => {
   if (prev === undefined) delete process.env.QA_DB_CATALOGUE; else process.env.QA_DB_CATALOGUE = prev;
 });
 
-test('deterministic answer path is a separate switch from the DB catalogue', () => {
-  const savedDet = process.env.QA_DETERMINISTIC_ANSWER;
-  const savedLlm = process.env.QA_OLLAMA_ANSWER;
-  process.env.QA_DETERMINISTIC_ANSWER = 'false';
-  process.env.QA_OLLAMA_ANSWER = 'true';
-  assert.strictEqual(routing.answerPath({ hasPilotRule: true }), 'llm');      // det off → not deterministic
-  process.env.QA_DETERMINISTIC_ANSWER = 'true';
-  assert.strictEqual(routing.answerPath({ hasPilotRule: true }), 'deterministic');
-  assert.strictEqual(routing.answerPath({ hasPilotRule: false }), 'llm');     // non-pilot never deterministic
-  process.env.QA_DETERMINISTIC_ANSWER = savedDet ?? '';
-  process.env.QA_OLLAMA_ANSWER = savedLlm ?? '';
+test('the answer path is ALWAYS deterministic — no llm/ollama/ai_fallback result exists', () => {
+  assert.strictEqual(routing.answerPath(), 'deterministic');
+  const snap = routing.snapshot();
+  assert.strictEqual(snap.answer_path, 'deterministic');
+  assert.ok(!('ollama_answer' in snap), 'no LLM flag in the routing snapshot');
+  // only the two documented temporary flags remain
+  const cfgFlags = require('../src/config/deterministic-qa.config').FLAGS;
+  assert.deepStrictEqual(Object.keys(cfgFlags).sort(), ['dbCatalogue', 'deterministicAnswer']);
 });
 
 // ── No LLM in the deterministic path + repeatability ─────────────────────────

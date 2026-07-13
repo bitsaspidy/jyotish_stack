@@ -1,43 +1,37 @@
 'use strict';
 /**
- * Feature-flag routing (Phase 3, component 6).
+ * Feature-flag routing (Stage 2 of the no-LLM pivot).
  *
- * Three INDEPENDENT switches (see config): dbCatalogue, deterministicAnswer,
- * ollamaAnswer. This module centralises the routing decisions so controllers
- * never branch on env vars directly, and it enforces the invariant that the
- * legacy question-bank and the new DB catalogue are NEVER served simultaneously.
+ * There is NO generative answer path: the deterministic predefined-question
+ * engine is the only Kundli answer system. This module centralises the two
+ * TEMPORARY migration flags (see config for their documented removal points)
+ * and keeps the invariant that the legacy question-bank and the DB catalogue
+ * are never served simultaneously from the legacy endpoint.
  */
 
 const cfg = require('../../config/deterministic-qa.config');
 
-/** Which catalogue the suggestion UI should be served from — exactly one. */
+/** Which catalogue the LEGACY /question-bank endpoint serves — exactly one. */
 function catalogueSource() {
   return cfg.FLAGS.dbCatalogue ? 'db' : 'legacy';
 }
 
 /**
- * Which answer path to use for a Kundli question.
- * @param {object} opts { hasPilotRule:boolean }
- * @returns 'deterministic' | 'llm' | 'legacy_rule'
- *
- * - deterministic: new no-LLM engine (only when its flag is ON and a pilot rule
- *   exists for the resolved question). Enabling the DB catalogue for testing does
- *   NOT force this path — deterministicAnswer is a separate switch.
- * - llm: existing Ollama "Final Answer" streaming (when its flag is ON).
- * - legacy_rule: the existing rule-based structured answer (always available).
+ * The Kundli answer path. Always deterministic — there is no generative or
+ * fallback result of any kind. Insufficient data yields the approved
+ * deterministic insufficient-data response inside the engine, never a
+ * fallback generator.
  */
-function answerPath({ hasPilotRule = false } = {}) {
-  if (cfg.FLAGS.deterministicAnswer && hasPilotRule) return 'deterministic';
-  if (cfg.FLAGS.ollamaAnswer) return 'llm';
-  return 'legacy_rule';
+function answerPath() {
+  return 'deterministic';
 }
 
 function snapshot() {
   return {
     db_catalogue: cfg.FLAGS.dbCatalogue,
     deterministic_answer: cfg.FLAGS.deterministicAnswer,
-    ollama_answer: cfg.FLAGS.ollamaAnswer,
     catalogue_source: catalogueSource(),
+    answer_path: answerPath(),
   };
 }
 

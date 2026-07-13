@@ -23,12 +23,11 @@ const { composeKundliUserSummary } = require('../services/kundli-user-summary.se
 const { composeLifeReportUserFriendly } = require('../services/report-engine/life-report-humanizer');
 const { composeStrengthUserFriendly }   = require('../services/report-engine/strength-humanizer');
 const { composePredictionUserFriendly } = require('../services/report-engine/prediction-humanizer');
-const { analyzeQuestion } = require('../services/question-understanding.service');
-const { buildKundliQuestionAnswer } = require('../services/kundli-question.service');
-const { buildPrompt, detectQuestionLang } = require('../services/kundli-question-ai.service');
-const ollama = require('../services/ollama.service');
-const questionBank = require('../services/question-bank');
-const aiCache = require('../services/kundli-ai-cache.service');
+// NOTE: question-understanding.service + kundli-question.service still exist and
+// power the separate Prashna feature (prashna.routes.js) — they are non-LLM and
+// deliberately NOT imported here anymore: the only Kundli answer path is the
+// deterministic predefined-question engine below.
+const questionBank = require('../services/question-bank');   // legacy catalogue — removed in Stage 3
 const qa = require('../services/deterministic-qa');
 const qaRouting = require('../services/deterministic-qa/routing');
 const qaRepo = require('../services/deterministic-qa/catalogue-repository');
@@ -43,15 +42,6 @@ router.use(authenticate);
 
 // Max Kundli profiles a user may create, by plan tier
 const PLAN_PROFILE_LIMITS = { free: 1, basic: 3, premium: 10, yearly: 9999 };
-const QUESTION_CATEGORIES = new Set(['general','marriage','career','finance','health','legal','travel','lost_object','property','education','family']);
-
-function parseKundliQuestion(body) {
-  const question = String(body?.question || '').replace(/\s+/g, ' ').trim();
-  const requestedCategory = String(body?.category || 'general').trim();
-  if (question.length < 8 || question.length > 500) return { error:'Your question must be between 8 and 500 characters.' };
-  if (!QUESTION_CATEGORIES.has(requestedCategory)) return { error:'Question category is invalid.' };
-  return { question, category:requestedCategory };
-}
 
 // ── Helper: run calculation and persist ──────────────────────────────────────
 async function calcAndSave(profile) {
@@ -970,174 +960,10 @@ router.get('/:id/today', async (req, res) => {
   }
 });
 
-// ── POST /api/kundli/:id/ask-question — private rule-based Kundli Q&A ───────
-router.post('/:id/ask-question', async (req, res) => {
-  const input = parseKundliQuestion(req.body);
-  if (input.error) return fail(res, input.error, 400);
-  try {
-    const profile = await db('kundli_profiles')
-      .where({ uuid: req.params.id, user_id: req.user.id })
-      .first();
-    if (!profile) return fail(res, 'Kundli not found', 404);
-
-    const chart = await ensureCalculatedChart(profile);
-    if (!chart) return fail(res, 'Unable to calculate chart', 500);
-
-    const analysis = await analyzeQuestion(input.question, input.category, { mode:'kundli' });
-    if (analysis.isAmbiguous) {
-      const message = analysis.language === 'hi'
-        ? (analysis.needsClarificationHi || 'कृपया एक स्पष्ट विषय, विकल्प या समय के बारे में पूछें।')
-        : (analysis.needsClarificationEn || 'Please ask about one clear topic, choice or time period.');
-      return fail(res, message, 422, { code:'QUESTION_NEEDS_DETAIL' });
-    }
-    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
-    const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis, includeTechnical:isAdmin });
-    if (!answer) return fail(res, 'The saved Kundli does not contain enough calculated data for this question. Please recalculate it and try again.', 422);
-    // The natural-language AI "Final Answer" is streamed separately (see the
-    // /ask-question/ai-stream route) so this structured answer returns instantly.
-    return ok(res, {
-      answer,
-      meta:{ engine_version:answer.version, question_service_source:analysis.source, charts_used:answer.chartLenses.map((item) => item.slug), ai_available:true },
-    });
-  } catch (e) {
-    console.error('[KundliQuestion]', e.message);
-    return fail(res, 'Unable to answer from this Kundli right now. Please try again.', 500);
-  }
-});
-
-// Replay cached answer text with a light typing effect (fast, ~0.7s).
-async function streamCachedText(res, text) {
-  const parts = String(text).split(/(\s+)/);
-  let buf = '';
-  for (let i = 0; i < parts.length; i++) {
-    buf += parts[i];
-    if (i % 4 === 3 || i === parts.length - 1) {
-      res.write(buf); res.flush?.(); buf = '';
-      await new Promise((r) => setTimeout(r, 16));
-    }
-  }
-}
-
-// Generate one non-streamed answer (used by the background warmer).
-async function generateWarmAnswer(chart, profile, questionText, lang) {
-  const analysis = await analyzeQuestion(questionText, 'general', { mode:'kundli' });
-  if (analysis.isAmbiguous) return null;
-  const answer = buildKundliQuestionAnswer({ chart, profile, question:questionText, analysis });
-  if (!answer) return null;
-  const { system, user } = buildPrompt({ chart, profile, question:questionText, analysis, ruleAnswer:answer, lang });
-  const out = await ollama.generate(user, { system, num_predict:500 });
-  return out.ok ? out.text : null;
-}
-
-// Background warmer — pre-generate the top questions for a kundli (fire-and-forget).
-const _warming = new Set();
-async function warmKundli(profile, chart, lang) {
-  const tag = `${profile.id}:${lang}`;
-  if (_warming.has(tag)) return;
-  _warming.add(tag);
-  try {
-    const done = await aiCache.cachedKeySet(profile.id, lang);
-    for (const key of questionBank.WARM_KEYS) {
-      if (done.has(key)) continue;
-      const bq = questionBank.getByKey(key);
-      if (!bq) continue;
-      try {
-        const text = await generateWarmAnswer(chart, profile, lang === 'hi' ? bq.hi : bq.en, lang);
-        if (text) await aiCache.setCached(profile.id, key, lang, text, ollama.OLLAMA_MODEL);
-      } catch { /* skip this question */ }
-    }
-  } finally { _warming.delete(tag); }
-}
-
-// ── POST /api/kundli/:id/ask-question/ai-stream — live-typed AI Final Answer ──
-// Streams the AI answer as plain UTF-8 text so the client renders it live. For a
-// suggestion-chip question (questionKey) it serves the per-kundli cache instantly
-// when present, else generates via the local LLM and caches the result.
-router.post('/:id/ask-question/ai-stream', async (req, res) => {
-  const input = parseKundliQuestion(req.body);
-  if (input.error) return res.status(400).end();
-  const questionKey = questionBank.isValidKey(req.body?.questionKey) ? req.body.questionKey : null;
-  try {
-    const profile = await db('kundli_profiles')
-      .where({ uuid: req.params.id, user_id: req.user.id })
-      .first();
-    if (!profile) return res.status(404).end();
-
-    // Reply in the language the user TYPED (English → en, Hinglish/Hindi → hi,
-    // regional scripts → their code), not the UI toggle. Falls back to English.
-    const lang = detectQuestionLang(input.question, 'en');
-
-    const streamHead = () => res.writeHead(200, {
-      'Content-Type':'text/plain; charset=utf-8',
-      'Cache-Control':'no-cache, no-transform',
-      'Connection':'keep-alive',
-      'X-Accel-Buffering':'no',          // disable proxy buffering (nginx/Apache)
-    });
-
-    // Cache hit (suggestion chip already generated for this kundli) → instant.
-    if (questionKey) {
-      const cached = await aiCache.getCached(profile.id, questionKey, lang);
-      if (cached?.answer) {
-        streamHead(); res.flushHeaders?.();
-        await streamCachedText(res, cached.answer);
-        return res.end();
-      }
-    }
-
-    const chart = await ensureCalculatedChart(profile);
-    if (!chart) return res.status(500).end();
-
-    const analysis = await analyzeQuestion(input.question, input.category, { mode:'kundli' });
-    if (analysis.isAmbiguous) return res.status(204).end();
-
-    const answer = buildKundliQuestionAnswer({ chart, profile, question:input.question, analysis });
-    if (!answer) return res.status(204).end();
-
-    const { system, user } = buildPrompt({ chart, profile, question:input.question, analysis, ruleAnswer:answer, lang });
-
-    streamHead(); res.flushHeaders?.();
-
-    let full = '';
-    const result = await ollama.streamGenerate(
-      // Non-thinking model → the budget only needs to cover the ~170-word reply.
-      { prompt:user, system, opts:{ num_predict:500 } },
-      (piece) => { full += piece; res.write(piece); res.flush?.(); },
-      // Heartbeat (0x01, filtered client-side) so a slow first token doesn't
-      // idle-timeout the proxy connection before the answer starts.
-      () => { res.write('\x01'); res.flush?.(); },
-    );
-    res.end();
-    // Cache the freshly generated answer for this chip so future taps are instant.
-    if (questionKey && result.ok && full.trim()) {
-      aiCache.setCached(profile.id, questionKey, lang, full.trim(), ollama.OLLAMA_MODEL);
-    }
-    if (!result.ok) console.warn('[KundliQuestionAI:stream] no output:', result.error || 'empty');
-    return;
-  } catch (e) {
-    console.error('[KundliQuestionAI:stream]', e.message);
-    try { return res.end(); } catch { /* already closed */ }
-  }
-});
-
-// ── POST /api/kundli/:id/ask-question/prewarm — background-warm top questions ──
-// Called when the Ask-a-Question panel opens; kicks off (fire-and-forget)
-// generation of the WARM_KEYS answers so the user's taps are already cached.
-router.post('/:id/ask-question/prewarm', async (req, res) => {
-  try {
-    const profile = await db('kundli_profiles')
-      .where({ uuid: req.params.id, user_id: req.user.id })
-      .first();
-    if (!profile) return res.status(404).end();
-    const chart = await ensureCalculatedChart(profile);
-    if (!chart) return res.status(204).end();
-    const lang = ['en','hi','ta','te','bn','mr','pa','gu'].includes(req.body?.lang) ? req.body.lang : 'hi';
-    warmKundli(profile, chart, lang).catch((e) => console.warn('[KundliQuestionAI:warm]', e.message));
-    return res.status(202).json({ ok:true, warming:true });
-  } catch (e) {
-    console.error('[KundliQuestionAI:prewarm]', e.message);
-    return res.status(500).end();
-  }
-});
+// The legacy free-text /ask-question route (rule-answer + LLM meta), the
+// streaming helpers and the background cache warmer were REMOVED in Stage 2 of
+// the no-LLM pivot. The deterministic predefined-question endpoint above is the
+// only Kundli answer path.
 
 // ── DELETE /api/kundli/:id ────────────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
@@ -1150,4 +976,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-module.exports.parseKundliQuestion = parseKundliQuestion;

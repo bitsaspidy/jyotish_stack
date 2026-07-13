@@ -24,10 +24,14 @@ const CONFIDENCE_VER    = 1;
 const COMPLETENESS_VER  = 1;
 const TRANSIT_VER       = 1;
 
-// ── Feature flags — three INDEPENDENT switches ───────────────────────────────
-// They are read from env once per process. Defaults keep the new path opt-in so
-// the DB catalogue can be exercised without making deterministic answers the
-// production default, and the legacy LLM path is unaffected until switched.
+// ── Feature flags — TEMPORARY migration switches only ────────────────────────
+// The former generative-answer flag was removed in Stage 2 of the no-LLM pivot;
+// there is no generative path. The two remaining flags exist only for the
+// controlled rollout, with documented removal points:
+//   QA_DB_CATALOGUE        — removed in Stage 3, when the legacy question-bank.js
+//                            is deleted and the DB catalogue becomes permanent.
+//   QA_DETERMINISTIC_ANSWER — removed once the pilot rollout is accepted, after
+//                            which deterministic generation is unconditional.
 function flag(name, def) {
   const v = process.env[name];
   if (v === undefined || v === null || v === '') return def;
@@ -35,14 +39,11 @@ function flag(name, def) {
 }
 
 const FLAGS = Object.freeze({
-  // Serve the Ask-a-Question suggestion catalogue from the DB (question_catalogue)
-  // instead of the legacy question-bank.js. Safe to enable alone.
+  // Serve the legacy /kundli/question-bank endpoint from the DB catalogue
+  // instead of question-bank.js (the new /kundli/qa/catalogue is always DB).
   get dbCatalogue()        { return flag('QA_DB_CATALOGUE', false); },
-  // Generate deterministic (no-LLM) answers for pilot questions. May be enabled
-  // for testing WITHOUT making it the production default (see routing note).
+  // Gate for the deterministic answer endpoint during the pilot rollout.
   get deterministicAnswer(){ return flag('QA_DETERMINISTIC_ANSWER', false); },
-  // Allow the existing Ollama/LLM "Final Answer" path. Independent of the above.
-  get ollamaAnswer()       { return flag('QA_OLLAMA_ANSWER', true); },
 });
 
 // ── Divisional-chart support policy ──────────────────────────────────────────
