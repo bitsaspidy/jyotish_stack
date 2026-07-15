@@ -45,6 +45,131 @@ function StateBadge({ state, label, hi }) {
   );
 }
 
+// ── Admin evidence inspector ────────────────────────────────────────────────
+// Deliberately English-only and unstyled-for-users: this is an engineering view,
+// not product copy. It renders what the engine DECIDED and why, so a wrong answer
+// can be diagnosed without reading logs.
+
+const ROLE_LABEL = (r) => (r.kind === 'house_lord' ? `${r.house}th lord`
+  : r.kind === 'dasha' ? `${r.level} dasha`
+  : r.kind === 'varga' ? `varga ${r.chart}`
+  : String(r.kind || '').replace(/_/g, ' '));
+
+// What each verdict alignment means, in one line, so the reason the headline
+// stands is legible without opening verdict-resolver.js.
+const ALIGNMENT_NOTE = {
+  primary_agreement:       'Primary evidence agrees with the verdict.',
+  secondary_only_conflict: 'A conflict was raised by secondary evidence only — the verdict follows the primary evidence.',
+  primary_blocker:         'A strong primary blocker capped the upside.',
+  varga_contradiction:     'The relevant divisional chart contradicts a positive birth-chart reading, so the upside was capped.',
+  timing_gap:              'The promise is present but the current timing is not active.',
+  mixed_primary:           'Primary evidence is genuinely split between support and blockers.',
+  primary_caution:         'Primary evidence is cautionary.',
+  balanced:                'No single factor decided this.',
+};
+
+function Row({ label, children }) {
+  return (
+    <div style={{ display:'flex', gap:10, padding:'6px 0', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+      <span style={{ color:'rgba(245,240,232,0.4)', fontSize:10, minWidth:132, flexShrink:0 }}>{label}</span>
+      <span style={{ color:'rgba(245,240,232,0.82)', fontSize:10.5, lineHeight:1.6 }}>{children}</span>
+    </div>
+  );
+}
+
+function FactorList({ items, tone }) {
+  if (!items || !items.length) return <span style={{ color:'rgba(245,240,232,0.35)' }}>none</span>;
+  return (
+    <span style={{ display:'flex', flexDirection:'column', gap:3 }}>
+      {items.map((f) => (
+        <span key={f.entity_id} style={{ color:tone }}>
+          <strong>{f.planet || f.entity_id}</strong>
+          {' · '}
+          {(f.roles || []).map(ROLE_LABEL).join(' + ')}
+          {' · tier '}{f.tier}
+          {' · '}{f.score > 0 ? '+' : ''}{f.score}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function AdminEvidence({ trace }) {
+  const [open, setOpen] = useState(false);
+  const v = trace.verdict || {};
+  const norm = trace.evidence_normalization || {};
+  const keys = [...new Set((trace.templates_used || []).map((t) => t.key || `${t.section}:${t.source}`))];
+
+  return (
+    <section className="card-royal p-5 sm:p-6" style={{ border:'1px solid rgba(147,197,253,0.28)', background:'rgba(147,197,253,0.04)' }}>
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        style={{ display:'flex', alignItems:'center', gap:9, width:'100%', background:'none', border:'none', cursor:'pointer', padding:0, textAlign:'left' }}>
+        <span aria-hidden="true">🔬</span>
+        <span style={{ color:'#93C5FD', fontSize:12, fontWeight:800, flex:1 }}>
+          Admin · answer evidence
+          <span style={{ color:'rgba(245,240,232,0.4)', fontWeight:500, marginLeft:8 }}>
+            {trace.domain} · {v.alignment}{v.changed ? ` · adjusted from ${v.changed_from}` : ''}
+          </span>
+        </span>
+        <span aria-hidden="true" style={{ color:'#93C5FD', fontSize:11 }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div style={{ marginTop:13 }}>
+          <Row label="Domain">{trace.domain}</Row>
+          <Row label="Verdict">
+            <strong>{v.state}</strong>
+            {v.changed
+              ? <span style={{ color:'#FBBF24' }}> (moved from {v.changed_from} by the resolver)</span>
+              : <span style={{ color:'rgba(245,240,232,0.4)' }}> (unchanged by the resolver)</span>}
+          </Row>
+          <Row label="Why it stands">
+            {ALIGNMENT_NOTE[v.alignment] || v.alignment}
+            {v.primary_reason && (
+              <div style={{ color:'rgba(245,240,232,0.5)', marginTop:3 }}>
+                Decided by: <strong>{v.primary_reason.planet || v.primary_reason.chart || v.primary_reason.entity_id}</strong>
+                {' · tier '}{v.primary_reason.tier}{' · '}{v.primary_reason.score > 0 ? '+' : ''}{v.primary_reason.score}
+              </div>
+            )}
+          </Row>
+          <Row label="Primary supports"><FactorList items={trace.primary_supports} tone="#34D399" /></Row>
+          <Row label="Primary blockers"><FactorList items={trace.primary_blockers} tone="#FB7185" /></Row>
+          <Row label="Timing gap">
+            {v.timing_gap
+              ? <span style={{ color:'#FBBF24' }}>yes — promise present, current timing inactive</span>
+              : 'no'}
+          </Row>
+          <Row label="Evidence dedup">
+            {norm.merged_count} entities after merge · {norm.dropped_duplicates} duplicate role(s) collapsed
+            {norm.dropped_duplicates > 0 && (
+              <span style={{ color:'rgba(245,240,232,0.45)' }}>
+                {' '}({norm.dropped_duplicates_within_groups} within groups, {norm.dropped_duplicates_across_groups} across)
+              </span>
+            )}
+          </Row>
+          <Row label="Confidence">
+            {trace.confidence_reason_kind || '—'}
+          </Row>
+          <Row label="Resolver notes">
+            {(v.notes || []).length ? (v.notes || []).join(', ') : <span style={{ color:'rgba(245,240,232,0.35)' }}>none</span>}
+          </Row>
+          <Row label="Charts used">{(trace.charts_available || []).join(', ') || '—'}</Row>
+          <Row label="Completeness">{trace.data_completeness != null ? `${trace.data_completeness}%` : '—'}</Row>
+          <Row label="Rule keys">{(trace.rule_keys_evaluated || []).join(', ') || '—'}</Row>
+          <Row label="Template blocks">
+            <span style={{ fontFamily:'ui-monospace, monospace', fontSize:9.5, lineHeight:1.7, color:'rgba(245,240,232,0.6)' }}>
+              {keys.length ? keys.join(' · ') : '—'}
+            </span>
+          </Row>
+          <Row label="Versions">
+            rule {trace.requirement_version ?? '—'} · template {trace.template_version ?? '—'} · {trace.duration_ms}ms
+          </Row>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function KundliQuestionPanel({ uuid, name, lang }) {
   const hi = lang === 'hi';
   const [categories, setCategories] = useState([]);
@@ -52,22 +177,43 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
   const [search, setSearch] = useState('');
   const [state, setState] = useState('idle');        // idle | loading | done | error
   const [answer, setAnswer] = useState(null);
+  const [trace, setTrace] = useState(null);          // admin-only; the API omits it for normal users
   const [asked, setAsked] = useState(null);          // the question object that was asked
   const [message, setMessage] = useState('');
+  // The catalogue has its OWN state. Previously a failed load and an empty
+  // response both left `categories` at [], which rendered "Loading the question
+  // list…" forever — the panel looked permanently empty and said nothing about
+  // why. Tracking it explicitly is what lets the three cases differ.
+  const [catState, setCatState] = useState('loading');   // loading | ready | empty | error
+  const [catError, setCatError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Load the approved question catalogue (DB-backed, pilot questions only).
   useEffect(() => {
     let alive = true;
+    setCatState('loading');
+    setCatError('');
     api.get('/kundli/qa/catalogue')
       .then(({ data }) => {
-        if (alive && data?.categories?.length) {
-          setCategories(data.categories);
-          setActiveCat(data.categories[0].code);
-        }
+        if (!alive) return;
+        const cats = data?.categories || [];
+        // Defensive: only categories that actually carry questions can be shown.
+        // The admin-scoped catalogue returns a DIFFERENT shape (flat `questions`,
+        // no nested list), so a shape mismatch must read as "empty", never as a
+        // silent set of tabs with nothing behind them.
+        const usable = cats.filter((c) => Array.isArray(c.questions) && c.questions.length > 0);
+        if (!usable.length) { setCatState('empty'); return; }
+        setCategories(usable);
+        setActiveCat(usable[0].code);
+        setCatState('ready');
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (!alive) return;
+        setCatError(error.response?.data?.message || '');
+        setCatState('error');
+      });
     return () => { alive = false; };
-  }, []);
+  }, [reloadKey]);
 
   // Search across BOTH languages so Hindi and English queries both work.
   const visibleQuestions = useMemo(() => {
@@ -90,6 +236,10 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     try {
       const { data } = await api.post(`/kundli/${uuid}/qa/deterministic`, { questionCode: question.code, lang });
       setAnswer(data.answer);
+      // Present for admins only — the route attaches `trace` by role, so its mere
+      // presence is the admin signal. No role prop, and no way for a normal user's
+      // payload to light this up.
+      setTrace(data.trace || null);
       setState('done');
     } catch (error) {
       const msg = error.response?.data?.message
@@ -99,7 +249,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     }
   };
 
-  const askAnother = () => { setAnswer(null); setAsked(null); setMessage(''); setState('idle'); };
+  const askAnother = () => { setAnswer(null); setTrace(null); setAsked(null); setMessage(''); setState('idle'); };
 
   return (
     <section style={{ display:'grid', gap:16 }}>
@@ -143,7 +293,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
             className="input-royal w-full mt-3" style={{ minHeight:42 }} />
 
           {/* category tabs (hidden while searching) */}
-          {!search.trim() && categories.length > 0 && (
+          {!search.trim() && catState === 'ready' && categories.length > 0 && (
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:14 }}>
               {categories.map((c) => {
                 const on = c.code === activeCat;
@@ -169,15 +319,50 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
                 <span>{local(hi, q.question_en, q.question_hi)}</span>
               </button>
             ))}
-            {categories.length > 0 && visibleQuestions.length === 0 && (
+            {catState === 'ready' && visibleQuestions.length === 0 && (
               <p style={{ color:MUTED, fontSize:11, padding:'10px 2px' }}>
                 {hi ? 'इस खोज से कोई प्रश्न नहीं मिला।' : 'No questions match this search.'}
               </p>
             )}
-            {categories.length === 0 && (
+
+            {catState === 'loading' && (
               <p style={{ color:MUTED, fontSize:11, padding:'10px 2px' }}>
                 {hi ? 'प्रश्न सूची लोड हो रही है…' : 'Loading the question list…'}
               </p>
+            )}
+
+            {/* The catalogue answered, but with nothing to show. This is a real
+                server-side state (no question is both rule-implemented and fully
+                templated), so it gets a real message instead of a spinner that
+                never resolves. */}
+            {catState === 'empty' && (
+              <div role="status" style={{ padding:'12px 14px', borderRadius:9, border:'1px solid rgba(251,191,36,0.25)', background:'rgba(251,191,36,0.06)' }}>
+                <p style={{ color:'#FBBF24', fontSize:11.5, fontWeight:700 }}>
+                  {hi ? 'अभी कोई प्रश्न उपलब्ध नहीं है।' : 'No questions are available right now.'}
+                </p>
+                <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.6, marginTop:5 }}>
+                  {hi
+                    ? 'प्रश्न सूची तैयार होते ही यहाँ दिखाई देगी। कृपया कुछ देर बाद पुनः प्रयास करें।'
+                    : 'The question list will appear here once it is ready. Please try again shortly.'}
+                </p>
+                <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="btn-outline-gold" style={{ marginTop:10, padding:'6px 13px', fontSize:10.5 }}>
+                  {hi ? 'पुनः प्रयास करें' : 'Retry'}
+                </button>
+              </div>
+            )}
+
+            {catState === 'error' && (
+              <div role="alert" style={{ padding:'12px 14px', borderRadius:9, border:'1px solid rgba(239,68,68,0.22)', background:'rgba(239,68,68,0.07)' }}>
+                <p style={{ color:'#FCA5A5', fontSize:11.5, fontWeight:700 }}>
+                  {hi ? 'प्रश्न सूची लोड नहीं हो सकी।' : 'The question list could not be loaded.'}
+                </p>
+                {catError && (
+                  <p style={{ color:MUTED, fontSize:10.5, lineHeight:1.6, marginTop:5 }}>{catError}</p>
+                )}
+                <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="btn-outline-gold" style={{ marginTop:10, padding:'6px 13px', fontSize:10.5 }}>
+                  {hi ? 'पुनः प्रयास करें' : 'Retry'}
+                </button>
+              </div>
             )}
           </div>
 
@@ -228,6 +413,17 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
                 {local(hi, answer.headline.en, answer.headline.hi)}
               </h3>
             )}
+
+            {/* Why this confidence. A bare "Confidence: High" asks the reader to
+                trust a level they cannot inspect; the engine now explains which
+                evidence agreed (or disagreed), so show it. Names evidence only —
+                never a score. */}
+            {local(hi, answer.confidence?.reason_en, answer.confidence?.reason_hi) && (
+              <p style={{ color:MUTED, fontSize:11, lineHeight:1.7, marginTop:11, paddingTop:11, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                <span aria-hidden="true" style={{ marginRight:6 }}>💡</span>
+                {local(hi, answer.confidence.reason_en, answer.confidence.reason_hi)}
+              </p>
+            )}
           </article>
 
           {(answer.sections || []).map((s) => (
@@ -242,6 +438,11 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
               </p>
             </section>
           ))}
+
+          {/* Admin-only evidence inspector. Rendered purely because `trace` is
+              present, which the API attaches by role — a normal user's payload has
+              no trace, so there is nothing here for them to reveal. */}
+          {trace && <AdminEvidence trace={trace} />}
 
           <button type="button" onClick={askAnother} className="btn-outline-gold" style={{ justifySelf:'start', padding:'9px 17px' }}>
             {hi ? '← दूसरा प्रश्न चुनें' : '← Choose another question'}

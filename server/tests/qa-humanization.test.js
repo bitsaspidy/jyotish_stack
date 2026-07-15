@@ -609,6 +609,56 @@ test('RG-34b: admin trace DOES carry the evidence view the user must not see', a
   assert.ok(Array.isArray(r.trace.templates_used) && r.trace.templates_used.length > 0, 'admin sees selected template keys');
 });
 
+// ── Catalogue shape contracts (the "empty Ask a Question tab" guard) ─────────
+
+test('CAT-1: the user catalogue nests questions inside each category', async (t) => {
+  if (!guard(t)) return;
+  // This IS the panel's contract: it renders
+  // `categories.find(c => c.code === activeCat).questions`. If a category ever
+  // ships without a nested `questions` array the tab renders tabs and nothing
+  // else — which is exactly what "the Ask a Question tab is empty" looks like.
+  const cats = await qa.getUserFacingCatalogue();
+  assert.ok(cats.length > 0, 'the user catalogue must not be empty');
+  for (const c of cats) {
+    assert.ok(Array.isArray(c.questions), `category ${c.code} must nest a questions array`);
+    assert.ok(c.questions.length > 0, `category ${c.code} must not be shown with zero questions`);
+    for (const q of c.questions) {
+      assert.ok(q.code && q.question_en && q.question_hi, `${q.code} needs bilingual text for the picker`);
+    }
+  }
+  assert.deepStrictEqual(cats.flatMap((c) => c.questions.map((q) => q.code)).sort(), [...PILOTS].sort());
+});
+
+test('CAT-2: the admin catalogue is a DIFFERENT shape and must never feed the user picker', async (t) => {
+  if (!guard(t)) return;
+  const admin = await qa.getAdminCatalogue();
+  assert.strictEqual(admin.questions.length, 100, 'admin sees all 100');
+  // Documented deliberately: admin returns a FLAT questions array and categories
+  // WITHOUT nested questions. Feeding this to the user picker yields tabs with no
+  // questions behind them, so the two shapes must stay distinguishable.
+  for (const c of admin.categories) {
+    assert.ok(!Array.isArray(c.questions), 'admin categories intentionally carry no nested questions');
+  }
+  const tally = admin.questions.reduce((a, q) => { a[q.readiness] = (a[q.readiness] || 0) + 1; return a; }, {});
+  assert.strictEqual(tally.pilot, 10);
+  assert.strictEqual(tally.planned, 90);
+});
+
+test('CAT-3: every admin row carries the domain and readiness the coverage table renders', async (t) => {
+  if (!guard(t)) return;
+  const admin = await qa.getAdminCatalogue();
+  for (const q of admin.questions) {
+    assert.ok(q.domain, `${q.code} must resolve a domain`);
+    assert.ok(DOMAINS.includes(q.domain), `${q.code} has an unknown domain: ${q.domain}`);
+    assert.ok(['pilot', 'planned', 'disabled'].includes(q.readiness), `${q.code} readiness: ${q.readiness}`);
+    assert.strictEqual(typeof q.has_rule, 'boolean');
+  }
+  // A not-ready question must explain itself, or the coverage table's "Missing"
+  // column has nothing to show and the gate stays as opaque as it was before.
+  const notReady = admin.questions.filter((q) => q.readiness === 'planned' && q.has_rule);
+  for (const q of notReady) assert.ok((q.missing || []).length, `${q.code} is gated but lists nothing missing`);
+});
+
 test('RG-35: no LLM/network call happens on the humanized path', async (t) => {
   if (!guard(t)) return;
   const savedFetch = global.fetch;

@@ -582,6 +582,38 @@ router.get('/qa/catalogue', async (req, res) => {
   }
 });
 
+// ── GET /api/kundli/qa/blocks — admin-only answer-content browser ─────────────
+// Defined BEFORE '/:id'. Lets an admin read the seeded answer content (domain
+// direct answers, cautions, actions, planet meanings, Varga meanings, timing
+// language) without DB access — the content is the product here, and reviewing it
+// through phpMyAdmin is not a workflow.
+// Read-only by design: editing belongs to the knowledge CMS, not to this browser.
+router.get('/qa/blocks', async (req, res) => {
+  try {
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
+    if (!isAdmin) return fail(res, 'Not authorized', 403);
+
+    const q = db('answer_shared_blocks')
+      .select('block_key', 'type', 'lang', 'text', 'version', 'active')
+      .orderBy(['block_key', 'lang']);
+
+    // Prefix filter is parameterised and escaped: `_` and `%` are LIKE wildcards,
+    // and block keys legitimately contain neither, so a raw prefix would silently
+    // widen the match.
+    const prefix = typeof req.query.prefix === 'string' ? req.query.prefix.trim() : '';
+    if (prefix) q.where('block_key', 'like', `${prefix.replace(/[%_\\]/g, '\\$&')}%`);
+    if (req.query.lang === 'en' || req.query.lang === 'hi') q.where({ lang: req.query.lang });
+    if (req.query.active === 'true') q.where({ active: true });
+    if (req.query.active === 'false') q.where({ active: false });
+
+    const rows = await q.limit(1200);
+    return ok(res, { blocks: rows, count: rows.length });
+  } catch (e) {
+    console.error('[QaBlocks] Error:', e.message);
+    return fail(res, 'Unable to load answer content right now.', 500);
+  }
+});
+
 // ── POST /api/kundli/:id/qa/deterministic — deterministic Kundli answer ────────
 // The ONLY Kundli answer endpoint. Unconditional (no feature flag); limited to
 // questions that are rule-implemented AND fully templated (readiness-gated).
