@@ -21,20 +21,47 @@
 const db = require('../../config/db');
 const pilot = require('./pilot-rules');
 const cfg = require('../../config/deterministic-qa.config');
+const { resolveDomain, disclaimerTypeFor } = require('./domains');
 
 const STATES = ['highly_favourable', 'favourable', 'moderately_favourable', 'mixed', 'challenging', 'highly_challenging'];
 const LANGS = ['en', 'hi'];
+const PLANETS = ['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn', 'rahu', 'ketu'];
 
-// answer_sections key → shared block keys that must exist (any-of groups).
-const SECTION_BLOCK_GROUPS = {
-  kundli_indicates: [['sec.kundli_indicates.support_and_caution', 'sec.kundli_indicates.support_only', 'sec.kundli_indicates.caution_only', 'sec.kundli_indicates.neutral']],
-  dchart_indication: [['sec.dchart.supports', 'sec.dchart.contradicts', 'sec.dchart.mixed_signals', 'sec.dchart.agrees']],
-  dasha_influence: [['sec.dasha.maha_antar', 'sec.dasha.maha_only']],
-  transit_influence: [['sec.transit.default'], ['frag.transit_line']],
-  positive: [['sec.positive.factors', 'sec.positive.no_factors']],
-  caution: [['sec.caution.factors', 'sec.caution.no_factors']],
-  timing_outlook: [['sec.timing_outlook.supportive', 'sec.timing_outlook.mixed', 'sec.timing_outlook.caution']],
-};
+/**
+ * answer_sections key → shared block groups that must exist, given the question's
+ * DOMAIN. Each inner array is an any-of group; every group must be satisfied.
+ *
+ * These are the blocks without which a section would render empty or generic. The
+ * evidence section requires the full nine planet meanings for the domain on
+ * purpose: a relevant house lord can be any planet, and a house lord is primary
+ * evidence — so a domain missing even one meaning could show a reader a factor it
+ * cannot explain. That is precisely the failure this gate exists to prevent, and
+ * it is what keeps the nine unseeded domains correctly hidden.
+ */
+function sectionBlockGroups(domain) {
+  return {
+    kundli_indicates: [
+      ['frag.factor.strong', 'frag.factor.moderate', 'frag.factor.weak'],
+      ['frag.factor.multi_role.strong', 'frag.factor.multi_role.moderate', 'frag.factor.multi_role.weak'],
+      ['frag.role.house_lord', 'frag.role.karaka'],
+      PLANETS.map((p) => `meaning.${p}.${domain}`),
+    ],
+    dasha_influence: [['sec.dasha.maha_antar', 'sec.dasha.maha_only']],
+    transit_influence: [['sec.transit.default'], ['frag.transit_line']],
+    positive: [['sec.positive.no_factors']],
+    caution: [[`caution.${domain}`]],
+    // Mirrors the composer's fallback chain: a domain without its own timing voice
+    // legitimately borrows the general one, so either satisfies the gate.
+    timing_outlook: [
+      [`timing.${domain}.current.supportive`, `timing.${domain}.current.mixed`, `timing.${domain}.current.caution`,
+        'timing.general.current.supportive', 'timing.general.current.mixed', 'timing.general.current.caution'],
+      ['timing.no_guarantee'],
+    ],
+    // dchart_indication is deliberately absent: the composer omits the divisional
+    // section when no chart has something specific to contribute, which is correct
+    // behaviour rather than an incomplete answer.
+  };
+}
 
 async function loadCoverage(questionCode) {
   const [templates, blocks] = await Promise.all([
@@ -55,18 +82,25 @@ async function loadCoverage(questionCode) {
 async function checkTemplateReadiness(question, requirement) {
   const missing = [];
   const { tset, bset, templates } = await loadCoverage(question.code);
+  const domain = resolveDomain(question);
+  const groupsBySection = sectionBlockGroups(domain);
 
   for (const lang of LANGS) {
-    // direct answers must cover every evaluable state (or provide an 'any' row)
+    // Direct answers must cover every evaluable state, from EITHER a
+    // question-specific row (Q001, Q093) or this question's domain family.
+    // The domain block is required specifically — not `direct_answer.general` —
+    // so a life area whose language has not been authored reads as 'planned'
+    // rather than quietly shipping the generic answer.
     for (const state of STATES) {
-      if (!tset.has(`direct_answer|${state}|${lang}`) && !tset.has(`direct_answer|any|${lang}`)) {
-        missing.push(`template:direct_answer:${state}:${lang}`);
-      }
+      const hasTemplate = tset.has(`direct_answer|${state}|${lang}`) || tset.has(`direct_answer|any|${lang}`);
+      const hasDomainBlock = bset.has(`direct_answer.${domain}.${state}|${lang}`);
+      if (!hasTemplate && !hasDomainBlock) missing.push(`direct_answer:${state}:${lang}`);
     }
-    // practical guidance
+    // Next step: question-specific row or the domain action.
     if ((requirement.answer_sections || []).includes('practical_guidance')
-      && !tset.has(`practical_guidance|any|${lang}`)) {
-      missing.push(`template:practical_guidance:${lang}`);
+      && !tset.has(`practical_guidance|any|${lang}`)
+      && !bset.has(`action.${domain}|${lang}`)) {
+      missing.push(`practical_guidance:${lang}`);
     }
     // headline: question template OR complete shared per-state labels
     const hasHeadlineTpl = tset.has(`headline|any|${lang}`);
@@ -77,15 +111,20 @@ async function checkTemplateReadiness(question, requirement) {
     }
     // shared section bodies for this question's sections
     for (const sec of requirement.answer_sections || []) {
-      const groups = SECTION_BLOCK_GROUPS[sec];
+      const groups = groupsBySection[sec];
       if (!groups) continue;
       for (const group of groups) {
-        if (!group.every((k) => bset.has(`${k}|${lang}`))) missing.push(`shared:${sec}:${lang}`);
+        if (!group.some((k) => bset.has(`${k}|${lang}`))) missing.push(`shared:${sec}:${lang}`);
       }
     }
-    // disclaimer + insufficient-data blocks
-    const dKey = cfg.DISCLAIMER_BLOCK[question.disclaimer_type] || cfg.DISCLAIMER_BLOCK.general;
-    if (dKey && !bset.has(`${dKey}|${lang}`)) missing.push(`disclaimer:${question.disclaimer_type}:${lang}`);
+    // Confidence never ships without its reason, so those blocks are required too.
+    for (const key of ['confidence.high.default', 'confidence.medium.default', 'confidence.low.default']) {
+      if (!bset.has(`${key}|${lang}`)) missing.push(`confidence:${key}:${lang}`);
+    }
+    // disclaimer (domain-aware) + insufficient-data blocks
+    const dType = disclaimerTypeFor(domain, question.disclaimer_type);
+    const dKey = cfg.DISCLAIMER_BLOCK[dType] || cfg.DISCLAIMER_BLOCK.general;
+    if (dKey && !bset.has(`${dKey}|${lang}`)) missing.push(`disclaimer:${dType}:${lang}`);
     if (!bset.has(`insufficient_data|${lang}`)) missing.push(`shared:insufficient_data:${lang}`);
     // state + section labels
     for (const state of [...STATES, 'insufficient_data']) {

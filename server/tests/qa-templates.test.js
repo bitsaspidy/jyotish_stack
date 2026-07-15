@@ -15,6 +15,7 @@ const db = require('../src/config/db');
 const repo = require('../src/services/deterministic-qa/catalogue-repository');
 const { loadRequirement } = require('../src/services/deterministic-qa/requirement-loader');
 const readiness = require('../src/services/deterministic-qa/template-readiness');
+const { resolveDomain } = require('../src/services/deterministic-qa/domains');
 const qa = require('../src/services/deterministic-qa');
 
 const PILOTS = ['Q001', 'Q012', 'Q021', 'Q031', 'Q041', 'Q051', 'Q061', 'Q071', 'Q081', 'Q093'];
@@ -46,16 +47,30 @@ test('all 10 pilot questions pass template-readiness (en + hi, all states)', asy
   }
 });
 
-test('direct-answer templates cover every state in both languages for each pilot', async (t) => {
+test('direct answers cover every state in both languages for each pilot', async (t) => {
   if (!guard(t)) return;
+  // Coverage may now come from EITHER source: a question-specific template row
+  // (Q001 names your lagna; Q093 names a planet) or the question's domain family.
+  // The six favourability pilots and the two timing pilots intentionally lost
+  // their template rows — those shared one generic per-state phrase between eight
+  // unrelated life areas, which is exactly what the domain families replaced.
   for (const code of PILOTS) {
+    const q = await repo.getQuestionByCode(code);
+    const domain = resolveDomain(q);
     const rows = await db('answer_templates')
       .where({ question_code: code, section_key: 'direct_answer', active: true })
       .select('answer_state', 'lang');
-    const have = new Set(rows.map((r) => `${r.answer_state}|${r.lang}`));
+    const tmpl = new Set(rows.map((r) => `${r.answer_state}|${r.lang}`));
+    const blocks = await db('answer_shared_blocks')
+      .where({ active: true }).where('block_key', 'like', `direct_answer.${domain}.%`)
+      .select('block_key', 'lang');
+    const dom = new Set(blocks.map((b) => `${b.block_key}|${b.lang}`));
+
     for (const state of STATES6) {
       for (const lang of ['en', 'hi']) {
-        assert.ok(have.has(`${state}|${lang}`) || have.has(`any|${lang}`), `${code} direct_answer ${state} ${lang}`);
+        const covered = tmpl.has(`${state}|${lang}`) || tmpl.has(`any|${lang}`)
+          || dom.has(`direct_answer.${domain}.${state}|${lang}`);
+        assert.ok(covered, `${code} (${domain}) direct_answer ${state} ${lang}`);
       }
     }
   }

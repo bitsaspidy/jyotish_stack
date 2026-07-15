@@ -18,11 +18,9 @@ const STATUS_HI = {
   neutral: 'सामान्य', mixed: 'मिश्रित', challenging: 'चुनौतीपूर्ण', caution: 'सावधानी',
 };
 
-const ORDINAL_HI = (n) => `${n}वें`;
-function ordinalEn(n) {
-  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
-  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
-}
+// House ordinals deliberately do NOT live here. `${n}वें` is not Hindi, and the
+// classical names (प्रथम … द्वादश) are not derivable by suffixing a digit — see
+// house-label.js, the single place allowed to name a house.
 
 function planetName(name, lang) { return lang === 'hi' ? (PLANET_HI[name] || name) : name; }
 function statusWord(status, lang) { return lang === 'hi' ? (STATUS_HI[status] || status) : String(status || '').replace(/_/g, ' '); }
@@ -35,4 +33,4 @@ function joinList(items, lang) {
   return `${list.slice(0, -1).join(', ')} ${lang === 'hi' ? 'और' : 'and'} ${last}`;
 }
 
-module.exports = { PLANET_HI, STATUS_HI, planetName, statusWord, joinList, ordinalEn, ORDINAL_HI };
+module.exports = { PLANET_HI, STATUS_HI, planetName, statusWord, joinList };

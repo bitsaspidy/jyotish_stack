@@ -25,18 +25,40 @@ async function getActiveCategories() {
 }
 
 // ── Questions ────────────────────────────────────────────────────────────────
-const QUESTION_COLS = [
+const BASE_QUESTION_COLS = [
   'code', 'category_code', 'subcategory', 'question_en', 'question_hi',
   'short_title_en', 'short_title_hi', 'desc_en', 'desc_hi', 'display_order',
   'active', 'disclaimer_type', 'min_data_policy', 'fallback_block_key',
   'rule_version', 'template_version',
 ];
 
+// `domain` arrives in migration 050. Probe once rather than assume: a DB that has
+// not been migrated yet must still answer questions (domains.js derives the domain
+// from category/subcategory as a fallback), not fail on an unknown column.
+let domainColumnPromise = null;
+function hasDomainColumn() {
+  if (!domainColumnPromise) {
+    domainColumnPromise = db.schema.hasColumn('question_catalogue', 'domain').catch(() => false);
+  }
+  return domainColumnPromise;
+}
+
+async function questionCols() {
+  return (await hasDomainColumn()) ? [...BASE_QUESTION_COLS, 'domain'] : BASE_QUESTION_COLS;
+}
+
 async function getActiveQuestions() {
   return db('question_catalogue')
     .where({ active: true })
     .orderBy(['category_code', 'display_order'])
-    .select(QUESTION_COLS);
+    .select(await questionCols());
+}
+
+/** Every question regardless of `active` — admin catalogue / readiness view. */
+async function getAllQuestions() {
+  return db('question_catalogue')
+    .orderBy(['category_code', 'display_order'])
+    .select(await questionCols());
 }
 
 /** Active questions grouped by active category — for the suggestion catalogue UI. */
@@ -53,7 +75,7 @@ async function getActiveCatalogueGrouped() {
 /** A single question by stable code. Returns null for unknown / malformed codes. */
 async function getQuestionByCode(code) {
   if (!isValidCode(code)) return null;
-  return (await db('question_catalogue').where({ code }).select(QUESTION_COLS).first()) || null;
+  return (await db('question_catalogue').where({ code }).select(await questionCols()).first()) || null;
 }
 
 /** Only returns the question if it is ACTIVE (inactive questions are hidden). */
@@ -109,6 +131,7 @@ module.exports = {
   isValidCode,
   getActiveCategories,
   getActiveQuestions,
+  getAllQuestions,
   getActiveCatalogueGrouped,
   getQuestionByCode,
   getActiveQuestionByCode,

@@ -19,6 +19,9 @@ const { evaluateDatedTransits } = require('./dated-transit');
 const completeness = require('./completeness-evaluator');
 const { buildEvidence } = require('./evidence-builder');
 const { resolveState } = require('./state-engine');
+const { normalizeAnswerEvidence } = require('./evidence-normalizer');
+const { resolveQuestionVerdict } = require('./verdict-resolver');
+const { resolveDomain, disclaimerTypeFor } = require('./domains');
 const composer = require('./template-composer');
 const readiness = require('./template-readiness');
 const pilot = require('./pilot-rules');
@@ -64,7 +67,9 @@ async function insufficientAnswer(question, requirement, comp, versions, loaded,
     repo.getSharedBlock('label.state.insufficient_data', 'en'), repo.getSharedBlock('label.state.insufficient_data', 'hi'),
     repo.getSharedBlock('label.conf.low', 'en'), repo.getSharedBlock('label.conf.low', 'hi'),
   ]);
-  const disclaimers = await fetchDisclaimers(question.disclaimer_type);
+  // Even with too little data to answer, the disclaimer must match the life area —
+  // a health question that cannot be answered still needs the medical warning.
+  const disclaimers = await fetchDisclaimers(disclaimerTypeFor(resolveDomain(question), question.disclaimer_type));
   const answer = {
     state: 'insufficient_data',
     state_label: { en: sEn || 'not yet determinable', hi: sHi || 'अभी निर्धारित नहीं' },
@@ -156,28 +161,59 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
     suggestedConfidence: comp.suggested_confidence,
   });
 
-  // 8. pilot rule → evaluation facts + interpolation variables (no user text)
-  const rule = pilot.getRule(question.code);
-  const ruleFacts = rule ? rule({ question, requirement, loaded, strength, transit, evidence, state: decision.state, confidence: decision.confidence }) : null;
+  // 8. domain + verdict alignment. The state engine ranks nothing; this re-reads
+  //    its decision through the evidence hierarchy so the headline cannot end up
+  //    contradicting the evidence printed under it, and records WHY it stands.
+  const domain = resolveDomain(question);
+  const normalized = normalizeAnswerEvidence([
+    ...(evidence.natal.factors || []),
+    ...(evidence.dchart.factors || []),
+    ...(evidence.timing.factors || []),
+  ]);
+  const verdict = resolveQuestionVerdict({ decision, factors: normalized.factors, groups: evidence, domain });
 
-  // 9. disclaimers + limitations
+  // 9. pilot rule → evaluation facts + interpolation variables (no user text)
+  const rule = pilot.getRule(question.code);
+  const ruleFacts = rule ? rule({ question, requirement, loaded, strength, transit, evidence, state: verdict.state, confidence: verdict.confidence }) : null;
+
+  // 10. disclaimers + limitations. The disclaimer follows the DOMAIN: a property
+  //     answer needs the legal warning, not the financial one.
   const [disclaimers, limitations] = await Promise.all([
-    fetchDisclaimers(question.disclaimer_type),
+    fetchDisclaimers(disclaimerTypeFor(domain, question.disclaimer_type)),
     fetchLimitations(loaded.chartLoad.fallbacks),
   ]);
 
-  // 10. compose the human-readable answer from DB-backed templates
+  // 11. compose the human-readable answer from DB-backed templates
   const answer = await composer.compose({
     question, requirement, loaded, strength, transit,
-    evidence, state: decision.state, confidence: decision.confidence,
+    evidence, state: verdict.state, confidence: verdict.confidence,
+    verdict, normalized, domain, completeness: comp.data_completeness,
     ruleFacts, disclaimers, limitations,
   }, deps.db || null);
-  const templatesUsed = answer.meta ? answer.meta.templates_used : [];
+  const composerMeta = answer.meta || {};
   delete answer.meta;   // internal detail — belongs in the trace, not the user answer
 
   const ruleKeys = (ruleFacts && ruleFacts.rule_keys) || ['qa.state.v1'];
   const trace = buildTrace({ question, requirement, loaded, completeness: comp, evidence, decision, transit, versions, ruleKeys, durationMs: Date.now() - startedAt });
-  trace.templates_used = templatesUsed;
+  trace.templates_used = composerMeta.templates_used || [];
+
+  // Admin-only evidence view (Part 15). Everything here is inspectable by an admin
+  // and reaches a normal user through no path: the route attaches `trace` only for
+  // admin/superadmin, and `answer` carries none of it.
+  trace.domain = domain;
+  trace.verdict = {
+    state: verdict.state,
+    changed_from: verdict.changed_from,
+    changed: verdict.changed,
+    alignment: verdict.alignment,
+    primary_reason: verdict.primary_reason,
+    timing_gap: verdict.timing_gap,
+    notes: verdict.notes,
+  };
+  trace.primary_supports = verdict.supports.map((f) => ({ entity_id: f.entity_id, planet: f.planet, tier: f.tier, score: f.score, roles: f.roles }));
+  trace.primary_blockers = verdict.blockers.map((f) => ({ entity_id: f.entity_id, planet: f.planet, tier: f.tier, score: f.score, roles: f.roles }));
+  trace.evidence_normalization = composerMeta.evidence_normalization || null;
+  trace.confidence_reason_kind = composerMeta.confidence_reason_kind || null;
 
   return { ok: true, path: 'deterministic', answer, trace, audit: buildAudit(question, answer, comp, trace, decision) };
 }
@@ -215,19 +251,27 @@ async function getUserFacingCatalogue() {
  * (temporary computed readiness in lieu of a dedicated column).
  */
 async function getAdminCatalogue() {
+  // Read through the repository so `subcategory` and `domain` come along: readiness
+  // is domain-dependent, and a question whose domain silently defaulted to its
+  // category would be graded against the wrong content (Q051 is `children`, not
+  // `family`) and wrongly reported as not ready.
   const [cats, questions] = await Promise.all([
     repo.getActiveCategories(),
-    require('../../config/db')('question_catalogue').orderBy(['category_code', 'display_order']).select(
-      'code', 'category_code', 'question_en', 'question_hi', 'short_title_en', 'short_title_hi',
-      'active', 'disclaimer_type', 'rule_version', 'template_version',
-    ),
+    repo.getAllQuestions(),
   ]);
   const rows = [];
   for (const q of questions) {
     let requirement = null;
     try { requirement = await loadRequirement(q.code); } catch { /* surfaced as planned */ }
     const r = await readiness.readinessStatus(q, requirement);
-    rows.push({ ...q, readiness: r.status, has_rule: r.has_rule, templates_ready: r.templates_ready });
+    rows.push({
+      ...q,
+      domain: resolveDomain(q),
+      readiness: r.status,
+      has_rule: r.has_rule,
+      templates_ready: r.templates_ready,
+      missing: r.missing || undefined,
+    });
   }
   return { categories: cats, questions: rows };
 }

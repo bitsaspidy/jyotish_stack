@@ -26,33 +26,25 @@ const B = (block_key, type, en, hi) => [
 ];
 
 const SHARED_BLOCKS = [
-  // — kundli_indicates section bodies (condition-specific) —
-  ...B('sec.kundli_indicates.support_and_caution','section',
-    'In your birth chart, {{support_factors}} give the main support in this area, while {{caution_factor}} is comparatively weaker and needs conscious effort.',
-    'आपकी जन्म कुंडली में {{support_factors}} इस विषय में मुख्य सहारा देते हैं, जबकि {{caution_factor}} तुलनात्मक रूप से कमज़ोर है और सचेत प्रयास चाहता है।'),
-  ...B('sec.kundli_indicates.support_only','section',
-    'In your birth chart, {{support_factors}} give the main support in this area.',
-    'आपकी जन्म कुंडली में {{support_factors}} इस विषय में मुख्य सहारा देते हैं।'),
-  ...B('sec.kundli_indicates.caution_only','section',
-    'In your birth chart, the relevant factors are modest, and {{caution_factor}} in particular needs conscious effort.',
-    'आपकी जन्म कुंडली में संबंधित कारक सामान्य हैं, और विशेष रूप से {{caution_factor}} सचेत प्रयास चाहता है।'),
-  ...B('sec.kundli_indicates.neutral','section',
-    'In your birth chart, the factors relevant to this question are balanced — neither strongly supportive nor strongly adverse.',
-    'आपकी जन्म कुंडली में इस प्रश्न से जुड़े कारक संतुलित हैं — न अत्यधिक सहायक, न अत्यधिक प्रतिकूल।'),
-
-  // — divisional-chart section bodies —
-  ...B('sec.dchart.supports','section',
-    'The divisional chart view ({{dchart_support}}) reinforces this reading.',
-    'विभाजन चार्ट ({{dchart_support}}) इस विश्लेषण को पुष्ट करता है।'),
-  ...B('sec.dchart.contradicts','section',
-    'However, the divisional chart view ({{dchart_against}}) points the other way, so the picture is not one-sided.',
-    'किंतु विभाजन चार्ट ({{dchart_against}}) विपरीत संकेत देता है, इसलिए स्थिति एकतरफ़ा नहीं है।'),
-  ...B('sec.dchart.mixed_signals','section',
-    'The divisional charts give mixed signals here: {{dchart_support}} supports the reading while {{dchart_against}} points the other way — treat the conclusion as balanced rather than one-sided.',
-    'विभाजन चार्ट यहाँ मिश्रित संकेत देते हैं: {{dchart_support}} विश्लेषण का समर्थन करता है जबकि {{dchart_against}} विपरीत दिशा दिखाता है — निष्कर्ष को एकतरफ़ा नहीं, संतुलित मानें।'),
-  ...B('sec.dchart.agrees','section',
-    'The relevant divisional chart broadly agrees with the birth chart.',
-    'संबंधित विभाजन चार्ट मोटे तौर पर जन्म कुंडली से सहमत है।'),
+  // REMOVED (humanization upgrade), and deactivated in the DB by seed 037:
+  //
+  //   sec.kundli_indicates.*  — listed factor LABELS ("11th-lord Mars and Mars"),
+  //     which both duplicated the entity and told the reader nothing about what
+  //     the planet does in their life area. Replaced by per-factor rendering:
+  //     merged roles + `meaning.<planet>.<domain>` + a polarity frame.
+  //
+  //   sec.dchart.*  — "विभाजन चार्ट (D10) इस विश्लेषण को पुष्ट करता है।" A chart
+  //     name plus a status word is not a perspective. Replaced by
+  //     `varga.<chart>.<domain>.<polarity>`, which states what the chart actually
+  //     contributes.
+  //
+  //   sec.positive.factors / sec.caution.* — one caution sentence for finance,
+  //     health, property and marriage alike, and the source of "वास्तविक ध्यान
+  //     रखें" and "अपरिवर्तनीय निर्णय". Replaced by `caution.<domain>`.
+  //
+  //   sec.timing_outlook.* / frag.window_line* / frag.no_window_line /
+  //   frag.dasha_line — a single sentence about the current window. Replaced by
+  //     the timing framework (`timing.<domain>.<phase>`).
 
   // — dasha section bodies —
   ...B('sec.dasha.maha_antar','section',
@@ -70,47 +62,15 @@ const SHARED_BLOCKS = [
     '{{planet}} in {{sign}} ({{classification}}{{until}})',
     '{{planet}} {{sign}} में ({{classification}}{{until}})'),
   ...B('frag.transit_until','fragment', ', until ~{{date}}', ', ~{{date}} तक'),
-  ...B('frag.window_line','fragment',
-    ' A relatively supportive window runs while {{planet}} transits {{sign}} (roughly until {{date}}).',
-    ' {{planet}} के {{sign}} में गोचर के दौरान अपेक्षाकृत अनुकूल अवधि रहती है (लगभग {{date}} तक)।'),
-  ...B('frag.window_line_open','fragment',
-    ' A relatively supportive window runs while {{planet}} transits {{sign}}.',
-    ' {{planet}} के {{sign}} में गोचर के दौरान अपेक्षाकृत अनुकूल अवधि रहती है।'),
-  ...B('frag.no_window_line','fragment',
-    ' No strongly supportive slow-planet window stands out in the near term, so favour steady preparation over forcing timing.',
-    ' निकट भविष्य में कोई प्रबल अनुकूल धीमे-ग्रह अवधि प्रमुख नहीं दिखती, इसलिए समय पर ज़ोर देने के बजाय स्थिर तैयारी करें।'),
-  ...B('frag.dasha_line','fragment',
-    ' Your running {{maha_lord}} period sets the background tone.',
-    ' आपकी वर्तमान {{maha_lord}} दशा पृष्ठभूमि का स्वर तय करती है।'),
   ...B('frag.role_maha','fragment',
     ' (also your running Mahadasha lord)', ' (जो आपकी वर्तमान महादशा स्वामी भी है)'),
   ...B('frag.role_antar','fragment',
     ' (your running Antardasha lord)', ' (आपकी वर्तमान अंतर्दशा स्वामी)'),
 
-  // — positive / caution section bodies —
-  ...B('sec.positive.factors','section',
-    'Your strongest support comes from {{positive_factors}}. Building deliberately on this raises the odds in your favour.',
-    'आपका सबसे बड़ा सहारा {{positive_factors}} से आता है। इस पर सोच-समझकर निर्माण करने से संभावना आपके पक्ष में बढ़ती है।'),
+  // — positive fallback (used only when no factor has a seeded meaning) —
   ...B('sec.positive.no_factors','section',
     'No single factor stands out strongly, but a steady, workable base is present — deliberate, consistent effort builds on it.',
     'कोई एक कारक विशेष रूप से प्रबल नहीं है, फिर भी एक स्थिर, उपयोगी आधार मौजूद है — नियोजित और निरंतर प्रयास इसे बढ़ाता है।'),
-  ...B('sec.caution.factors','section',
-    'Keep a realistic watch on {{caution_factors}}; avoid rushed, irreversible commitments in this area.',
-    '{{caution_factors}} पर वास्तविक ध्यान रखें; इस क्षेत्र में जल्दबाज़ी में अपरिवर्तनीय निर्णय न लें।'),
-  ...B('sec.caution.no_factors','section',
-    'No single factor is strongly adverse; the main caution is simply to avoid over-confidence and verify facts before big steps.',
-    'कोई एक कारक अत्यधिक प्रतिकूल नहीं है; मुख्य सावधानी यही है कि अति-आत्मविश्वास से बचें और बड़े कदम से पहले तथ्य जाँचें।'),
-
-  // — timing outlook section bodies —
-  ...B('sec.timing_outlook.supportive','section',
-    'The current slow-planet window is broadly supportive — a reasonable period to prepare and act deliberately.',
-    'वर्तमान धीमे-ग्रह अवधि मोटे तौर पर सहायक है — तैयारी और सोच-समझकर कार्य के लिए उपयुक्त समय।'),
-  ...B('sec.timing_outlook.mixed','section',
-    'The current window is mixed — progress is realistic through steady preparation and follow-up.',
-    'वर्तमान अवधि मिश्रित है — निरंतर तैयारी और अनुवर्तन से प्रगति संभव है।'),
-  ...B('sec.timing_outlook.caution','section',
-    'The current slow-planet window asks for patience — use it to prepare rather than to force outcomes.',
-    'वर्तमान धीमे-ग्रह अवधि धैर्य मांगती है — परिणाम पर ज़ोर देने के बजाय तैयारी में इसका उपयोग करें।'),
 
   // — challenging-state review note (appended after caution for both caution states) —
   ...B('note.challenging_review','note',
@@ -159,27 +119,19 @@ const SHARED_BLOCKS = [
   ...B('label.headline.highly_challenging','label','This area asks for extra care','इस क्षेत्र में अधिक सावधानी चाहिए'),
 ];
 
-// ── Per-state assessment phrases (reused inside direct answers) ───────────────
-const STATE_PHRASE = {
-  highly_favourable: [
-    'the indications are strongly supportive',
-    'संकेत प्रबल रूप से अनुकूल हैं'],
-  favourable: [
-    'the indications are favourable',
-    'संकेत अनुकूल हैं'],
-  moderately_favourable: [
-    'the indications are moderately favourable — workable with steady effort',
-    'संकेत सामान्यतः अनुकूल हैं — निरंतर प्रयास से साध्य'],
-  mixed: [
-    'the indications are mixed — the possibility is present, but preparation and timing matter more than a quick yes or no',
-    'संकेत मिश्रित हैं — संभावना मौजूद है, लेकिन जल्दी हाँ या ना से अधिक तैयारी और समय महत्वपूर्ण हैं'],
-  challenging: [
-    'the indications call for careful effort — strengthen preparation instead of forcing an immediate result',
-    'संकेत सतर्क प्रयास मांगते हैं — तुरंत परिणाम पर ज़ोर देने के बजाय तैयारी मजबूत करें'],
-  highly_challenging: [
-    'this area asks for extra care right now — move gradually, protect what you can control, and avoid irreversible steps',
-    'यह क्षेत्र अभी अधिक सावधानी मांगता है — धीरे-धीरे बढ़ें, जो नियंत्रण में है उसे संभालें, और अपरिवर्तनीय कदम न उठाएँ'],
-};
+// REMOVED (humanization upgrade): STATE_PHRASE.
+//
+// One per-state phrase was spliced into the direct answer of eight unrelated
+// questions — career, business, money, children, education, health, marriage and
+// property all opened with the same sentence, differing only by a topic noun. It
+// is the single largest source of the "template with planet names substituted"
+// feel, and its `mixed` entry is where "जल्दी हाँ या ना" came from.
+//
+// Direct answers for those questions now resolve to `direct_answer.<domain>.<state>`
+// in answer_shared_blocks (seed 037), so each life area states its own claim.
+// Q001 and Q093 keep question-specific direct answers below because theirs are
+// genuinely specific — they name your lagna, Moon sign and dominant planet — not
+// a generic phrase wearing a topic.
 
 // Q001-specific self-signifier readings per state.
 const Q001_STATE = {
@@ -201,15 +153,12 @@ const Q093_STATE = {
   highly_challenging:['The wider period asks for extra care, so treat this planet as your steadying anchor rather than a green light.','व्यापक समय अधिक सावधानी मांगता है, इसलिए इस ग्रह को हरी झंडी नहीं, बल्कि स्थिरता का सहारा मानें।'],
 };
 
-// Favourability-question topics (direct answers embed these).
-const TOPIC = {
-  Q012: ['the choice between a job and your own business','नौकरी और व्यवसाय के चुनाव'],
-  Q021: ['running your own business','व्यवसाय करने'],
-  Q031: ['wealth prospects','धन प्राप्ति के योग'],
-  Q051: ['the prospects of having children','संतान प्राप्ति के योग'],
-  Q061: ['the most suitable field of education','उपयुक्त शिक्षा क्षेत्र'],
-  Q071: ['your general health tendencies','आपकी सामान्य स्वास्थ्य प्रवृत्तियों'],
-};
+// REMOVED (humanization upgrade): TOPIC.
+//
+// These nouns were the ONLY thing distinguishing six direct answers from one
+// another — "On wealth prospects, {phrase}" vs "On your general health tendencies,
+// {phrase}". Swapping a noun is not domain-specific language. Each of those six
+// questions now draws its answer from its own domain family.
 
 // Practical guidance per question (en, hi).
 const PRACTICAL = {
@@ -241,11 +190,23 @@ const T = (question_code, section_key, answer_state, lang, text, condition_key =
   block_text: text, display_order: 0, template_version: 1, active: true,
 });
 
+/**
+ * Question-specific direct answers.
+ *
+ * ONLY the two questions whose answer genuinely cannot be expressed at domain
+ * level keep a row here: Q001 names your ascendant, Moon sign and dominant planet,
+ * and Q093 names the planet itself. Everything a template row cannot personalise
+ * beyond a topic noun now lives in its domain family instead — the composer falls
+ * through to `direct_answer.<domain>.<state>` when no question row exists.
+ *
+ * Q041 (marriage timing) and Q081 (house timing) deliberately lost their rows: the
+ * window/dasha lines they spliced inline are now the job of the timing framework,
+ * which gives a real outlook (current phase → caution window → supportive window →
+ * triggers) instead of one sentence with a date stapled to it.
+ */
 function directAnswerRows() {
   const rows = [];
   for (const state of STATES) {
-    const [phraseEn, phraseHi] = STATE_PHRASE[state];
-
     // Q001 — descriptive personality answer
     rows.push(T('Q001','direct_answer',state,'en',
       `Your personality is shaped by your {{lagna_sign}} ascendant (ruled by {{lagna_lord}}) and a {{moon_sign}} Moon guiding your emotional mind, with {{dominant_planet}} as the dominant influence on how you come across. ${Q001_STATE[state][0]}`));
@@ -257,24 +218,6 @@ function directAnswerRows() {
       `Right now, {{planet}}{{active_role}} is the most favourable planet for you. Aligning important efforts with its significations, days and remedies gives the best current support. ${Q093_STATE[state][0]}`));
     rows.push(T('Q093','direct_answer',state,'hi',
       `इस समय {{planet}}{{active_role}} आपके लिए सबसे अनुकूल ग्रह है। महत्वपूर्ण प्रयासों को इसकी विशेषताओं, दिनों और उपायों से जोड़ना वर्तमान में सबसे अच्छा सहारा देता है। ${Q093_STATE[state][1]}`));
-
-    // Q041 / Q081 — timing answers
-    rows.push(T('Q041','direct_answer',state,'en',
-      `On the timing of marriage, ${phraseEn}.{{window_line}}{{dasha_line}} This is guidance on likely periods, not a guaranteed event date.`));
-    rows.push(T('Q041','direct_answer',state,'hi',
-      `विवाह के समय पर, ${phraseHi}।{{window_line}}{{dasha_line}} यह संभावित अवधियों का मार्गदर्शन है, निश्चित घटना-तिथि नहीं।`));
-    rows.push(T('Q081','direct_answer',state,'en',
-      `On the timing of buying a house, ${phraseEn}.{{window_line}}{{dasha_line}} This is guidance on likely periods, not a guaranteed event date.`));
-    rows.push(T('Q081','direct_answer',state,'hi',
-      `मकान खरीदने के समय पर, ${phraseHi}।{{window_line}}{{dasha_line}} यह संभावित अवधियों का मार्गदर्शन है, निश्चित घटना-तिथि नहीं।`));
-
-    // Six favourability questions
-    for (const [code, [topicEn, topicHi]] of Object.entries(TOPIC)) {
-      rows.push(T(code,'direct_answer',state,'en',
-        `On ${topicEn}, ${phraseEn}. This is a tendency to work with, not a fixed verdict.`));
-      rows.push(T(code,'direct_answer',state,'hi',
-        `${topicHi} के संबंध में, ${phraseHi}। यह प्रवृत्ति है, निश्चित निर्णय नहीं।`));
-    }
   }
   return rows;
 }
@@ -307,4 +250,4 @@ function buildTemplates() {
   return [...directAnswerRows(), ...headlineRows(), ...practicalRows()];
 }
 
-module.exports = { PILOT_CODES, STATES, SHARED_BLOCKS, buildTemplates, TOPIC, PRACTICAL };
+module.exports = { PILOT_CODES, STATES, SHARED_BLOCKS, buildTemplates, PRACTICAL };

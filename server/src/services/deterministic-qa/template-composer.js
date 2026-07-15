@@ -1,19 +1,36 @@
 'use strict';
 /**
- * Template composer (Stage 1) — DB-backed answer assembly.
+ * Template composer — DB-backed answer assembly, domain-aware.
  *
- * Replaces the code-generated paragraphs of the old answer-composer: code now
- * only evaluates evidence, derives condition keys, LOADS approved templates
- * from answer_templates (question-specific) and answer_shared_blocks (shared
- * section bodies / fragments / labels), interpolates {{placeholders}} and
- * assembles the structured sections. No user-facing paragraph text is generated
- * in code — only the minimal EMERGENCY fallback below, used when a template row
- * is unexpectedly missing at runtime (template readiness gating should prevent
- * that from ever happening for exposed questions).
+ * Code evaluates evidence, resolves KEYS, and interpolates {{placeholders}}. Every
+ * user-facing sentence is loaded from answer_templates (question-specific) or
+ * answer_shared_blocks (shared sections / fragments / labels). The only text in
+ * this file is the emergency fallback below, used when a row is unexpectedly
+ * missing at runtime (readiness gating should stop that reaching an exposed
+ * question).
+ *
+ * What changed with the humanization upgrade:
+ *  • Sections are composed per DOMAIN, not per state alone. `mixed` finance and
+ *    `mixed` health resolve to different blocks because they are different claims.
+ *  • Evidence is normalized before rendering, so an entity appears once and its
+ *    roles are stated together instead of duplicated.
+ *  • A planet is rendered through its meaning IN THIS LIFE AREA — never as a bare
+ *    name with a status word attached.
+ *  • Divisional charts must contribute something, or they are omitted rather than
+ *    padded with "confirms this analysis".
+ *  • Confidence ships with the reason it holds.
+ *  • Timing questions take the timing path (phases), not a transit dump.
  */
 
 const defaultDb = require('../../config/db');
-const { planetName, statusWord, joinList } = require('./vocab');
+const { planetName, joinList } = require('./vocab');
+const { houseLordLabel } = require('./house-label');
+const { resolveDomain, disclaimerTypeFor } = require('./domains');
+const { normalizeAnswerEvidence } = require('./evidence-normalizer');
+const { describeFactor, roleKeyOf } = require('./planet-meaning');
+const { composeVargaMeaning } = require('./varga-meaning');
+const { composeConfidenceReason } = require('./confidence-reason');
+const { composeTimingOutlook } = require('./timing-outlook');
 
 // Minimal emergency fallback (owner-approved to remain in code).
 const EMERGENCY = {
@@ -58,43 +75,60 @@ function interpolate(text, vars) {
   return String(text || '').replace(/\{\{(\w+)\}\}/g, (_, name) => (vars[name] != null ? String(vars[name]) : ''));
 }
 
-// ── Condition + variable derivation (evaluation only, no user text) ───────────
+/**
+ * Key-chain resolver handed to the sub-composers: first key that exists wins.
+ * Returning null (rather than a placeholder) is deliberate — a section with
+ * nothing true to say is omitted, never padded.
+ */
+function makeResolver(set, used) {
+  return (keys, lang, vars = {}) => {
+    for (const key of keys || []) {
+      const text = block(set, key, lang);
+      if (text != null) {
+        if (used) used.push({ key, lang });
+        return interpolate(text, vars);
+      }
+    }
+    return null;
+  };
+}
+
+// ── Factor rendering ─────────────────────────────────────────────────────────
+/**
+ * Render one merged factor as a sentence: role(s) + meaning-in-this-domain +
+ * polarity frame. This is where "Venus is weak" becomes something actionable, and
+ * where a planet holding two roles is stated once, with both roles named.
+ */
+function renderFactor(factor, { domain, set, lang, resolve }) {
+  if (!factor.planet) return null;
+  const desc = describeFactor(factor, domain);
+  const theme = resolve(desc.meaning_keys, lang);
+  if (!theme) return null;                      // no meaning seeded → say nothing
+
+  // Resolve each role's key directly. Indexing into desc.role_keys would be wrong:
+  // that list is filtered, so an unmappable role would silently shift every
+  // subsequent role onto the wrong label.
+  const roleTexts = (factor.roles || []).map((role) => {
+    const key = roleKeyOf(role);
+    if (!key) return null;
+    const houseVar = role.kind === 'house_lord' ? houseLordLabel(role.house, lang) : '';
+    return resolve([key], lang, { house: houseVar });
+  }).filter(Boolean);
+
+  const frame = resolve([desc.frame_key], lang, {
+    planet: planetName(factor.planet, lang),
+    theme,
+    roles: joinList(roleTexts, lang),
+  });
+  return frame || null;
+}
+
+function renderFactorList(factors, ctx) {
+  return (factors || []).map((f) => renderFactor(f, ctx)).filter(Boolean);
+}
+
+// ── Legacy variable derivation (dasha / transit sections keep their shape) ────
 function layerLabel(layer, lang) { return lang === 'hi' ? (layer.label_hi || layer.label) : layer.label; }
-function topLayers(layers, n, dir) {
-  const sorted = [...(layers || [])].sort((a, b) => (dir === 'pos' ? b.score - a.score : a.score - b.score));
-  return sorted.slice(0, n);
-}
-
-function kundliCondition(evidence, lang) {
-  const pos = topLayers(evidence.natal.layers, 2, 'pos').filter((l) => l.score > 0);
-  const neg = topLayers(evidence.natal.layers, 1, 'neg').filter((l) => l.score < 0);
-  const condition = pos.length && neg.length ? 'support_and_caution'
-    : pos.length ? 'support_only'
-    : neg.length ? 'caution_only' : 'neutral';
-  return {
-    condition,
-    vars: {
-      support_factors: joinList(pos.map((l) => layerLabel(l, lang)), lang),
-      caution_factor: neg.map((l) => layerLabel(l, lang)).join(', '),
-    },
-  };
-}
-
-function dchartCondition(evidence, lang) {
-  const layers = evidence.dchart.layers.filter((l) => !l.key.endsWith(':d1'));
-  const support = layers.filter((l) => l.score > 10);
-  const against = layers.filter((l) => l.score < -10);
-  const condition = support.length && against.length ? 'mixed_signals'
-    : support.length ? 'supports'
-    : against.length ? 'contradicts' : 'agrees';
-  return {
-    condition,
-    vars: {
-      dchart_support: joinList(support.map((l) => layerLabel(l, lang)), lang),
-      dchart_against: joinList(against.map((l) => layerLabel(l, lang)), lang),
-    },
-  };
-}
 
 function transitLines(set, transit, lang) {
   if (!transit || !transit.available) return '';
@@ -102,62 +136,33 @@ function transitLines(set, transit, lang) {
   const scope = rel.length ? rel : transit.transits;
   const pattern = block(set, 'frag.transit_line', lang) || '';
   const untilPattern = block(set, 'frag.transit_until', lang) || '';
-  const sep = lang === 'hi' ? '; ' : '; ';
   return scope.map((t) => interpolate(pattern, {
     planet: planetName(t.planet, lang),
     sign: lang === 'hi' ? t.transit_sign_hi : t.transit_sign_en,
-    classification: block(set, `label.class.${t.classification}`, lang) || statusWord(t.classification, lang),
+    classification: block(set, `label.class.${t.classification}`, lang) || t.classification,
     until: t.transit_end ? interpolate(untilPattern, { date: t.transit_end }) : '',
-  })).join(sep);
-}
-
-function windowLine(set, ruleVars, lang) {
-  const win = ruleVars && ruleVars.timing_window;
-  if (!win) return block(set, 'frag.no_window_line', lang) || '';
-  const key = win.transit_end ? 'frag.window_line' : 'frag.window_line_open';
-  return interpolate(block(set, key, lang) || '', {
-    planet: planetName(win.planet, lang),
-    sign: lang === 'hi' ? win.transit_sign_hi : win.transit_sign_en,
-    date: win.transit_end || '',
-  });
+  })).join('; ');
 }
 
 function buildVars({ ctx, set, lang }) {
   const chart = ctx.loaded.chart;
   const dasha = ctx.loaded.selected.dasha.available;
   const rv = (ctx.ruleFacts && ctx.ruleFacts.vars) || {};
-  const kundli = kundliCondition(ctx.evidence, lang);
-  const dchart = dchartCondition(ctx.evidence, lang);
-  const allLayers = [...ctx.evidence.natal.layers, ...ctx.evidence.dchart.layers, ...ctx.evidence.timing.layers];
-  const posAll = topLayers(allLayers, 2, 'pos').filter((l) => l.score > 0);
-  const negAll = topLayers([...ctx.evidence.natal.layers, ...ctx.evidence.timing.layers], 1, 'neg').filter((l) => l.score < 0);
-
   const roleKey = rv.active_role === 'maha' ? 'frag.role_maha' : rv.active_role === 'antar' ? 'frag.role_antar' : null;
 
   return {
-    conditions: { kundli_indicates: kundli.condition, dchart_indication: dchart.condition },
-    vars: {
-      ...kundli.vars,
-      ...dchart.vars,
-      positive_factors: joinList(posAll.map((l) => layerLabel(l, lang)), lang),
-      caution_factors: negAll.map((l) => layerLabel(l, lang)).join(', '),
-      maha_lord: dasha.maha ? planetName(dasha.maha.lord, lang) : '',
-      antar_lord: dasha.antar ? planetName(dasha.antar.lord, lang) : '',
-      lagna_sign: lang === 'hi' ? (chart.ascendant.rashi_hi || chart.ascendant.rashi_en) : chart.ascendant.rashi_en,
-      lagna_lord: planetName(chart.ascendant.rashi_lord, lang),
-      moon_sign: chart.planets.Moon ? (lang === 'hi' ? chart.planets.Moon.rashi_hi : chart.planets.Moon.rashi_en) : '',
-      dominant_planet: rv.dominant_planet ? planetName(rv.dominant_planet, lang) : '',
-      planet: rv.planet ? planetName(rv.planet, lang) : '',
-      active_role: roleKey ? (block(set, roleKey, lang) || '') : '',
-      transit_lines: transitLines(set, ctx.transit, lang),
-      window_line: ctx.requirement.needs_dated_transit ? windowLine(set, rv, lang) : '',
-      dasha_line: dasha.maha && ctx.requirement.needs_dated_transit
-        ? interpolate(block(set, 'frag.dasha_line', lang) || '', { maha_lord: planetName(dasha.maha.lord, lang) }) : '',
-    },
+    maha_lord: dasha.maha ? planetName(dasha.maha.lord, lang) : '',
+    antar_lord: dasha.antar ? planetName(dasha.antar.lord, lang) : '',
+    lagna_sign: lang === 'hi' ? (chart.ascendant.rashi_hi || chart.ascendant.rashi_en) : chart.ascendant.rashi_en,
+    lagna_lord: planetName(chart.ascendant.rashi_lord, lang),
+    moon_sign: chart.planets.Moon ? (lang === 'hi' ? chart.planets.Moon.rashi_hi : chart.planets.Moon.rashi_en) : '',
+    dominant_planet: rv.dominant_planet ? planetName(rv.dominant_planet, lang) : '',
+    planet: rv.planet ? planetName(rv.planet, lang) : '',
+    active_role: roleKey ? (block(set, roleKey, lang) || '') : '',
+    transit_lines: transitLines(set, ctx.transit, lang),
   };
 }
 
-// ── Section assembly ─────────────────────────────────────────────────────────
 function sectionTitle(set, key) {
   return {
     title_en: block(set, `label.sec.${key}`, 'en') || key.replace(/_/g, ' '),
@@ -165,128 +170,154 @@ function sectionTitle(set, key) {
   };
 }
 
-function renderTemplateSection({ set, key, state, condition, varsByLang, used }) {
-  const out = {};
-  for (const lang of ['en', 'hi']) {
-    const t = pickTemplate(set, key, state, lang, condition);
-    if (!t) return null;
-    out[`text_${lang}`] = interpolate(t.block_text, varsByLang[lang].vars);
-    used.push({ section: key, source: 'template', state: t.answer_state, condition: t.condition_key, lang, version: t.template_version });
-  }
-  return { key, ...sectionTitle(set, key), ...out };
-}
-
-function renderSharedSection({ set, key, blockKeyByLang, varsByLang, used }) {
-  const out = {};
-  for (const lang of ['en', 'hi']) {
-    const blockKey = typeof blockKeyByLang === 'string' ? blockKeyByLang : blockKeyByLang[lang];
-    const text = block(set, blockKey, lang);
-    if (text == null) return null;
-    out[`text_${lang}`] = interpolate(text, varsByLang[lang].vars);
-    used.push({ section: key, source: 'shared', key: blockKey, lang });
-  }
-  return { key, ...sectionTitle(set, key), ...out };
+function bilingual(key, set, fn) {
+  const en = fn('en');
+  const hi = fn('hi');
+  if (en == null || hi == null) return null;    // never ship a half-translated section
+  return { key, ...sectionTitle(set, key), text_en: en, text_hi: hi };
 }
 
 /**
  * Compose the bilingual sectioned answer from DB templates.
  * ctx: { question, requirement, loaded, evidence, transit, state, confidence,
- *        ruleFacts, disclaimers, limitations }
- * @returns { state, state_label, confidence, headline, sections, limitations, meta }
+ *        verdict, normalized, domain, ruleFacts, disclaimers, limitations }
  */
 async function compose(ctx, dbOverride = null) {
   const set = await loadTemplateSet(ctx.question.code, dbOverride);
   const used = [];
-  const varsByLang = {
-    en: buildVars({ ctx, set, lang: 'en' }),
-    hi: buildVars({ ctx, set, lang: 'hi' }),
-  };
+  const resolve = makeResolver(set, used);
+  const domain = ctx.domain || resolveDomain(ctx.question);
   const state = ctx.state;
+
+  const norm = ctx.normalized || normalizeAnswerEvidence([
+    ...(ctx.evidence.natal.factors || []),
+    ...(ctx.evidence.dchart.factors || []),
+    ...(ctx.evidence.timing.factors || []),
+  ]);
+  const groupDuplicates = ['natal', 'dchart', 'timing'].reduce((sum, g) => {
+    const grp = ctx.evidence[g];
+    return sum + (grp && grp.normalized ? grp.normalized.dropped_duplicates : 0);
+  }, 0);
+
+  const varsByLang = { en: buildVars({ ctx, set, lang: 'en' }), hi: buildVars({ ctx, set, lang: 'hi' }) };
+  const factorCtx = (lang) => ({ domain, set, lang, resolve });
   const sections = [];
 
-  // headline: question-specific template row, else shared per-state label
-  let headline = null;
-  const hTpl = pickTemplate(set, 'headline', state, 'en') && pickTemplate(set, 'headline', state, 'hi');
-  if (hTpl) {
-    headline = {
-      en: interpolate(pickTemplate(set, 'headline', state, 'en').block_text, varsByLang.en.vars),
-      hi: interpolate(pickTemplate(set, 'headline', state, 'hi').block_text, varsByLang.hi.vars),
-    };
-    used.push({ section: 'headline', source: 'template' });
-  } else {
-    headline = {
-      en: block(set, `label.headline.${state}`, 'en') || '',
-      hi: block(set, `label.headline.${state}`, 'hi') || '',
-    };
-    used.push({ section: 'headline', source: 'shared', key: `label.headline.${state}` });
-  }
+  // Record a question-specific template hit, so provenance covers BOTH sources —
+  // question templates and shared blocks. Admin needs the full picture of which
+  // rows produced an answer; a half-recorded trace is not auditable.
+  const useTemplate = (section, t, lang) => {
+    if (!t) return null;
+    used.push({ section, source: 'template', state: t.answer_state, condition: t.condition_key, lang, version: t.template_version });
+    return t;
+  };
+
+  // headline — question-specific row, else the shared per-state label
+  const hEn = useTemplate('headline', pickTemplate(set, 'headline', state, 'en'), 'en');
+  const hHi = useTemplate('headline', pickTemplate(set, 'headline', state, 'hi'), 'hi');
+  const headline = (hEn && hHi)
+    ? { en: interpolate(hEn.block_text, varsByLang.en), hi: interpolate(hHi.block_text, varsByLang.hi) }
+    : { en: block(set, `label.headline.${state}`, 'en') || '', hi: block(set, `label.headline.${state}`, 'hi') || '' };
 
   for (const key of ctx.requirement.answer_sections || []) {
     let section = null;
     switch (key) {
-      case 'direct_answer':
-        section = renderTemplateSection({ set, key, state, condition: 'default', varsByLang, used });
+      // ── Direct answer — question-specific text if this question genuinely has
+      //    its own (Q001 names your lagna; Q093 names a planet). Otherwise the
+      //    DOMAIN answer for this state: finance-mixed and health-mixed are
+      //    different sentences, which is the whole point.
+      case 'direct_answer': {
+        section = bilingual(key, set, (lang) => {
+          const t = useTemplate('direct_answer', pickTemplate(set, 'direct_answer', state, lang), lang);
+          if (t) return interpolate(t.block_text, varsByLang[lang]);
+          return resolve([`direct_answer.${domain}.${state}`, `direct_answer.general.${state}`], lang, varsByLang[lang]);
+        });
         if (!section) section = { key, ...sectionTitle(set, key), text_en: EMERGENCY.en, text_hi: EMERGENCY.hi };
         break;
-      case 'kundli_indicates':
-        section = renderSharedSection({
-          set, key,
-          blockKeyByLang: {
-            en: `sec.kundli_indicates.${varsByLang.en.conditions.kundli_indicates}`,
-            hi: `sec.kundli_indicates.${varsByLang.hi.conditions.kundli_indicates}`,
-          },
-          varsByLang, used,
-        });
-        break;
-      case 'dchart_indication': {
-        const cond = varsByLang.en.conditions.dchart_indication;
-        // suppress the section entirely when there is no divisional signal at all
-        if (cond === 'agrees' && !ctx.evidence.dchart.layers.some((l) => !l.key.endsWith(':d1'))) break;
-        section = renderSharedSection({
-          set, key,
-          blockKeyByLang: { en: `sec.dchart.${cond}`, hi: `sec.dchart.${varsByLang.hi.conditions.dchart_indication}` },
-          varsByLang, used,
+      }
+
+      // ── What the chart indicates — merged factors, each rendered through its
+      //    meaning in this life area.
+      case 'kundli_indicates': {
+        section = bilingual(key, set, (lang) => {
+          const parts = [
+            ...renderFactorList(norm.supports, factorCtx(lang)),
+            ...renderFactorList(norm.blockers, factorCtx(lang)),
+          ];
+          return parts.length ? parts.join(' ') : null;
         });
         break;
       }
+
+      // ── Divisional charts — only when they contribute something.
+      case 'dchart_indication': {
+        section = bilingual(key, set, (lang) => {
+          const v = composeVargaMeaning({ state, domain, factors: norm.factors, lang, resolve });
+          return v ? v.text : null;
+        });
+        break;
+      }
+
       case 'dasha_influence': {
         const d = ctx.loaded.selected.dasha.available;
         if (!d.maha) break;
-        section = renderSharedSection({
-          set, key, blockKeyByLang: d.antar ? 'sec.dasha.maha_antar' : 'sec.dasha.maha_only', varsByLang, used,
+        const bk = d.antar ? 'sec.dasha.maha_antar' : 'sec.dasha.maha_only';
+        section = bilingual(key, set, (lang) => resolve([bk], lang, varsByLang[lang]));
+        break;
+      }
+
+      case 'transit_influence': {
+        if (!ctx.transit || !ctx.transit.available) break;
+        section = bilingual(key, set, (lang) => resolve(['sec.transit.default'], lang, varsByLang[lang]));
+        break;
+      }
+
+      case 'positive': {
+        section = bilingual(key, set, (lang) => {
+          const parts = renderFactorList(norm.supports.slice(0, 2), factorCtx(lang));
+          if (parts.length) return parts.join(' ');
+          return resolve(['sec.positive.no_factors'], lang, varsByLang[lang]);
         });
         break;
       }
-      case 'transit_influence':
-        if (!ctx.transit || !ctx.transit.available) break;
-        section = renderSharedSection({ set, key, blockKeyByLang: 'sec.transit.default', varsByLang, used });
+
+      // ── Caution — per life area. A property caution talks about title and loan
+      //    terms; a health caution talks about symptoms and doctors. One shared
+      //    caution sentence for both is what we are removing.
+      case 'caution': {
+        section = bilingual(key, set, (lang) => resolve([`caution.${domain}`, 'caution.general'], lang, varsByLang[lang]));
         break;
-      case 'positive':
-        section = renderSharedSection({
-          set, key,
-          blockKeyByLang: varsByLang.en.vars.positive_factors ? 'sec.positive.factors' : 'sec.positive.no_factors',
-          varsByLang, used,
+      }
+
+      // ── Timing — phases, windows and triggers, not a list of transit dates.
+      case 'timing_outlook': {
+        if (!ctx.transit || !ctx.transit.available) break;
+        section = bilingual(key, set, (lang) => {
+          const t = composeTimingOutlook({
+            transit: ctx.transit,
+            dasha: ctx.loaded.selected.dasha.available,
+            verdict: ctx.verdict,
+            domain, lang, resolve,
+          });
+          return t ? t.text : null;
         });
         break;
-      case 'caution':
-        section = renderSharedSection({
-          set, key,
-          blockKeyByLang: varsByLang.en.vars.caution_factors ? 'sec.caution.factors' : 'sec.caution.no_factors',
-          varsByLang, used,
+      }
+
+      // ── Next step — question-specific if authored, else the domain action.
+      case 'practical_guidance': {
+        section = bilingual(key, set, (lang) => {
+          const t = useTemplate('practical_guidance', pickTemplate(set, 'practical_guidance', state, lang), lang);
+          if (t) return interpolate(t.block_text, varsByLang[lang]);
+          return resolve([`action.${domain}`, 'action.general'], lang, varsByLang[lang]);
         });
-        break;
-      case 'timing_outlook':
-        if (!ctx.transit || !ctx.transit.available) break;
-        section = renderSharedSection({ set, key, blockKeyByLang: `sec.timing_outlook.${ctx.transit.summary.overall}`, varsByLang, used });
-        break;
-      case 'practical_guidance':
-        section = renderTemplateSection({ set, key, state, condition: 'default', varsByLang, used });
         if (!section) section = { key, ...sectionTitle(set, key), text_en: EMERGENCY.en, text_hi: EMERGENCY.hi };
         break;
+      }
+
       case 'remedy':
-        // No pilot question requires remedies; remedy templates arrive with the
-        // question set that needs them (never generated in code).
-        break;
+        break;   // remedy templates arrive with the question set that needs them
+
       case 'important_note': {
         const lim_en = (ctx.limitations || []).map((l) => l.en).filter(Boolean);
         const lim_hi = (ctx.limitations || []).map((l) => l.hi).filter(Boolean);
@@ -295,9 +326,9 @@ async function compose(ctx, dbOverride = null) {
           text_en: [ctx.disclaimers ? ctx.disclaimers.en : '', ...lim_en].filter(Boolean).join(' '),
           text_hi: [ctx.disclaimers ? ctx.disclaimers.hi : '', ...lim_hi].filter(Boolean).join(' '),
         };
-        used.push({ section: key, source: 'shared', key: 'disclaimer+limitations' });
         break;
       }
+
       default:
         break;
     }
@@ -312,9 +343,20 @@ async function compose(ctx, dbOverride = null) {
       const idx = sections.findIndex((s) => s.key === 'caution');
       const noteSection = { key: 'review_period', ...sectionTitle(set, 'review_period'), text_en: note_en, text_hi: note_hi };
       if (idx >= 0) sections.splice(idx + 1, 0, noteSection); else sections.push(noteSection);
-      used.push({ section: 'review_period', source: 'shared', key: 'note.challenging_review' });
     }
   }
+
+  // confidence + the reason it holds (Part 12 keeps this a field, not a section)
+  const reasonFor = (lang) => composeConfidenceReason({
+    level: ctx.confidence,
+    verdict: ctx.verdict,
+    factors: norm.factors,
+    groupsPresent: ['natal', 'dchart', 'timing'].filter((g) => ctx.evidence[g] && ctx.evidence[g].present).length,
+    completeness: ctx.completeness,
+    resolve,
+  }, lang);
+  const reasonEn = reasonFor('en');
+  const reasonHi = reasonFor('hi');
 
   return {
     state,
@@ -326,12 +368,35 @@ async function compose(ctx, dbOverride = null) {
       level: ctx.confidence,
       en: block(set, `label.conf.${ctx.confidence}`, 'en') || ctx.confidence,
       hi: block(set, `label.conf.${ctx.confidence}`, 'hi') || ctx.confidence,
+      reason_en: reasonEn ? reasonEn.text : null,
+      reason_hi: reasonHi ? reasonHi.text : null,
     },
     headline,
     sections,
     limitations: ctx.limitations || [],
-    meta: { templates_used: used },
+    meta: {
+      // Admin-only detail. index.js strips this off the user payload and files it
+      // in the trace — nothing here may reach a normal user.
+      domain,
+      templates_used: used,
+      confidence_reason_kind: reasonEn ? reasonEn.kind : null,
+      evidence_normalization: {
+        merged_count: norm.merged_count,
+        // Duplicates are mostly collapsed by the per-group pass, so the
+        // cross-group count alone reads as "nothing was deduplicated" even when a
+        // planet held three roles. Report both, totalled, or admin cannot audit
+        // the very thing this section exists to show.
+        dropped_duplicates: groupDuplicates + norm.dropped_duplicates,
+        dropped_duplicates_within_groups: groupDuplicates,
+        dropped_duplicates_across_groups: norm.dropped_duplicates,
+        supports: norm.supports.map((f) => ({ entity_id: f.entity_id, tier: f.tier, roles: f.roles, multi_role: f.multi_role })),
+        blockers: norm.blockers.map((f) => ({ entity_id: f.entity_id, tier: f.tier, roles: f.roles, multi_role: f.multi_role })),
+      },
+    },
   };
 }
 
-module.exports = { compose, loadTemplateSet, pickTemplate, interpolate, EMERGENCY };
+module.exports = {
+  compose, loadTemplateSet, pickTemplate, interpolate, makeResolver,
+  renderFactor, EMERGENCY,
+};

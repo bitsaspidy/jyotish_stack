@@ -134,10 +134,14 @@ const DATED_TRANSIT = Object.freeze({
 });
 
 // ── Shared-block keys for disclaimers (map disclaimer_type → block_key) ───────
+// `legal` covers property/vehicle/dispute answers: those turn on title, contracts
+// and loan terms, where "not financial advice" is the wrong warning to give.
+// Chosen per DOMAIN (see domains.js), not per catalogue category.
 const DISCLAIMER_BLOCK = Object.freeze({
   medical: 'disclaimer_medical',
   financial: 'disclaimer_financial',
   marriage: 'disclaimer_marriage',
+  legal: 'disclaimer_legal',
   general: 'disclaimer_general',
   none: null,
 });

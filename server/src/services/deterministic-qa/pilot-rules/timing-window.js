@@ -1,10 +1,13 @@
 'use strict';
 /**
  * Shared timing-window rule for the timing-heavy pilots (Q041 marriage timing,
- * Q081 house-purchase timing). Stage 1: evaluation only — finds the nearest
- * supportive slow-planet window (a PERIOD OF EMPHASIS, never a guaranteed event
- * date). User-facing text lives in answer_templates; the composer renders
- * {{window_line}} / {{dasha_line}} from shared fragments.
+ * Q081 house-purchase timing). Evaluation only — finds the nearest supportive
+ * slow-planet window (a PERIOD OF EMPHASIS, never a guaranteed event date).
+ *
+ * The window it returns is now surfaced through the timing framework
+ * (timing-outlook.js), which builds a real outlook — current phase, caution
+ * window, supportive window, triggers — from the full transit set. This rule's
+ * facts remain part of the trace and the rule-key audit.
  */
 
 function bestSupportiveWindow(transit) {
