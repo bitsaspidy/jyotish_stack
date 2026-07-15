@@ -280,6 +280,17 @@ function generateTodayPrediction(chart, atDate = new Date()) {
   const moonFromLagnaH = transitData.house_positions.moon;
   const moonLagnaText  = MOON_FROM_LAGNA[moonFromLagnaH];
 
+  // The main reading (`rh.description_en`) is classical Gochar read FROM THE MOON
+  // SIGN (Chandra Lagna). `moonLagnaText` is the Moon's house FROM THE ASCENDANT.
+  // These are two different reference frames, so the ascendant line must be
+  // labelled — otherwise "transiting your own sign" (from the Moon) and "your
+  // 7th" (from the Lagna) read as a contradiction. Skip it entirely when both
+  // frames land on the same house (Lagna == Moon sign), where it is a duplicate.
+  const moonFromMoonH = _houseFromLagna(moonRashi, daily.moon_sign.rashi_num);
+  const showMoonLagna = moonLagnaText && moonFromLagnaH !== moonFromMoonH;
+  const moonLagnaLine_en = showMoonLagna ? `From your ascendant (Lagna): ${moonLagnaText.en}` : '';
+  const moonLagnaLine_hi = showMoonLagna ? `लग्न से: ${moonLagnaText.hi}` : '';
+
   // Transit Moon nakshatra from longitude
   const moonTotalDeg      = (daily.moon_sign.rashi_num - 1) * 30 + (daily.moon_sign.degree || 0);
   const transitMoonNakNum = Math.min(27, Math.max(1, Math.floor(moonTotalDeg / (360 / 27)) + 1));
@@ -298,8 +309,8 @@ function generateTodayPrediction(chart, atDate = new Date()) {
     ? `आप ${PLANET_HI[maha.lord]} महादशा${antar?.lord ? ` / ${PLANET_HI[antar.lord]} अंतर्दशा` : ''} में हैं।`
     : '';
 
-  const content_en = [rh.description_en, moonLagnaText?.en, dashaLine_en, favLine.en].filter(Boolean).join('\n\n');
-  const content_hi = [rh.description_hi, moonLagnaText?.hi, dashaLine_hi, favLine.hi].filter(Boolean).join('\n\n');
+  const content_en = [rh.description_en, moonLagnaLine_en, dashaLine_en, favLine.en].filter(Boolean).join('\n\n');
+  const content_hi = [rh.description_hi, moonLagnaLine_hi, dashaLine_hi, favLine.hi].filter(Boolean).join('\n\n');
 
   const dayStart = new Date(atDate); dayStart.setHours(0, 0, 0, 0);
   const dayEnd   = new Date(atDate); dayEnd.setHours(23, 59, 59, 999);
