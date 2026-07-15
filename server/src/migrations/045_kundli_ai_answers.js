@@ -1,10 +1,9 @@
 'use strict';
 /**
- * Migration 045 — kundli_ai_answers
- * Per-kundli cache of the AI "Final Answer" for Ask-a-Question, keyed by the
- * question-bank key + language. Lets tapped suggestion chips (and repeat asks)
- * return instantly instead of re-running the local LLM. A background warmer
- * pre-fills the top questions after a kundli is opened.
+ * Migration 045 — kundli_ai_answers  (HISTORICAL — table dropped by migration 048)
+ * Originally a per-kundli cache of a generated "Final Answer", keyed by a
+ * suggestion key + language. Retained only as applied migration history; the
+ * feature and this table were removed in Stage 2 of the no-LLM pivot.
  */
 
 exports.up = async function (knex) {

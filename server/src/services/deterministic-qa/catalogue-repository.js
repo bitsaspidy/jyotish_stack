@@ -4,10 +4,9 @@
  *
  * The DB catalogue (question_categories / question_catalogue /
  * question_requirements / question_legacy_alias / answer_shared_blocks /
- * rule_registry) is the single user-facing source of truth. This module is the
- * ONLY place that reads those tables for the deterministic engine. It never
- * touches the legacy question-bank.js — that stays a separate (LLM-path) concern
- * so the two catalogues are never returned simultaneously.
+ * rule_registry) is the single source of truth for Kundli questions. This
+ * module is the ONLY place that reads those tables for the deterministic engine.
+ * There is no other catalogue (the legacy JS bank was removed in Stage 3).
  *
  * All reads are parameterised; codes are validated against /^Q\d{3}$/ before use.
  */

@@ -279,26 +279,20 @@ test('requirement with unknown planet is rejected', async () => {
   } finally { catalogueRepo.getRequirementsRow = orig; }
 });
 
-// ── Feature-flag routing ─────────────────────────────────────────────────────
-test('feature flags route to exactly one catalogue source (never both)', () => {
-  const prev = process.env.QA_DB_CATALOGUE;
-  process.env.QA_DB_CATALOGUE = 'true';
-  assert.strictEqual(routing.catalogueSource(), 'db');
-  process.env.QA_DB_CATALOGUE = 'false';
-  assert.strictEqual(routing.catalogueSource(), 'legacy');
-  // exactly one, never both
-  assert.ok(['db', 'legacy'].includes(routing.catalogueSource()));
-  if (prev === undefined) delete process.env.QA_DB_CATALOGUE; else process.env.QA_DB_CATALOGUE = prev;
-});
-
-test('the answer path is ALWAYS deterministic — no llm/ollama/ai_fallback result exists', () => {
+// ── Unconditional routing (Stage 3: no feature flags) ────────────────────────
+test('catalogue is unconditionally DB-sourced and the answer path is always deterministic', () => {
   assert.strictEqual(routing.answerPath(), 'deterministic');
   const snap = routing.snapshot();
   assert.strictEqual(snap.answer_path, 'deterministic');
-  assert.ok(!('ollama_answer' in snap), 'no LLM flag in the routing snapshot');
-  // only the two documented temporary flags remain
-  const cfgFlags = require('../src/config/deterministic-qa.config').FLAGS;
-  assert.deepStrictEqual(Object.keys(cfgFlags).sort(), ['dbCatalogue', 'deterministicAnswer']);
+  assert.strictEqual(snap.catalogue_source, 'db');
+  // no feature-flag branching remains
+  assert.strictEqual(typeof routing.catalogueSource, 'undefined', 'catalogueSource() removed in Stage 3');
+});
+
+test('the deterministic-qa config exposes NO feature flags', () => {
+  const cfg = require('../src/config/deterministic-qa.config');
+  assert.strictEqual(cfg.FLAGS, undefined, 'FLAGS removed in Stage 3');
+  assert.strictEqual(cfg.flag, undefined, 'flag() helper removed in Stage 3');
 });
 
 // ── No LLM in the deterministic path + repeatability ─────────────────────────

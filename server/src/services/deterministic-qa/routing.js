@@ -1,38 +1,21 @@
 'use strict';
 /**
- * Feature-flag routing (Stage 2 of the no-LLM pivot).
+ * Answer routing (Stage 3 — database-first, unconditional).
  *
- * There is NO generative answer path: the deterministic predefined-question
- * engine is the only Kundli answer system. This module centralises the two
- * TEMPORARY migration flags (see config for their documented removal points)
- * and keeps the invariant that the legacy question-bank and the DB catalogue
- * are never served simultaneously from the legacy endpoint.
+ * There is exactly ONE Kundli answer path: the database catalogue feeds the
+ * deterministic engine, which produces the answer. No feature flags, no
+ * generative path, no legacy question-bank, no alternate branch.
+ *
+ *   Database → Deterministic Engine → Answer
  */
 
-const cfg = require('../../config/deterministic-qa.config');
-
-/** Which catalogue the LEGACY /question-bank endpoint serves — exactly one. */
-function catalogueSource() {
-  return cfg.FLAGS.dbCatalogue ? 'db' : 'legacy';
-}
-
-/**
- * The Kundli answer path. Always deterministic — there is no generative or
- * fallback result of any kind. Insufficient data yields the approved
- * deterministic insufficient-data response inside the engine, never a
- * fallback generator.
- */
+/** The Kundli answer path is always deterministic — there is no alternate result. */
 function answerPath() {
   return 'deterministic';
 }
 
 function snapshot() {
-  return {
-    db_catalogue: cfg.FLAGS.dbCatalogue,
-    deterministic_answer: cfg.FLAGS.deterministicAnswer,
-    catalogue_source: catalogueSource(),
-    answer_path: answerPath(),
-  };
+  return { answer_path: 'deterministic', catalogue_source: 'db' };
 }
 
-module.exports = { catalogueSource, answerPath, snapshot };
+module.exports = { answerPath, snapshot };

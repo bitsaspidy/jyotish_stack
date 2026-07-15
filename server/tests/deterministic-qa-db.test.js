@@ -111,17 +111,13 @@ test('catalogue response is bilingual (Hindi + English) and single-sourced', asy
   }
 });
 
-test('no duplicate catalogues: DB grouped set is the Q-code catalogue, distinct from legacy keys', async (t) => {
+test('single catalogue: the DB is the only source and the legacy JS bank is gone', async (t) => {
   if (!guard(t)) return;
   const grouped = await repo.getActiveCatalogueGrouped();
   const dbCodes = new Set(grouped.flatMap((c) => c.questions.map((q) => q.code)));
-  // every DB code is a Q-code; the legacy question-bank uses non-Q string keys —
-  // the two never overlap, so a merged/duplicated catalogue is impossible.
-  for (const code of dbCodes) assert.ok(/^Q\d{3}$/.test(code));
-  const legacy = require('../src/services/question-bank');
-  const legacyKeys = legacy.grouped().flatMap((c) => (c.questions || []).map((q) => q.key || q.id || ''));
-  const overlap = legacyKeys.filter((k) => dbCodes.has(k));
-  assert.strictEqual(overlap.length, 0, 'legacy keys and DB Q-codes must not overlap');
+  for (const code of dbCodes) assert.ok(/^Q\d{3}$/.test(code), 'every catalogue entry is a stable Q-code');
+  // the legacy question-bank.js was deleted in Stage 3 — it must not be importable
+  assert.throws(() => require('../src/services/question-bank'), { code: 'MODULE_NOT_FOUND' });
 });
 
 test('full deterministic pipeline answers Q001 + Q093 for an owned calculated Kundli', async (t) => {

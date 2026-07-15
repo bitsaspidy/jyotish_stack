@@ -103,13 +103,13 @@ test('the question panel is deterministic-only (no stream, prewarm, free text, h
   assert.ok(panel.includes('questionCode'), 'panel submits a predefined question code');
 });
 
-test('active configuration mentions no Ollama/Qwen (env example + config)', () => {
+test('active configuration mentions no Ollama/Qwen and no QA feature flags (Stage 3)', () => {
   const envExample = fs.readFileSync(path.join(SERVER, '.env.example'), 'utf8');
   assert.ok(!/ollama|qwen|11434/i.test(envExample), '.env.example must not mention Ollama/Qwen');
-  // temporary flags are present AND documented with removal points
-  assert.ok(envExample.includes('QA_DETERMINISTIC_ANSWER'), 'temporary flag documented');
-  assert.ok(envExample.includes('QA_DB_CATALOGUE'), 'temporary flag documented');
-  assert.ok(/removed/i.test(envExample), 'flag removal points documented');
+  // Stage 3 removed the QA feature flags entirely — they must not reappear
+  assert.ok(!/QA_DETERMINISTIC_ANSWER|QA_DB_CATALOGUE/.test(envExample), 'QA feature flags removed');
+  const cfg = require('../src/config/deterministic-qa.config');
+  assert.strictEqual(cfg.FLAGS, undefined, 'config exposes no FLAGS');
 });
 
 test('routing has no llm/ollama/ai_fallback result', () => {
@@ -117,6 +117,20 @@ test('routing has no llm/ollama/ai_fallback result', () => {
   assert.strictEqual(routing.answerPath(), 'deterministic');
   const src = fs.readFileSync(path.join(SRC, 'services', 'deterministic-qa', 'routing.js'), 'utf8');
   assert.ok(!/'llm'|"llm"|ai_fallback/.test(src), 'no llm/ai_fallback branch in routing source');
+});
+
+test('Stage 3: the legacy JS question bank is gone and nothing imports it', () => {
+  const abs = path.join(SRC, 'services', 'question-bank.js');
+  assert.ok(!fs.existsSync(abs), 'question-bank.js must be deleted');
+  assert.throws(() => require(abs), { code: 'MODULE_NOT_FOUND' });
+  const offenders = [];
+  for (const file of walk(SRC)) {
+    const content = fs.readFileSync(file, 'utf8');
+    if (/require\(['"][^'"]*question-bank['"]\)|QA_DB_CATALOGUE|catalogueSource/.test(content)) {
+      offenders.push(path.relative(SRC, file).split(path.sep).join('/'));
+    }
+  }
+  assert.deepStrictEqual(offenders, [], `legacy catalogue references remain: ${offenders.join(', ')}`);
 });
 
 test('seed data files contain no LLM references', () => {

@@ -4,7 +4,6 @@
  *
  * Everything the answer engine relies on that a domain expert may want to
  * recalibrate lives here, NOT inside controllers or scattered constants:
- *  - feature flags (three independent switches)
  *  - the 7-state score bands
  *  - confidence thresholds
  *  - completeness weights + block policy
@@ -24,27 +23,11 @@ const CONFIDENCE_VER    = 1;
 const COMPLETENESS_VER  = 1;
 const TRANSIT_VER       = 1;
 
-// ── Feature flags — TEMPORARY migration switches only ────────────────────────
-// The former generative-answer flag was removed in Stage 2 of the no-LLM pivot;
-// there is no generative path. The two remaining flags exist only for the
-// controlled rollout, with documented removal points:
-//   QA_DB_CATALOGUE        — removed in Stage 3, when the legacy question-bank.js
-//                            is deleted and the DB catalogue becomes permanent.
-//   QA_DETERMINISTIC_ANSWER — removed once the pilot rollout is accepted, after
-//                            which deterministic generation is unconditional.
-function flag(name, def) {
-  const v = process.env[name];
-  if (v === undefined || v === null || v === '') return def;
-  return String(v).toLowerCase() === 'true' || v === '1';
-}
-
-const FLAGS = Object.freeze({
-  // Serve the legacy /kundli/question-bank endpoint from the DB catalogue
-  // instead of question-bank.js (the new /kundli/qa/catalogue is always DB).
-  get dbCatalogue()        { return flag('QA_DB_CATALOGUE', false); },
-  // Gate for the deterministic answer endpoint during the pilot rollout.
-  get deterministicAnswer(){ return flag('QA_DETERMINISTIC_ANSWER', false); },
-});
+// ── No feature flags ─────────────────────────────────────────────────────────
+// Stage 3 made the database catalogue and the deterministic answer engine
+// UNCONDITIONAL. There are no QA feature-flag switches and no alternate path:
+// the DB is the single source of truth and the deterministic engine is the only
+// Kundli answer system.
 
 // ── Divisional-chart support policy ──────────────────────────────────────────
 // Charts the engine trusts for interpretation. D3 (siblings) and D11 (gains) are
@@ -162,7 +145,6 @@ const DISCLAIMER_BLOCK = Object.freeze({
 module.exports = {
   CALC_VERSION, RULE_ENGINE_VER,
   STATE_BANDS_VER, CONFIDENCE_VER, COMPLETENESS_VER, TRANSIT_VER,
-  FLAGS, flag,
   SUPPORTED_CHARTS, CHART_FALLBACK,
   STATE_BANDS, ANSWER_STATES, POSITIVE_STATES, CAUTION_STATES,
   EVIDENCE_WEIGHTS, CONFLICT, CONFIDENCE, COMPLETENESS,

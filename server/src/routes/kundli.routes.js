@@ -27,10 +27,8 @@ const { composePredictionUserFriendly } = require('../services/report-engine/pre
 // power the separate Prashna feature (prashna.routes.js) — they are non-LLM and
 // deliberately NOT imported here anymore: the only Kundli answer path is the
 // deterministic predefined-question engine below.
-const questionBank = require('../services/question-bank');   // legacy catalogue — removed in Stage 3
 const qa = require('../services/deterministic-qa');
 const qaRouting = require('../services/deterministic-qa/routing');
-const qaRepo = require('../services/deterministic-qa/catalogue-repository');
 const qaPilot = require('../services/deterministic-qa/pilot-rules');
 const qaReadiness = require('../services/deterministic-qa/template-readiness');
 const { loadRequirement: qaLoadRequirement } = require('../services/deterministic-qa/requirement-loader');
@@ -564,29 +562,11 @@ router.get('/:id/report.pdf', async (req, res) => {
   }
 });
 
-// ── GET /api/kundli/question-bank — Ask-a-Question suggestion chips ───────────
-// Defined BEFORE '/:id' so it isn't captured as an id. Serves EXACTLY ONE
-// catalogue source (feature-flagged) — never the DB catalogue and the legacy
-// question-bank simultaneously.
-router.get('/question-bank', async (req, res) => {
-  try {
-    if (qaRouting.catalogueSource() === 'db') {
-      const categories = await qaRepo.getActiveCatalogueGrouped();
-      return ok(res, { categories, source: 'db' });
-    }
-    return ok(res, { categories: questionBank.grouped(), source: 'legacy' });
-  } catch (e) {
-    console.error('[QuestionBank] Error:', e.message);
-    // Fail safe to the legacy catalogue so the panel never breaks.
-    return ok(res, { categories: questionBank.grouped(), source: 'legacy' });
-  }
-});
-
 // ── GET /api/kundli/qa/catalogue — deterministic question catalogue ───────────
-// Defined BEFORE '/:id'. Always DB-backed (question_catalogue). Normal users
-// receive ONLY questions that are active + rule-implemented + fully templated
-// (the 10 pilots during Stage 1); the other 90 are completely hidden. Admins
-// may request all 100 with computed readiness via ?scope=admin.
+// Defined BEFORE '/:id'. The ONLY question catalogue — always DB-backed
+// (question_catalogue); the legacy question-bank was removed in Stage 3. Normal
+// users receive ONLY questions that are active + rule-implemented + fully
+// templated; admins may request all 100 with computed readiness via ?scope=admin.
 router.get('/qa/catalogue', async (req, res) => {
   try {
     const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin';
@@ -602,9 +582,10 @@ router.get('/qa/catalogue', async (req, res) => {
   }
 });
 
-// ── POST /api/kundli/:id/qa/deterministic — no-LLM deterministic pilot answer ──
-// Gated by the QA_DETERMINISTIC_ANSWER flag AND limited to the 10 Phase-3 pilot
-// questions. Reuses the same ownership rule as every other Kundli route.
+// ── POST /api/kundli/:id/qa/deterministic — deterministic Kundli answer ────────
+// The ONLY Kundli answer endpoint. Unconditional (no feature flag); limited to
+// questions that are rule-implemented AND fully templated (readiness-gated).
+// Reuses the same ownership rule as every other Kundli route.
 function mapQaReason(res, reason) {
   switch (reason) {
     case 'invalid_id':            return fail(res, 'Invalid Kundli identifier.', 400);
@@ -622,16 +603,13 @@ function mapQaReason(res, reason) {
 }
 
 router.post('/:id/qa/deterministic', async (req, res) => {
-  if (!qaConfig.FLAGS.deterministicAnswer) {
-    return fail(res, 'Deterministic answers are not enabled.', 403, { code: 'DETERMINISTIC_DISABLED' });
-  }
   const lang = ['en', 'hi'].includes(req.body?.lang) ? req.body.lang : 'en';
   try {
-    // Resolve the code first so we can enforce "pilot questions only" in Phase 3.
+    // Resolve the code first so we can enforce "implemented questions only".
     const resolved = await qa.resolveQuestion({ questionCode: req.body?.questionCode, legacyKey: req.body?.legacyKey });
     if (!resolved.ok) return mapQaReason(res, resolved.reason);
     if (!qaPilot.hasRule(resolved.question.code)) {
-      return fail(res, 'This question is not part of the current pilot yet.', 409, { code: 'NOT_IN_PILOT' });
+      return fail(res, 'This question is not available yet.', 409, { code: 'NOT_IMPLEMENTED' });
     }
     // A question with incomplete bilingual templates must never reach users.
     const requirementForCheck = await qaLoadRequirement(resolved.question.code);

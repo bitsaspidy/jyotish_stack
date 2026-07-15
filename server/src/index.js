@@ -61,7 +61,11 @@ app.get('/health', async (_req, res) => {
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
+const knowledgeRoutes = require('./routes/knowledge.routes');
 app.use('/api/auth', authLimiter, authRoutes);
+// mounted BEFORE /api/admin so the nested knowledge CMS path is not shadowed
+app.use('/api/admin/knowledge', knowledgeRoutes.adminRouter);
+app.use('/api/knowledge',       knowledgeRoutes.publicRouter);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/kundli', kundliRoutes);
