@@ -15,7 +15,7 @@ const GOLD = '#D4AF37'; const IVORY = '#F5F0E8'; const DIM = 'rgba(245,240,232,0
 const T = {
   tagline:  ['Ancient Wisdom. Modern Intelligence.','प्राचीन ज्ञान। आधुनिक बुद्धि।'],
   h1:       ['Jyotish Stack AI','ज्योतिष स्टैक AI'],
-  sub:      ['Where 5,000 years of Vedic astrology meets artificial intelligence. Kundli, Dasha, and cosmic destiny — decoded precisely.','जहाँ 5,000 वर्षों की वैदिक ज्योतिष AI से मिलती है। कुंडली, दशा और भाग्य — सटीक विश्लेषण।'],
+  sub:      ['A deterministic Vedic Astrology Knowledge Platform powered by a rule engine, multilingual knowledge management, and human-friendly interpretation.','नियम-इंजन पर आधारित एक सुनिश्चित वैदिक ज्योतिष ज्ञान मंच — बहुभाषी ज्ञान प्रबंधन और सहज, मानव-अनुकूल व्याख्या के साथ।'],
   cta1:     ['Start for Free','निःशुल्क शुरू करें'],
   cta2:     ['Create Kundli','कुंडली बनाएं'],
   feat_h:   ['Our Services','हमारी सेवाएं'],
