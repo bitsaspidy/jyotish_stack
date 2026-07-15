@@ -26,6 +26,18 @@ const { initDailyPushJob }   = require('./jobs/daily-push');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ─── Reverse proxy ────────────────────────────────────────────────────────────
+// Apache terminates TLS and proxies to this app on 127.0.0.1, so without this
+// every request appears to come from the proxy: req.ip was always 127.0.0.1,
+// which silently broke ALL rate limiters (one shared bucket for every user) and
+// logged a useless IP on sessions/activity/inquiries.
+//
+// `1` = trust exactly ONE hop (Apache) — never `true`, which would trust any
+// client-supplied X-Forwarded-For and make req.ip spoofable. With one trusted
+// hop Express takes the right-most entry Apache appended (the real peer), so a
+// forged "X-Forwarded-For: 1.2.3.4" cannot override it.
+app.set('trust proxy', 1);
+
 // ─── Security & Parsing ───────────────────────────────────────────────────────
 app.use(helmet());
 app.use(compression());

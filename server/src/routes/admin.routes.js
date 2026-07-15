@@ -979,7 +979,9 @@ async function logActivity(req, action, entity, entityId, detail) {
       action, entity,
       entity_id:  entityId ? String(entityId) : null,
       detail:     detail || null,
-      ip_address: req.ip || req.headers['x-forwarded-for'] || null,
+      // req.ip is proxy-aware (app trusts one hop); the raw-header fallback was
+      // both dead and client-spoofable.
+      ip_address: req.ip || null,
     });
   } catch (_) { /* non-fatal */ }
 }

@@ -124,7 +124,10 @@ router.post('/contact', contactLimiter, async (req, res) => {
     }
 
     const department = VALID_DEPARTMENTS.includes(req.body.department) ? req.body.department : 'general';
-    const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+    // req.ip is proxy-aware (app trusts one hop) and NOT spoofable. Reading the
+    // raw X-Forwarded-For and taking [0] took the left-most entry, which is
+    // entirely client-supplied — a forged header logged an attacker's chosen IP.
+    const ip = req.ip || null;
 
     const cleaned = {
       name:    name.trim(),
