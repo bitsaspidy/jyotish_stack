@@ -18,6 +18,7 @@ const NAV = [
       { href:'/admin/plans',    icon:'◉', emoji:'💳', label:'Plans' },
       { href:'/admin/sales',    icon:'◈', emoji:'💰', label:'Sales' },
       { href:'/admin/kundlis',  icon:'◈', emoji:'🔯', label:'Kundli Profiles' },
+      { href:'/admin/questions', icon:'◈', emoji:'💬', label:'Kundli Q&A' },
       { href:'/admin/knowledge', icon:'◈', emoji:'📚', label:'Knowledge Base' },
     ],
   },

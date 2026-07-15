@@ -7,7 +7,6 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 const links = [
   { href: '/dashboard',     label: 'Dashboard',     icon: '📊' },
   { href: '/users',         label: 'Users',          icon: '👥' },
-  { href: '/questions',     label: 'Kundli Q&A',     icon: '💬' },
   { href: '/settings',      label: 'Settings',       icon: '⚙️' },
   { href: '/newsletter',    label: 'Newsletter',     icon: '📰' },
   { href: '/notifications', label: 'Notifications',  icon: '🔔' },

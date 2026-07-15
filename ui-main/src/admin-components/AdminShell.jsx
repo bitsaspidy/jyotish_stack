@@ -11,6 +11,7 @@ const PAGE_TITLES = {
   '/admin/plans':         'Subscription Plans',
   '/admin/sales':         'Sales Management',
   '/admin/kundlis':       'Kundli Profiles',
+  '/admin/questions':     'Kundli Q&A',
   '/admin/knowledge':     'Jyotish Knowledge Base',
   '/admin/newsletter':    'Newsletter',
   '/admin/email-blast':   'Email Blast',

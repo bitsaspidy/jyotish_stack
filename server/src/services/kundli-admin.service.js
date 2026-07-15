@@ -83,6 +83,24 @@ async function calcAndSave(profile) {
   }
 }
 
+/**
+ * Return the stored chart when it is complete, else recalculate and save.
+ *
+ * Every condition here MUST be a field that calcAndSave() actually produces. A
+ * condition on anything else is not a freshness check — it is a permanent cache
+ * miss, because recalculating cannot satisfy it either.
+ *
+ * This previously also required `judgement.version === 'judgement-priority-v2'`,
+ * which nothing could ever satisfy: calculateVedicChart() emits no `judgement`
+ * key at all, and calcAndSave() stores its output verbatim. So the admin Kundli
+ * endpoint recalculated the entire chart on EVERY request and rewrote a large
+ * JSON blob to MySQL each time — the user-facing copy of this function never had
+ * that condition, which is why only admin pages hung.
+ *
+ * The judgement is deliberately NOT cached: buildFullKundliResponse() recomputes
+ * it per response from profile fields that change (gender, marital_status), so a
+ * stored copy would be both stale and ignored.
+ */
 async function ensureCalculatedChart(profile) {
   const existing = parseJsonMaybe(profile.calculated_data);
   if (
@@ -93,8 +111,7 @@ async function ensureCalculatedChart(profile) {
     existing?.reports?.event_timing?.windows?.length &&
     existing?.life_report?.sections &&
     existing?.varga_analysis?.d1?.role_en &&
-    existing?.varga_analysis?.d60?.past_life_reading &&
-    existing?.judgement?.version === 'judgement-priority-v2'
+    existing?.varga_analysis?.d60?.past_life_reading
   ) return existing;
   return calcAndSave(profile);
 }
