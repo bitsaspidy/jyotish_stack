@@ -11,6 +11,7 @@ let simpleParser;
 try { simpleParser = require('mailparser').simpleParser; } catch (_) { /* optional dep */ }
 
 const { DEPARTMENTS } = require('./email.service');
+const { readDmarcReport, looksLikeDmarcReport } = require('./helpers/dmarc-report');
 
 const _cache = {};
 const CACHE_TTL = 60 * 1000; // 60 seconds
@@ -92,19 +93,27 @@ async function fetchMailbox(deptKey, folder = 'INBOX', limit = 50) {
       for await (const msg of client.fetch(`${start}:*`, {
         envelope: true, uid: true, flags: true,
       })) {
+        const fromAddress = msg.envelope.from?.[0]?.address || '';
+        const subject = msg.envelope.subject || '(no subject)';
         msgs.push({
           uid:     msg.uid,
           dept:    deptKey,
           from:    msg.envelope.from?.[0] ? {
             name:    msg.envelope.from[0].name    || '',
-            address: msg.envelope.from[0].address || '',
+            address: fromAddress,
           } : null,
           to:      msg.envelope.to?.[0]?.address || '',
-          subject: msg.envelope.subject || '(no subject)',
+          subject,
           date:    msg.envelope.date,
           seen:    msg.flags?.has('\\Seen')    ?? true,
           starred: msg.flags?.has('\\Flagged') ?? false,
           folder,
+          // Flag automated DMARC reports so the list can label them rather than
+          // showing a daily subject-only row that looks like an empty message.
+          // Judged on the envelope alone — this listing deliberately does not
+          // download bodies, and paying that cost to label a badge would slow
+          // every inbox load for every user.
+          is_dmarc: looksLikeDmarcReport({ from: fromAddress, subject, attachments: [] }),
         });
       }
     } finally { lock.release(); }
@@ -196,6 +205,12 @@ async function fetchEmail(deptKey, uid, folder = 'INBOX') {
                          : null,
           suspicious:  isSuspicious(a.filename, a.contentType),
         })),
+        // DMARC aggregate reports arrive daily with an empty body and their whole
+        // payload zipped in an attachment, so they read as junk. Decode them here,
+        // where the attachment buffers are still in hand, and hand the UI a
+        // summary instead of a file to download and open by hand. Null for every
+        // other message, which is the overwhelming majority.
+        dmarc: readDmarcReport(parsed),
       };
     } finally { lock.release(); }
   } finally {

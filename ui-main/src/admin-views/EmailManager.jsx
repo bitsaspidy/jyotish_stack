@@ -220,6 +220,77 @@ function ImageLightbox({ src, name, onClose }) {
 }
 
 // ─── Attachments panel ────────────────────────────────────────────────────────
+/**
+ * DMARC aggregate report.
+ *
+ * These arrive daily with an empty body and the whole report zipped inside an
+ * attachment, so the inbox shows what looks like a broken message. The server
+ * decodes it; this states what it means. The question a reader has is only ever
+ * "is someone forging my domain, and is my own mail authenticating?" — so that is
+ * the answer, first, in a sentence.
+ */
+function DmarcPanel({ dmarc }) {
+  if (!dmarc) return null;
+
+  const clean = dmarc.all_passed;
+  const tone = dmarc.empty ? { c:'rgba(245,240,232,0.5)', b:'rgba(255,255,255,0.1)', bg:'rgba(255,255,255,0.02)' }
+    : clean ? { c:'#34D399', b:'rgba(52,211,153,0.3)', bg:'rgba(52,211,153,0.06)' }
+    : { c:'#FBBF24', b:'rgba(251,191,36,0.35)', bg:'rgba(251,191,36,0.06)' };
+
+  const day = (iso) => (iso ? new Date(iso).toLocaleDateString('en-IN', { day:'numeric', month:'short' }) : '');
+
+  return (
+    <div style={{ padding:'18px 22px' }}>
+      <div style={{ border:`1px solid ${tone.b}`, background:tone.bg, borderRadius:10, padding:'16px 18px' }}>
+        <p style={{ color:'rgba(245,240,232,0.35)', fontSize:9.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+          DMARC report · {dmarc.org} · {day(dmarc.begin)}
+        </p>
+
+        <p style={{ color:tone.c, fontSize:15, fontWeight:700, marginTop:8, lineHeight:1.5 }}>
+          {dmarc.empty
+            ? 'No mail was reported for your domain in this period.'
+            : clean
+              ? `All ${dmarc.total} messages from ${dmarc.domain} passed authentication.`
+              : `${dmarc.failed} of ${dmarc.total} messages failed authentication.`}
+        </p>
+
+        <p style={{ color:'rgba(245,240,232,0.6)', fontSize:12, lineHeight:1.7, marginTop:7 }}>
+          {dmarc.empty
+            ? 'Nothing claimed to be from your domain, so there is nothing to check.'
+            : clean
+              ? 'No one is successfully forging mail as your domain, and your own mail is signing correctly. Nothing to do.'
+              : 'A failure is either your own mail not signing correctly, or someone sending as your domain. Check the senders below — if you do not recognise an address, it is a forgery attempt, and your DMARC policy decides what receivers do about it.'}
+        </p>
+
+        {/* Failing senders — the only part that ever needs action */}
+        {!clean && !dmarc.empty && dmarc.failing_sources?.length > 0 && (
+          <div style={{ marginTop:12, paddingTop:12, borderTop:'1px solid rgba(255,255,255,0.07)' }}>
+            <p style={{ color:'rgba(245,240,232,0.35)', fontSize:9.5, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:7 }}>
+              Failing senders
+            </p>
+            {dmarc.failing_sources.map((s) => (
+              <div key={s.ip} style={{ display:'flex', gap:10, alignItems:'center', padding:'4px 0', fontSize:11.5 }}>
+                <span style={{ fontFamily:'ui-monospace, monospace', color:'rgba(245,240,232,0.8)', minWidth:120 }}>{s.ip}</span>
+                <span style={{ color:'rgba(245,240,232,0.45)' }}>{s.count} message{s.count > 1 ? 's' : ''}</span>
+                <span style={{ color:'#FB7185', fontSize:10 }}>
+                  DKIM {s.dkim} · SPF {s.spf}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p style={{ color:'rgba(245,240,232,0.28)', fontSize:9.5, lineHeight:1.6, marginTop:12 }}>
+          Policy <strong>p={dmarc.policy?.p}</strong> on {dmarc.policy?.pct}% of mail
+          {dmarc.policy?.p === 'none' && ' — receivers are only reporting, not rejecting'}
+          . {dmarc.source_count} sending source{dmarc.source_count === 1 ? '' : 's'} seen.
+          Report {dmarc.report_id}.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AttachmentsPanel({ attachments, email, adminApi: api, toast: t }) {
   const [lightbox, setLightbox] = useState(null); // { src, name }
   const [downloading, setDl]    = useState({});
@@ -368,6 +439,10 @@ function EmailDetail({ email, folder, onReply, onClose, onStar, onMarkUnread, on
             style={{ width:'100%', height:'100%', border:'none', background:'#fff' }}
             srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;font-size:14px;color:#222;padding:16px;margin:0;word-break:break-word;}a{color:#1a56db;}img{max-width:100%;height:auto;}</style></head><body>${bodyHtml}</body></html>`}
           />
+        ) : email.dmarc ? (
+          // A DMARC report's body is empty BY DESIGN — the report is the
+          // attachment. Show what it says instead of "(empty body)".
+          <DmarcPanel dmarc={email.dmarc} />
         ) : (email.text || email.content) ? (
           <pre style={{ padding:'20px 22px', color:'rgba(245,240,232,0.7)', fontSize:13, lineHeight:1.7, whiteSpace:'pre-wrap', fontFamily:'inherit', margin:0 }}>
             {email.text || email.content}
@@ -466,6 +541,15 @@ function EmailRow({ email, selected, onClick, onStar }) {
           <div style={{ display:'flex', gap:4, alignItems:'center', flexWrap:'wrap' }}>
             {email.dept && <Badge dept={email.dept} />}
             {email.status && <StatusBadge status={email.status} />}
+            {/* Automated domain-authentication report, not correspondence — label
+                it so a daily machine message is not mistaken for a customer. */}
+            {email.is_dmarc && (
+              <span style={{ fontSize:8.5, fontWeight:700, letterSpacing:'0.06em', textTransform:'uppercase',
+                color:'#93C5FD', background:'rgba(147,197,253,0.1)', border:'1px solid rgba(147,197,253,0.25)',
+                borderRadius:4, padding:'1px 5px' }}>
+                DMARC
+              </span>
+            )}
           </div>
         </div>
       </div>
