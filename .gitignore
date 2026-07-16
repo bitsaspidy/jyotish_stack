@@ -62,4 +62,3 @@ coverage/
 *.pem
 .vercel
 .turbo
-package-lock.json
