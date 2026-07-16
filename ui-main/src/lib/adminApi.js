@@ -5,7 +5,11 @@
  */
 import axios from 'axios';
 
-const adminApi = axios.create({ baseURL: '/api', withCredentials: true });
+// Axios defaults to timeout: 0 — wait forever, so a request that never settles
+// leaves "Loading Kundli…" on screen permanently instead of reporting a failure.
+// 120s matches Apache's ProxyTimeout: beyond that the proxy has already abandoned
+// the upstream, so a longer wait cannot succeed — it only hides the error.
+const adminApi = axios.create({ baseURL: '/api', withCredentials: true, timeout: 120000 });
 
 // Attach admin token
 adminApi.interceptors.request.use((cfg) => {
