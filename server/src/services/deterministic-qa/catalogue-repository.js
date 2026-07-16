@@ -32,19 +32,23 @@ const BASE_QUESTION_COLS = [
   'rule_version', 'template_version',
 ];
 
-// `domain` arrives in migration 050. Probe once rather than assume: a DB that has
-// not been migrated yet must still answer questions (domains.js derives the domain
-// from category/subcategory as a fallback), not fail on an unknown column.
-let domainColumnPromise = null;
-function hasDomainColumn() {
-  if (!domainColumnPromise) {
-    domainColumnPromise = db.schema.hasColumn('question_catalogue', 'domain').catch(() => false);
+// `domain` arrives in migration 050; intent metadata in 051. Probe once rather
+// than assume: a DB that has not been migrated yet must still answer questions
+// (domains.js and intents.js both derive from category/subcategory as a fallback),
+// not fail on an unknown column.
+const OPTIONAL_COLS = ['domain', 'intent_type', 'output_schema', 'selection_config'];
+let optionalColsPromise = null;
+function optionalCols() {
+  if (!optionalColsPromise) {
+    optionalColsPromise = Promise.all(
+      OPTIONAL_COLS.map((c) => db.schema.hasColumn('question_catalogue', c).catch(() => false)),
+    ).then((present) => OPTIONAL_COLS.filter((_, i) => present[i]));
   }
-  return domainColumnPromise;
+  return optionalColsPromise;
 }
 
 async function questionCols() {
-  return (await hasDomainColumn()) ? [...BASE_QUESTION_COLS, 'domain'] : BASE_QUESTION_COLS;
+  return [...BASE_QUESTION_COLS, ...(await optionalCols())];
 }
 
 async function getActiveQuestions() {

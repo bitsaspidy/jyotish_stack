@@ -22,6 +22,7 @@ const { resolveState } = require('./state-engine');
 const { normalizeAnswerEvidence } = require('./evidence-normalizer');
 const { resolveQuestionVerdict } = require('./verdict-resolver');
 const { resolveDomain, disclaimerTypeFor } = require('./domains');
+const { resolveIntent } = require('./intents');
 const composer = require('./template-composer');
 const readiness = require('./template-readiness');
 const pilot = require('./pilot-rules');
@@ -165,6 +166,7 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
   //    its decision through the evidence hierarchy so the headline cannot end up
   //    contradicting the evidence printed under it, and records WHY it stands.
   const domain = resolveDomain(question);
+  const intent = resolveIntent(question);
   const normalized = normalizeAnswerEvidence([
     ...(evidence.natal.factors || []),
     ...(evidence.dchart.factors || []),
@@ -187,7 +189,7 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
   const answer = await composer.compose({
     question, requirement, loaded, strength, transit,
     evidence, state: verdict.state, confidence: verdict.confidence,
-    verdict, normalized, domain, completeness: comp.data_completeness,
+    verdict, normalized, domain, intent, completeness: comp.data_completeness,
     ruleFacts, disclaimers, limitations,
   }, deps.db || null);
   const composerMeta = answer.meta || {};
@@ -201,6 +203,8 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
   // and reaches a normal user through no path: the route attaches `trace` only for
   // admin/superadmin, and `answer` carries none of it.
   trace.domain = domain;
+  trace.intent = intent;
+  trace.selection = composerMeta.selection_debug || null;
   trace.verdict = {
     state: verdict.state,
     changed_from: verdict.changed_from,

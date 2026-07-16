@@ -36,6 +36,101 @@ const SECTION_ICON = {
 
 function local(hi, en, hindi) { return hi ? (hindi || en) : (en || hindi); }
 
+// Fit levels, strongest first. Colour carries the ranking so the order is legible
+// without reading every card.
+const FIT_STYLE = {
+  best_fit:    { color:'#34D399', border:'rgba(52,211,153,0.4)',  bg:'rgba(52,211,153,0.09)' },
+  strong:      { color:'#A3E635', border:'rgba(163,230,53,0.35)', bg:'rgba(163,230,53,0.07)' },
+  supportive:  { color:'#FBBF24', border:'rgba(251,191,36,0.32)', bg:'rgba(251,191,36,0.06)' },
+  conditional: { color:'#FB923C', border:'rgba(251,146,60,0.32)', bg:'rgba(251,146,60,0.06)' },
+  lower_fit:   { color:'rgba(245,240,232,0.45)', border:'rgba(255,255,255,0.1)', bg:'rgba(255,255,255,0.02)' },
+};
+
+/**
+ * Ranked options for a selection question.
+ *
+ * A selection question asked "which one?", so it gets named options in order —
+ * not a favourability badge. Ranks and fit labels are shown; the scores that
+ * produced them are admin detail and never sent here.
+ */
+function SelectionPanel({ selection, hi }) {
+  const [open, setOpen] = useState({});
+  if (!selection || !selection.options?.length) return null;
+  const L = (o) => (hi ? o.hi : o.en);
+
+  return (
+    <div style={{ display:'grid', gap:11 }}>
+      {selection.options.map((o) => {
+        const s = FIT_STYLE[o.fit] || FIT_STYLE.supportive;
+        const isOpen = !!open[o.key];
+        return (
+          <article key={o.key} className="card-royal p-4 sm:p-5"
+            style={{ border:`1px solid ${s.border}`, background:s.bg }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+              <span aria-hidden="true" style={{ color:s.color, fontSize:19, fontWeight:800, minWidth:22, lineHeight:1.3 }}>
+                {o.rank}
+              </span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:9, flexWrap:'wrap' }}>
+                  <h4 className="font-serif text-gold text-base font-bold" style={{ margin:0 }}>{L(o.title)}</h4>
+                  <span style={{ color:s.color, border:`1px solid ${s.border}`, background:s.bg, borderRadius:99,
+                    padding:'2px 9px', fontSize:9, fontWeight:800 }}>
+                    {L(o.fit_label)}
+                  </span>
+                </div>
+                <p style={{ color:'rgba(245,240,232,0.8)', fontSize:12, lineHeight:1.75, marginTop:7 }}>
+                  {L(o.reason)}
+                </p>
+                {o.caution && (
+                  <p style={{ color:'#FB923C', fontSize:11.5, lineHeight:1.7, marginTop:6 }}>
+                    ⚠ {L(o.caution)}
+                  </p>
+                )}
+                {L(o.examples) && (
+                  <>
+                    <button type="button" onClick={() => setOpen((x) => ({ ...x, [o.key]: !x[o.key] }))}
+                      style={{ background:'none', border:'none', color:'rgba(147,197,253,0.85)', fontSize:10.5,
+                        cursor:'pointer', padding:'6px 0 0', fontWeight:600 }}>
+                      {isOpen ? (hi ? 'कम दिखाएँ' : 'Show less') : (hi ? 'इसमें क्या आता है?' : 'What this includes')}
+                    </button>
+                    {isOpen && (
+                      <p style={{ color:'rgba(245,240,232,0.55)', fontSize:11, lineHeight:1.7, marginTop:5 }}>
+                        {L(o.examples)}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+
+      {selection.secondary?.length > 0 && (
+        <div className="card-royal p-4" style={{ border:'1px solid rgba(255,255,255,0.08)' }}>
+          <p style={{ color:MUTED, fontSize:9.5, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+            {hi ? 'सहायक विकल्प' : 'Supporting options'}
+          </p>
+          <p style={{ color:'rgba(245,240,232,0.7)', fontSize:11.5, lineHeight:1.8, marginTop:6 }}>
+            {selection.secondary.map((o) => `${L(o.title)} (${L(o.fit_label)})`).join(' · ')}
+          </p>
+        </div>
+      )}
+
+      {selection.lower?.length > 0 && (
+        <div className="card-royal p-4" style={{ border:'1px solid rgba(255,255,255,0.06)', background:'rgba(255,255,255,0.015)' }}>
+          <p style={{ color:MUTED, fontSize:9.5, fontWeight:800, textTransform:'uppercase', letterSpacing:'0.1em' }}>
+            {hi ? 'अभी अपेक्षाकृत कम उपयुक्त' : 'Less suitable right now'}
+          </p>
+          <p style={{ color:'rgba(245,240,232,0.45)', fontSize:11.5, lineHeight:1.8, marginTop:6 }}>
+            {selection.lower.map((o) => L(o.title)).join(' · ')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StateBadge({ state, label, hi }) {
   const s = STATE_STYLE[state] || STATE_STYLE.mixed;
   return (
@@ -117,6 +212,50 @@ function AdminEvidence({ trace }) {
       {open && (
         <div style={{ marginTop:13 }}>
           <Row label="Domain">{trace.domain}</Row>
+          <Row label="Intent">
+            {trace.intent || '—'}
+            {trace.selection && <span style={{ color:'rgba(245,240,232,0.4)' }}> · ranked selection</span>}
+          </Row>
+
+          {/* Why each option ranked where it did, and what lost. A recommendation
+              someone may act on for years needs an audit trail. */}
+          {trace.selection && (
+            <>
+              <Row label="Direction planet">{trace.selection.dominant_planet || '—'}</Row>
+              <Row label="Ranked options">
+                <span style={{ display:'flex', flexDirection:'column', gap:5 }}>
+                  {trace.selection.ranked.slice(0, 6).map((r) => (
+                    <span key={r.key}>
+                      <strong style={{ color: r.blocked ? '#FB923C' : '#93C5FD' }}>
+                        {r.rank}. {r.key.replace(/^education\./, '')}
+                      </strong>
+                      {' · '}{r.fit}{' · score '}{r.score}
+                      {r.blocked && <span style={{ color:'#FB923C' }}> · blocked by {r.blocked_by}</span>}
+                      <span style={{ color:'rgba(245,240,232,0.4)', display:'block', fontSize:9.5, paddingLeft:12 }}>
+                        {r.contributions.map((c) => (
+                          `${c.kind}${c.planet ? `:${c.planet}` : c.chart ? `:${c.chart}` : ''} ${c.delta > 0 ? '+' : ''}${c.delta}`
+                        )).join('  ')}
+                      </span>
+                    </span>
+                  ))}
+                </span>
+              </Row>
+              <Row label="Discarded">
+                <span style={{ color:'rgba(245,240,232,0.5)', fontSize:10 }}>
+                  {trace.selection.discarded.length
+                    ? trace.selection.discarded.map((d) => `${d.key.replace(/^education\./, '')} (${d.score}${d.blocked_by ? `, blocked by ${d.blocked_by}` : ''})`).join(' · ')
+                    : 'none'}
+                </span>
+              </Row>
+              <Row label="Ranker weights">
+                <span style={{ fontFamily:'ui-monospace, monospace', fontSize:9.5, color:'rgba(245,240,232,0.55)' }}>
+                  {Object.entries(trace.selection.weights).map(([k, v]) => `${k}=${v}`).join(' · ')}
+                  {' · blocker at '}{trace.selection.blocker_at}
+                </span>
+              </Row>
+            </>
+          )}
+
           <Row label="Verdict">
             <strong>{v.state}</strong>
             {v.changed
@@ -417,7 +556,10 @@ export default function KundliQuestionPanel({
                 <p style={{ color:IVORY, fontSize:12.5, lineHeight:1.6 }}>{asked ? local(hi, asked.question_en, asked.question_hi) : ''}</p>
               </div>
               <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
-                <StateBadge state={answer.state} label={answer.state_label} hi={hi} />
+                {/* A selection answer's headline is its direction, so a
+                    favourable/mixed badge beside it would answer a different
+                    question and undercut the ranking. Confidence still applies. */}
+                {!answer.selection && <StateBadge state={answer.state} label={answer.state_label} hi={hi} />}
                 {answer.confidence && (
                   <span style={{ color:MUTED, border:'1px solid rgba(255,255,255,0.13)', borderRadius:99, padding:'5px 10px', fontSize:9.5, fontWeight:700 }}>
                     {hi ? 'विश्वसनीयता' : 'Confidence'}: {local(hi, answer.confidence.en, answer.confidence.hi)}
@@ -443,7 +585,23 @@ export default function KundliQuestionPanel({
             )}
           </article>
 
-          {(answer.sections || []).map((s) => (
+          {/* Ranked options come first: they ARE the answer to "which one?".
+              The narrative sections below then explain and qualify them. */}
+          {answer.selection && (
+            <div>
+              <h3 className="font-serif text-gold text-base font-bold" style={{ display:'flex', alignItems:'center', gap:8, marginBottom:11 }}>
+                <span aria-hidden="true">🎯</span>
+                {hi ? 'सबसे उपयुक्त क्षेत्र' : 'Most suitable options'}
+              </h3>
+              <SelectionPanel selection={answer.selection} hi={hi} />
+            </div>
+          )}
+
+          {(answer.sections || [])
+            // For a ranked answer the direct answer IS the cards above; rendering
+            // it again as a paragraph would repeat the entire list.
+            .filter((s) => !(answer.selection && s.key === 'direct_answer'))
+            .map((s) => (
             <section key={s.key} className="card-royal p-5 sm:p-6"
               style={s.key === 'important_note' ? { border:'1px solid rgba(148,163,184,0.16)', background:'rgba(148,163,184,0.04)' } : undefined}>
               <h4 className="font-serif text-gold text-base font-bold" style={{ display:'flex', alignItems:'center', gap:8 }}>

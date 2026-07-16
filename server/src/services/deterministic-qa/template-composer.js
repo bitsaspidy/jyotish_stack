@@ -31,6 +31,10 @@ const { describeFactor, roleKeyOf } = require('./planet-meaning');
 const { composeVargaMeaning } = require('./varga-meaning');
 const { composeConfidenceReason } = require('./confidence-reason');
 const { composeTimingOutlook } = require('./timing-outlook');
+const { resolveIntent } = require('./intents');
+const { taxonomyFor } = require('./selection');
+const { rankOptions } = require('./selection/selection-ranker');
+const { composeSelection } = require('./selection/selection-composer');
 
 // Minimal emergency fallback (owner-approved to remain in code).
 const EMERGENCY = {
@@ -73,6 +77,13 @@ function block(set, key, lang) {
 
 function interpolate(text, vars) {
   return String(text || '').replace(/\{\{(\w+)\}\}/g, (_, name) => (vars[name] != null ? String(vars[name]) : ''));
+}
+
+/** selection_config is JSON in MySQL but may arrive as a string on some drivers. */
+function parseConfig(v) {
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
 }
 
 /**
@@ -203,6 +214,31 @@ async function compose(ctx, dbOverride = null) {
   const factorCtx = (lang) => ({ domain, set, lang, resolve });
   const sections = [];
 
+  // ── Selection questions take a different SHAPE ───────────────────────────
+  // "Which education field suits me?" is not asking for a verdict. Rank the
+  // domain's option taxonomy once, then let the sections below render the
+  // ranking instead of a favourability summary. A selection question whose
+  // domain has no taxonomy falls through to the ordinary path — a verdict is a
+  // worse answer than a ranking, but a far better one than nothing.
+  const intent = ctx.intent || resolveIntent(ctx.question);
+  const taxonomy = intent === 'selection' ? taxonomyFor(domain) : null;
+  let ranking = null;
+  let selection = null;
+  if (taxonomy) {
+    ranking = rankOptions(taxonomy.options, {
+      strength: ctx.strength,
+      factors: norm.factors,
+      dasha: ctx.loaded.selected.dasha.available,
+    }, (ctx.question.selection_config && parseConfig(ctx.question.selection_config)) || {});
+    selection = {
+      en: composeSelection({ ranking, domain, prefix: taxonomy.blockPrefix, lang: 'en', resolve }),
+      hi: composeSelection({ ranking, domain, prefix: taxonomy.blockPrefix, lang: 'hi', resolve }),
+    };
+    // Both languages or neither — a half-translated ranked answer is worse than
+    // the verdict answer it would replace.
+    if (!selection.en || !selection.hi) selection = null;
+  }
+
   // Record a question-specific template hit, so provenance covers BOTH sources —
   // question templates and shared blocks. Admin needs the full picture of which
   // rows produced an answer; a half-recorded trace is not auditable.
@@ -212,12 +248,16 @@ async function compose(ctx, dbOverride = null) {
     return t;
   };
 
-  // headline — question-specific row, else the shared per-state label
+  // headline — question-specific row, else the shared per-state label.
+  // A selection answer's headline is its DIRECTION: "The prospects here are mixed"
+  // is not a headline for "which field suits me?".
   const hEn = useTemplate('headline', pickTemplate(set, 'headline', state, 'en'), 'en');
   const hHi = useTemplate('headline', pickTemplate(set, 'headline', state, 'hi'), 'hi');
-  const headline = (hEn && hHi)
-    ? { en: interpolate(hEn.block_text, varsByLang.en), hi: interpolate(hHi.block_text, varsByLang.hi) }
-    : { en: block(set, `label.headline.${state}`, 'en') || '', hi: block(set, `label.headline.${state}`, 'hi') || '' };
+  const headline = selection
+    ? { en: selection.en.primary_direction, hi: selection.hi.primary_direction }
+    : (hEn && hHi)
+      ? { en: interpolate(hEn.block_text, varsByLang.en), hi: interpolate(hHi.block_text, varsByLang.hi) }
+      : { en: block(set, `label.headline.${state}`, 'en') || '', hi: block(set, `label.headline.${state}`, 'hi') || '' };
 
   for (const key of ctx.requirement.answer_sections || []) {
     let section = null;
@@ -227,6 +267,21 @@ async function compose(ctx, dbOverride = null) {
       //    DOMAIN answer for this state: finance-mixed and health-mixed are
       //    different sentences, which is the whole point.
       case 'direct_answer': {
+        // A selection question's direct answer is the DIRECTION plus the ranked
+        // fields — never "education is workable for you", which answers a
+        // question the reader did not ask.
+        if (selection) {
+          section = bilingual(key, set, (lang) => {
+            const s = selection[lang];
+            const lines = [s.primary_direction];
+            for (const o of s.options) {
+              lines.push(`${o.rank}. ${o.title} — ${o.fit_label}`);
+              lines.push(o.reason + (o.caution ? ` ${o.caution}` : ''));
+            }
+            return lines.filter(Boolean).join('\n');
+          });
+          if (section) break;
+        }
         section = bilingual(key, set, (lang) => {
           const t = useTemplate('direct_answer', pickTemplate(set, 'direct_answer', state, lang), lang);
           if (t) return interpolate(t.block_text, varsByLang[lang]);
@@ -252,6 +307,9 @@ async function compose(ctx, dbOverride = null) {
       // ── Divisional charts — only when they contribute something.
       case 'dchart_indication': {
         section = bilingual(key, set, (lang) => {
+          // For a selection question the Varga's job is to say what it confirms
+          // about THIS kind of study, which the generic Varga note does better.
+          if (selection && selection[lang].varga_note) return selection[lang].varga_note;
           const v = composeVargaMeaning({ state, domain, factors: norm.factors, lang, resolve });
           return v ? v.text : null;
         });
@@ -272,12 +330,25 @@ async function compose(ctx, dbOverride = null) {
         break;
       }
 
+      // ── Positive potential — what the support MAKES POSSIBLE.
+      //    This used to re-render the same top factors already printed under
+      //    kundli_indicates, producing two byte-identical paragraphs in every
+      //    answer. Potential is a different claim from evidence, so it gets its
+      //    own domain content and never repeats the factor sentences.
       case 'positive': {
-        section = bilingual(key, set, (lang) => {
-          const parts = renderFactorList(norm.supports.slice(0, 2), factorCtx(lang));
-          if (parts.length) return parts.join(' ');
-          return resolve(['sec.positive.no_factors'], lang, varsByLang[lang]);
-        });
+        // For a selection question, "positive potential" is the supporting
+        // options — the fields that also work, just not as well.
+        if (selection && selection.en.secondary.length && selection.hi.secondary.length) {
+          section = bilingual(key, set, (lang) => {
+            const s = selection[lang];
+            return `${s.secondary.map((o) => `${o.title} (${o.fit_label})`).join(' · ')}`;
+          });
+          if (section) break;
+        }
+        section = bilingual(key, set, (lang) => resolve(
+          [`potential.${domain}`, 'potential.general', 'sec.positive.no_factors'],
+          lang, varsByLang[lang],
+        ));
         break;
       }
 
@@ -306,6 +377,12 @@ async function compose(ctx, dbOverride = null) {
 
       // ── Next step — question-specific if authored, else the domain action.
       case 'practical_guidance': {
+        // A selection answer's next step is the test plan: how to turn a leaning
+        // into a decision defensible on evidence rather than on a chart.
+        if (selection) {
+          section = bilingual(key, set, (lang) => selection[lang].test_plan);
+          if (section) break;
+        }
         section = bilingual(key, set, (lang) => {
           const t = useTemplate('practical_guidance', pickTemplate(set, 'practical_guidance', state, lang), lang);
           if (t) return interpolate(t.block_text, varsByLang[lang]);
@@ -321,10 +398,14 @@ async function compose(ctx, dbOverride = null) {
       case 'important_note': {
         const lim_en = (ctx.limitations || []).map((l) => l.en).filter(Boolean);
         const lim_hi = (ctx.limitations || []).map((l) => l.hi).filter(Boolean);
+        // A ranked answer names fields a reader may act on for years, so it
+        // carries an extra, explicit line: this is a leaning, not an aptitude
+        // test, and not a substitute for counselling or market reality.
+        const selDisc = (lang) => (selection ? resolve([`sel.disclaimer.${domain}`], lang) : null);
         section = {
           key, ...sectionTitle(set, key),
-          text_en: [ctx.disclaimers ? ctx.disclaimers.en : '', ...lim_en].filter(Boolean).join(' '),
-          text_hi: [ctx.disclaimers ? ctx.disclaimers.hi : '', ...lim_hi].filter(Boolean).join(' '),
+          text_en: [selDisc('en'), ctx.disclaimers ? ctx.disclaimers.en : '', ...lim_en].filter(Boolean).join(' '),
+          text_hi: [selDisc('hi'), ctx.disclaimers ? ctx.disclaimers.hi : '', ...lim_hi].filter(Boolean).join(' '),
         };
         break;
       }
@@ -358,12 +439,42 @@ async function compose(ctx, dbOverride = null) {
   const reasonEn = reasonFor('en');
   const reasonHi = reasonFor('hi');
 
+  // Structured ranking for the UI's cards. Deliberately score-free: the reader
+  // gets the order, the label and the reason — the numbers that produced them are
+  // admin detail and stay in the trace.
+  const selectionPayload = selection ? {
+    intent: 'selection',
+    primary_direction: { en: selection.en.primary_direction, hi: selection.hi.primary_direction },
+    options: selection.en.options.map((o, i) => ({
+      rank: o.rank,
+      key: o.key,
+      fit: o.fit,
+      title: { en: o.title, hi: selection.hi.options[i].title },
+      fit_label: { en: o.fit_label, hi: selection.hi.options[i].fit_label },
+      reason: { en: o.reason, hi: selection.hi.options[i].reason },
+      examples: { en: o.examples, hi: selection.hi.options[i].examples },
+      caution: o.caution ? { en: o.caution, hi: selection.hi.options[i].caution } : null,
+    })),
+    secondary: selection.en.secondary.map((o, i) => ({
+      key: o.key, fit: o.fit,
+      title: { en: o.title, hi: selection.hi.secondary[i].title },
+      fit_label: { en: o.fit_label, hi: selection.hi.secondary[i].fit_label },
+    })),
+    lower: selection.en.lower.map((o, i) => ({
+      key: o.key,
+      title: { en: o.title, hi: selection.hi.lower[i].title },
+    })),
+  } : null;
+
   return {
     state,
     state_label: {
       en: block(set, `label.state.${state}`, 'en') || state.replace(/_/g, ' '),
       hi: block(set, `label.state.${state}`, 'hi') || state.replace(/_/g, ' '),
     },
+    // Present only for ranked answers; the UI switches on it to show cards
+    // instead of a favourability badge.
+    selection: selectionPayload,
     confidence: {
       level: ctx.confidence,
       en: block(set, `label.conf.${ctx.confidence}`, 'en') || ctx.confidence,
@@ -378,6 +489,21 @@ async function compose(ctx, dbOverride = null) {
       // Admin-only detail. index.js strips this off the user payload and files it
       // in the trace — nothing here may reach a normal user.
       domain,
+      intent,
+      // The full ranking, including the scores and per-factor contributions that
+      // decided it, and every option that lost. This is the audit trail for a
+      // recommendation someone may act on for years.
+      selection_debug: ranking ? {
+        weights: ranking.context.weights,
+        blocker_at: ranking.context.blocker_at,
+        dominant_planet: selection ? selection.en.meta.dominant_planet : null,
+        ranked: ranking.ranked.map((r) => ({
+          rank: r.rank + 1, key: r.key, score: r.score, fit: r.fit,
+          blocked: r.blocked, blocked_by: r.blockedBy,
+          contributions: r.contributions,
+        })),
+        discarded: ranking.discarded,
+      } : null,
       templates_used: used,
       confidence_reason_kind: reasonEn ? reasonEn.kind : null,
       evidence_normalization: {
