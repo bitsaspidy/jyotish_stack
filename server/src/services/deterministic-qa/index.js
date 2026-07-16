@@ -205,6 +205,7 @@ async function answerQuestion({ questionCode, legacyKey, kundliUuid, userId, atD
   trace.domain = domain;
   trace.intent = intent;
   trace.selection = composerMeta.selection_debug || null;
+  trace.judgement = composerMeta.judgement_debug || null;
   trace.verdict = {
     state: verdict.state,
     changed_from: verdict.changed_from,

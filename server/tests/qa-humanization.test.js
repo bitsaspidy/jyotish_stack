@@ -18,7 +18,7 @@ const db = require('../src/config/db');
 const repo = require('../src/services/deterministic-qa/catalogue-repository');
 const qa = require('../src/services/deterministic-qa');
 const { houseLabel, houseLordLabel } = require('../src/services/deterministic-qa/house-label');
-const { normalizeAnswerEvidence } = require('../src/services/deterministic-qa/evidence-normalizer');
+const { normalizeAnswerEvidence, TIER, PRIMARY_TIERS } = require('../src/services/deterministic-qa/evidence-normalizer');
 const { resolveQuestionVerdict } = require('../src/services/deterministic-qa/verdict-resolver');
 const { composeVargaMeaning } = require('../src/services/deterministic-qa/varga-meaning');
 const { composeConfidenceReason } = require('../src/services/deterministic-qa/confidence-reason');
@@ -115,7 +115,11 @@ test('EV-06: merging preserves both distinct roles and marks the factor multi-ro
   const f = n.factors[0];
   assert.strictEqual(f.multi_role, true);
   assert.deepStrictEqual(f.roles.map((r) => r.kind).sort(), ['house_lord', 'karaka']);
-  assert.strictEqual(f.tier, 1, 'house_lord outranks karaka, so the merged tier is primary');
+  // The strongest role decides the tier: house_lord outranks karaka, so the merged
+  // factor is primary. Asserted against TIER rather than a magic number so the
+  // hierarchy can be reordered without rewriting the test.
+  assert.strictEqual(f.tier, TIER.house_lord, 'the merged tier is the stronger of the two roles');
+  assert.ok(PRIMARY_TIERS.has(f.tier), 'a house-lord factor is primary evidence');
   assert.strictEqual(f.score, 60, 'the same planet must not be double-counted');
 });
 
@@ -126,7 +130,8 @@ test('EV-07: normalization is idempotent — re-normalizing keeps roles and tier
   const once = normalizeAnswerEvidence([MARS_LORD, MARS_KARAKA]);
   const twice = normalizeAnswerEvidence(once.factors);
   assert.strictEqual(twice.factors.length, 1);
-  assert.strictEqual(twice.factors[0].tier, 1);
+  assert.strictEqual(twice.factors[0].tier, TIER.house_lord);
+  assert.ok(PRIMARY_TIERS.has(twice.factors[0].tier), 're-normalizing must not demote primary evidence');
   assert.strictEqual(twice.factors[0].multi_role, true);
   assert.deepStrictEqual(twice.factors[0].roles.map((r) => r.kind).sort(), ['house_lord', 'karaka']);
 });

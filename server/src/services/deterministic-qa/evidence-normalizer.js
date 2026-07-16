@@ -19,18 +19,28 @@
  * Keys and structure only — no user-facing text is produced here.
  */
 
-// Importance hierarchy (lower = more primary). Mirrors the approved order:
-// house/lord → karaka → varga → dasha → transit → yoga → secondary.
+// Importance hierarchy (lower = more primary), in the approved reading order:
+//   lagna → lagna lord → relevant house lord → Moon → Sun → relevant karaka
+//   → yoga → dosha → relevant varga → dasha → transit → everything else.
+//
+// This is the order an astrologer actually reads a chart in, and it is why the
+// verdict resolver can say a weak secondary planet did not overturn three strong
+// primary ones: rank is what makes that sentence meaningful.
 const TIER = Object.freeze({
-  house_lord: 1,
-  karaka: 2,
-  domain_anchor: 2,
-  varga: 3,
-  dasha: 4,
-  transit: 5,
-  yoga: 6,
-  overall: 6,
-  secondary: 7,
+  lagna: 1,
+  lagna_lord: 2,
+  house_lord: 3,
+  moon: 4,
+  sun: 5,
+  karaka: 6,
+  domain_anchor: 6,
+  yoga: 7,
+  dosha: 8,
+  varga: 9,
+  dasha: 10,
+  transit: 11,
+  overall: 11,
+  secondary: 12,
 });
 
 const PRIMARY_TIERS = new Set([TIER.house_lord, TIER.karaka, TIER.domain_anchor]);

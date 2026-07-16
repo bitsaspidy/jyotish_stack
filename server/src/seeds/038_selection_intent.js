@@ -14,14 +14,15 @@
  */
 
 const selection = require('../data/selection-blocks.data');
+const judgement = require('../data/judgement-blocks.data');
 const catalogue = require('../data/question-catalogue.data');
 const { resolveIntent, resolveOutputSchema } = require('../services/deterministic-qa/intents');
 const { resolveDomain } = require('../services/deterministic-qa/domains');
 const { hasSelector } = require('../services/deterministic-qa/selection');
 
 exports.seed = async function (knex) {
-  // 1. selection + potential content — same upsert contract as seeds 034/035/037
-  for (const b of selection.buildSelectionBlocks()) {
+  // 1. selection + potential + judgement content — same upsert contract as 034/035/037
+  for (const b of [...selection.buildSelectionBlocks(), ...judgement.buildJudgementBlocks()]) {
     await knex('answer_shared_blocks')
       .insert({ block_key: b.block_key, type: b.type, lang: b.lang, text: b.text, version: b.version, active: true })
       .onConflict(['block_key', 'lang', 'version']).merge({ type: b.type, text: b.text, active: true });

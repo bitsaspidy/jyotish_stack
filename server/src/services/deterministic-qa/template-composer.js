@@ -32,6 +32,7 @@ const { composeVargaMeaning } = require('./varga-meaning');
 const { composeConfidenceReason } = require('./confidence-reason');
 const { composeTimingOutlook } = require('./timing-outlook');
 const { resolveIntent } = require('./intents');
+const { composeJudgement } = require('./judgement-composer');
 const { taxonomyFor } = require('./selection');
 const { rankOptions } = require('./selection/selection-ranker');
 const { composeSelection } = require('./selection/selection-composer');
@@ -239,6 +240,16 @@ async function compose(ctx, dbOverride = null) {
     if (!selection.en || !selection.hi) selection = null;
   }
 
+  // ── Judgement (Human Conversation layer) ────────────────────────────────
+  // Assembled from THIS chart's reasoning — claim, then why it is not simple,
+  // then what to do, then what would change it. A selection question already
+  // answers with a ranked list, so it needs no verdict judgement.
+  const judgement = selection ? null : {
+    en: composeJudgement({ domain, state, verdict: ctx.verdict, lang: 'en', resolve }),
+    hi: composeJudgement({ domain, state, verdict: ctx.verdict, lang: 'hi', resolve }),
+  };
+  const hasJudgement = !!(judgement && judgement.en && judgement.hi);
+
   // Record a question-specific template hit, so provenance covers BOTH sources —
   // question templates and shared blocks. Admin needs the full picture of which
   // rows produced an answer; a half-recorded trace is not auditable.
@@ -253,11 +264,17 @@ async function compose(ctx, dbOverride = null) {
   // is not a headline for "which field suits me?".
   const hEn = useTemplate('headline', pickTemplate(set, 'headline', state, 'en'), 'en');
   const hHi = useTemplate('headline', pickTemplate(set, 'headline', state, 'hi'), 'hi');
+  // Order matters: a selection answer leads with its direction, any other answer
+  // leads with its JUDGEMENT. `label.headline.<state>` ("The prospects here are
+  // mixed") is the engine narrating its own internals and is now the last resort,
+  // not the default.
   const headline = selection
     ? { en: selection.en.primary_direction, hi: selection.hi.primary_direction }
-    : (hEn && hHi)
-      ? { en: interpolate(hEn.block_text, varsByLang.en), hi: interpolate(hHi.block_text, varsByLang.hi) }
-      : { en: block(set, `label.headline.${state}`, 'en') || '', hi: block(set, `label.headline.${state}`, 'hi') || '' };
+    : hasJudgement
+      ? { en: judgement.en.headline, hi: judgement.hi.headline }
+      : (hEn && hHi)
+        ? { en: interpolate(hEn.block_text, varsByLang.en), hi: interpolate(hHi.block_text, varsByLang.hi) }
+        : { en: block(set, `label.headline.${state}`, 'en') || '', hi: block(set, `label.headline.${state}`, 'hi') || '' };
 
   for (const key of ctx.requirement.answer_sections || []) {
     let section = null;
@@ -282,9 +299,14 @@ async function compose(ctx, dbOverride = null) {
           });
           if (section) break;
         }
+        // A question-specific template still wins (Q001 names your lagna, Q093 a
+        // planet — those ARE judgements, and specific ones). Otherwise the
+        // assembled judgement: claim → why it is not simple → what to do → what
+        // would change it.
         section = bilingual(key, set, (lang) => {
           const t = useTemplate('direct_answer', pickTemplate(set, 'direct_answer', state, lang), lang);
           if (t) return interpolate(t.block_text, varsByLang[lang]);
+          if (hasJudgement) return judgement[lang].text;
           return resolve([`direct_answer.${domain}.${state}`, `direct_answer.general.${state}`], lang, varsByLang[lang]);
         });
         if (!section) section = { key, ...sectionTitle(set, key), text_en: EMERGENCY.en, text_hi: EMERGENCY.hi };
@@ -490,6 +512,12 @@ async function compose(ctx, dbOverride = null) {
       // in the trace — nothing here may reach a normal user.
       domain,
       intent,
+      judgement_debug: hasJudgement ? {
+        headline: judgement.en.headline,
+        alignment: judgement.en.clauses.alignment,
+        qualified: judgement.en.clauses.qualified,
+        keys_used: judgement.en.keys_used,
+      } : null,
       // The full ranking, including the scores and per-factor contributions that
       // decided it, and every option that lost. This is the audit trail for a
       // recommendation someone may act on for years.
