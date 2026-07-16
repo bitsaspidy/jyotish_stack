@@ -36,13 +36,18 @@ export function generateStaticParams() {
   return Object.keys(OCCASION_SEO).map((occasion) => ({ occasion }));
 }
 
-export function generateMetadata({ params }) {
-  const seo = OCCASION_SEO[params.occasion];
+// `params` must be awaited — see kundli/[uuid]/page.jsx. Next 16 passes a Promise,
+// so `params.occasion` reads as undefined and every occasion would 404. Awaiting
+// works on Next 14 too, where params is a plain object.
+export async function generateMetadata({ params }) {
+  const { occasion } = await params;
+  const seo = OCCASION_SEO[occasion];
   if (!seo) return {};
-  return pageMeta({ ...seo, path: `/muhurat/${params.occasion}` });
+  return pageMeta({ ...seo, path: `/muhurat/${occasion}` });
 }
 
-export default function MuhuratOccasionPage({ params }) {
-  if (!OCCASION_SEO[params.occasion]) notFound();
-  return <MuhuratOccasion occasion={params.occasion} />;
+export default async function MuhuratOccasionPage({ params }) {
+  const { occasion } = await params;
+  if (!OCCASION_SEO[occasion]) notFound();
+  return <MuhuratOccasion occasion={occasion} />;
 }

@@ -7,8 +7,12 @@ export function generateStaticParams() {
   return SIGNS.map((s) => ({ sign: s.slug }));
 }
 
-export function generateMetadata({ params }) {
-  const s = signBySlug(params.sign);
+// `params` must be awaited — see kundli/[uuid]/page.jsx. Next 16 passes a Promise,
+// so `params.sign` reads as undefined and every sign would 404. Awaiting works on
+// Next 14 too, where params is a plain object.
+export async function generateMetadata({ params }) {
+  const { sign } = await params;
+  const s = signBySlug(sign);
   if (!s) return {};
   const l = s.en.toLowerCase();
   return pageMeta({
@@ -22,7 +26,8 @@ export function generateMetadata({ params }) {
   });
 }
 
-export default function SignHoroscopePage({ params }) {
-  if (!signBySlug(params.sign)) notFound();
-  return <SignHoroscope sign={params.sign} />;
+export default async function SignHoroscopePage({ params }) {
+  const { sign } = await params;
+  if (!signBySlug(sign)) notFound();
+  return <SignHoroscope sign={sign} />;
 }

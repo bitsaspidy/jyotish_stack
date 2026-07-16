@@ -721,7 +721,9 @@ export default function KundliAdminDetail({ kundliUuid }) {
   };
 
   useEffect(() => {
-    if (!kundliUuid) return;
+    // Bailing without clearing `fetching` (which starts true) leaves "Loading
+    // Kundli…" on screen forever with no request and no error. Surface it.
+    if (!kundliUuid) { setFetching(false); setError('No Kundli identifier was provided.'); return; }
     setFetching(true);
     adminApi.get(`/admin/kundlis/${kundliUuid}`)
       .then(({ data }) => {

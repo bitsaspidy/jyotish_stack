@@ -95,7 +95,13 @@ export default function KundliDetail({ uuid }) {
   useEffect(() => { if (!authLoading && !user) router.push('/login'); }, [user, authLoading, router]);
 
   const fetchKundli = useCallback(() => {
-    if (!user || !uuid) return;
+    // `fetching` starts true, so bailing out without clearing it leaves the
+    // "Computing Kundli…" spinner on screen forever — no request, no error, no
+    // way for the user to tell the page is broken. Report the two reasons we
+    // could bail instead of hanging: a missing uuid is a real fault, and a
+    // missing user is handled by the redirect effect above.
+    if (!uuid) { setFetching(false); setError('This Kundli link looks incomplete. Please open it again from your dashboard.'); return; }
+    if (!user) { setFetching(false); return; }
     setFetching(true);
     api.get(`/kundli/${uuid}`)
       .then(({ data }) => {
