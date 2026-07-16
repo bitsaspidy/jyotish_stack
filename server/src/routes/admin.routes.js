@@ -404,6 +404,44 @@ router.get('/kundlis/:uuid', ah(async (req, res) => {
   return ok(res, { profile });
 }));
 
+// ── Kundli Q&A (admin) ───────────────────────────────────────────────────────
+// The user-facing answer endpoint is ownership-scoped — it answers only for the
+// signed-in user's own Kundli — so an admin inspecting someone else's chart gets
+// a 404 there. This answers on behalf of the Kundli's OWNER, which is what an
+// admin looking at that chart actually means, and always returns the evaluation
+// trace (this router already requires an admin role, so there is no one here to
+// withhold it from).
+router.get('/kundlis/:uuid/qa/catalogue', ah(async (_req, res) => {
+  const qa = require('../services/deterministic-qa');
+  const categories = await qa.getUserFacingCatalogue();
+  return ok(res, { categories });
+}));
+
+router.post('/kundlis/:uuid/qa', ah(async (req, res) => {
+  const qa = require('../services/deterministic-qa');
+  const { ensureCalculatedChart: ensure } = require('../services/kundli-admin.service');
+
+  const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).select('user_id').first();
+  if (!profile) return fail(res, 'Kundli not found', 404);
+  // A Kundli with no owner cannot be answered: the engine's loader is
+  // ownership-scoped by design, and inventing an owner here would punch a hole
+  // straight through that.
+  if (!profile.user_id) return fail(res, 'This Kundli has no owner, so it cannot be answered.', 422);
+
+  const result = await qa.answerQuestion({
+    questionCode: req.body?.questionCode,
+    legacyKey: req.body?.legacyKey,
+    kundliUuid: req.params.uuid,
+    userId: profile.user_id,
+    deps: { ensureChart: ensure },
+  });
+  if (!result.ok) {
+    const code = result.reason === 'question_not_found' || result.reason === 'not_found' ? 404 : 400;
+    return fail(res, `Unable to answer this question (${result.reason}).`, code);
+  }
+  return ok(res, { answer: result.answer, trace: result.trace });
+}));
+
 // Varshphal for a kundli (admin endpoint)
 router.get('/kundlis/:uuid/varshphal', ah(async (req, res) => {
   const profile = await db('kundli_profiles').where({ uuid: req.params.uuid }).first();

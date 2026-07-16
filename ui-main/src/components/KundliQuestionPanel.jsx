@@ -170,8 +170,25 @@ function AdminEvidence({ trace }) {
   );
 }
 
-export default function KundliQuestionPanel({ uuid, name, lang }) {
+/**
+ * @param {object} props
+ * @param {object} [props.client]        axios instance — admin passes adminApi
+ * @param {string} [props.catalogueUrl]  question list endpoint
+ * @param {string} [props.answerUrl]     answer endpoint
+ *
+ * The endpoints are injectable because the admin view answers on behalf of the
+ * Kundli's OWNER through an admin-scoped route, while the user view answers for
+ * itself. Everything else — the picker, the answer rendering, the evidence
+ * inspector — is identical, and a second copy would drift from this one.
+ */
+export default function KundliQuestionPanel({
+  uuid, name, lang,
+  client = api,
+  catalogueUrl = '/kundli/qa/catalogue',
+  answerUrl,
+}) {
   const hi = lang === 'hi';
+  const askUrl = answerUrl || `/kundli/${uuid}/qa/deterministic`;
   const [categories, setCategories] = useState([]);
   const [activeCat, setActiveCat] = useState(null);
   const [search, setSearch] = useState('');
@@ -193,7 +210,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     let alive = true;
     setCatState('loading');
     setCatError('');
-    api.get('/kundli/qa/catalogue')
+    client.get(catalogueUrl)
       .then(({ data }) => {
         if (!alive) return;
         const cats = data?.categories || [];
@@ -213,7 +230,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
         setCatState('error');
       });
     return () => { alive = false; };
-  }, [reloadKey]);
+  }, [reloadKey, catalogueUrl, client]);
 
   // Search across BOTH languages so Hindi and English queries both work.
   const visibleQuestions = useMemo(() => {
@@ -234,7 +251,7 @@ export default function KundliQuestionPanel({ uuid, name, lang }) {
     setAnswer(null);
     setMessage('');
     try {
-      const { data } = await api.post(`/kundli/${uuid}/qa/deterministic`, { questionCode: question.code, lang });
+      const { data } = await client.post(askUrl, { questionCode: question.code, lang });
       setAnswer(data.answer);
       // Present for admins only — the route attaches `trace` by role, so its mere
       // presence is the admin signal. No role prop, and no way for a normal user's

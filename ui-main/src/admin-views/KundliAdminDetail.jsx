@@ -29,6 +29,7 @@ import {
   MAIN_TABS,
 } from '../components/kundli/kundliConstants';
 import { ChartToggle, SouthIndianChart, NorthIndianChart } from '../components/kundli/KundliChart';
+import KundliQuestionPanel  from '../components/KundliQuestionPanel';
 import BasicDetailsPanel    from '../components/kundli/BasicDetailsPanel';
 import PersonalityInsights  from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel    from '../components/kundli/LifePortraitPanel';
@@ -1258,6 +1259,27 @@ export default function KundliAdminDetail({ kundliUuid }) {
       {/* Ganesh Gayatri Mantra — visible on main kundli tab */}
       {activeTab === 'kundli' && (
         <MantrasPanel lang={lang} category="opening" />
+      )}
+
+      {/* ══ TAB: ASK A QUESTION ═══════════════════════════════════════════════
+          MAIN_TABS is shared with the user view, so this tab's BUTTON has always
+          rendered here — with nothing behind it. Clicking it showed an empty page.
+          The panel is the same component the user sees, pointed at the
+          admin-scoped endpoints: the user-facing answer route is ownership-scoped
+          and would 404 for an admin reading someone else's chart. Because the
+          admin route returns the evaluation trace, this also surfaces the evidence
+          inspector. */}
+      {activeTab === 'ask-question' && (
+        <div style={{ maxWidth: 900 }}>
+          <KundliQuestionPanel
+            uuid={kundliUuid}
+            name={kundli?.name}
+            lang={lang}
+            client={adminApi}
+            catalogueUrl={`/admin/kundlis/${kundliUuid}/qa/catalogue`}
+            answerUrl={`/admin/kundlis/${kundliUuid}/qa`}
+          />
+        </div>
       )}
 
       {/* ══ TAB: SIMPLE LIFE REPORT (human-friendly + admin debug) ════════════ */}
