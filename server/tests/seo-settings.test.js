@@ -99,6 +99,100 @@ test('SEO-dns: the apex domain drops www', () => {
   assert.ok(!apex.includes('/') && !apex.includes(':'), 'apex must be a hostname, not a URL');
 });
 
+// ── Page discovery ───────────────────────────────────────────────────────────
+
+const pages = require('../src/services/seo-pages.service');
+
+test('SEO-discover: finds the real pages of this site', () => {
+  const r = pages.discoverPages();
+  assert.strictEqual(r.found, true, 'the app directory should resolve from server/');
+  assert.ok(r.pages.length > 20, `expected the real page list, got ${r.pages.length}`);
+  const routes = r.pages.map((p) => p.route);
+  assert.ok(routes.includes('/'), 'the homepage is a page');
+  assert.ok(routes.includes('/free-kundli'));
+});
+
+test('SEO-discover: a redirect-only page is never a sitemap candidate', () => {
+  // /muhurat only calls redirect(). Listing it earns a "Page with redirect"
+  // exclusion in Search Console — this was found by hand once.
+  const r = pages.discoverPages();
+  const muhurat = r.pages.find((p) => p.route === '/muhurat');
+  assert.ok(muhurat, '/muhurat should be discovered');
+  assert.strictEqual(muhurat.status, 'redirect');
+});
+
+test('SEO-discover: login-only and admin pages are never candidates', () => {
+  const r = pages.discoverPages();
+  for (const route of ['/admin', '/dashboard', '/login', '/account', '/kundli/new']) {
+    const hit = r.pages.find((p) => p.route === route);
+    if (!hit) continue;
+    assert.strictEqual(hit.status, 'private', `${route} must not be offered for the sitemap`);
+  }
+  assert.ok(!r.pages.some((p) => p.status === 'candidate' && pages.isPrivate(p.route)));
+});
+
+test('SEO-discover: dynamic routes are not offered as fixed URLs', () => {
+  // The invariant is "never a candidate", not "always labelled dynamic":
+  // /kundli/[uuid] is both dynamic AND private, and private is the more important
+  // fact about it, so that label wins.
+  const r = pages.discoverPages();
+  for (const p of r.pages) {
+    if (p.route.includes('[')) {
+      assert.notStrictEqual(p.status, 'candidate', `${p.route} must never be offered as a fixed URL`);
+    }
+  }
+  assert.ok(r.pages.some((p) => p.status === 'dynamic'), 'the public dynamic routes should be labelled as such');
+});
+
+test('SEO-discover: redirect detection needs both the import and the call', () => {
+  assert.strictEqual(pages.isRedirectOnly("import { redirect } from 'next/navigation';\nexport default function P(){ redirect('/x'); }"), true);
+  // a page that merely mentions the word
+  assert.strictEqual(pages.isRedirectOnly("// we should redirect (later)\nexport default function P(){ return <div/>; }"), false);
+  // a big page that redirects conditionally is still a real page
+  const big = "import { redirect } from 'next/navigation';\n" + '// x'.repeat(400) + "\nexport default function P(){ if (a) redirect('/x'); return <div/>; }";
+  assert.strictEqual(pages.isRedirectOnly(big), false);
+});
+
+test('SEO-discover: route groups do not appear in the URL', () => {
+  assert.strictEqual(pages.toRoute(['(marketing)', 'pricing']), '/pricing');
+  assert.strictEqual(pages.toRoute([]), '/');
+  assert.strictEqual(pages.toRoute(['@modal', 'x']), null, 'parallel routes are not listable URLs');
+});
+
+// ── Admin-added routes ───────────────────────────────────────────────────────
+
+test('SEO-extras: keeps valid additions and fills sensible defaults', () => {
+  const out = seo.sanitizeExtras([{ path: '/terms' }]);
+  assert.deepStrictEqual(out, [{ path: '/terms', label: '/terms', priority: 0.5, changeFrequency: 'monthly', enabled: true }]);
+});
+
+test('SEO-extras: paths only — an absolute URL is never accepted', () => {
+  // A sitemap is a statement about THIS site; accepting foreign URLs would let
+  // someone launder links through our domain.
+  const out = seo.sanitizeExtras([
+    { path: 'https://evil.com/x' }, { path: '//evil.com' }, { path: 'no-slash' }, { path: '/ok' },
+  ]);
+  assert.deepStrictEqual(out.map((e) => e.path), ['/ok']);
+});
+
+test('SEO-extras: de-duplicates and caps the list', () => {
+  assert.strictEqual(seo.sanitizeExtras([{ path: '/a' }, { path: '/a' }]).length, 1);
+  const many = Array.from({ length: 500 }, (_, i) => ({ path: `/p${i}` }));
+  assert.strictEqual(seo.sanitizeExtras(many).length, 200, 'the list is capped');
+});
+
+test('SEO-extras: bad priority/frequency fall back rather than reject the row', () => {
+  const [e] = seo.sanitizeExtras([{ path: '/x', priority: 99, changeFrequency: 'often' }]);
+  assert.strictEqual(e.priority, 0.5);
+  assert.strictEqual(e.changeFrequency, 'monthly');
+});
+
+test('SEO-extras: junk in, empty out', () => {
+  for (const junk of [null, undefined, {}, 'x', [null, 3, 'y']]) {
+    assert.deepStrictEqual(seo.sanitizeExtras(junk), []);
+  }
+});
+
 // ── Sitemap overrides ────────────────────────────────────────────────────────
 
 test('SEO-overrides: keeps only the three fields the sitemap understands', () => {

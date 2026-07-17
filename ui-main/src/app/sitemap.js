@@ -1,5 +1,5 @@
 import { SITE_URL, INTERNAL_API_URL } from '../lib/seo';
-import { resolveRoutes, resolveBlogRoute } from '../lib/seoRoutes';
+import { resolveRoutes, resolveBlogRoute, resolveExtraRoutes } from '../lib/seoRoutes';
 
 /**
  * sitemap.xml — the route catalogue lives in lib/seoRoutes.js; the admin panel
@@ -11,14 +11,15 @@ import { resolveRoutes, resolveBlogRoute } from '../lib/seoRoutes';
  * why the catalogue is not stored in the database.
  */
 
-async function fetchOverrides() {
+async function fetchSitemapConfig() {
   try {
     const res = await fetch(`${INTERNAL_API_URL}/api/public/seo/sitemap-overrides`, { next: { revalidate: 3600 } });
-    if (!res.ok) return {};
+    if (!res.ok) return { overrides: {}, extras: [] };
     const json = await res.json();
-    return json?.data?.overrides || json?.overrides || {};
+    const body = json?.data || json || {};
+    return { overrides: body.overrides || {}, extras: body.extras || [] };
   } catch {
-    return {};
+    return { overrides: {}, extras: [] };
   }
 }
 
@@ -36,9 +37,12 @@ async function fetchBlogPosts() {
 
 export default async function sitemap() {
   const now = new Date();
-  const overrides = await fetchOverrides();
+  const { overrides, extras } = await fetchSitemapConfig();
 
-  const staticEntries = resolveRoutes(overrides)
+  // Catalogue routes + anything the admin added on top of it. resolveExtraRoutes
+  // drops extras that the catalogue has since claimed, so a URL cannot appear
+  // twice while a page is being promoted from "added in admin" to "in code".
+  const staticEntries = [...resolveRoutes(overrides), ...resolveExtraRoutes(extras)]
     .filter((r) => r.enabled)
     .map((r) => ({
       url: `${SITE_URL}${r.path === '/' ? '' : r.path}`,

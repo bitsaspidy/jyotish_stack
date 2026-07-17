@@ -1002,6 +1002,16 @@ router.get('/seo', ah(async (_req, res) => {
   });
 }));
 
+// GET /admin/seo/discover-pages — what pages exist in the code right now?
+// The App Router's filesystem is the route table, so this reads it rather than
+// asking the admin to remember. Classified, because a raw listing would happily
+// suggest /admin, /login and redirect-only pages.
+router.get('/seo/discover-pages', ah(async (_req, res) => {
+  const { discoverPages } = require('../services/seo-pages.service');
+  const result = discoverPages();
+  return ok(res, result);
+}));
+
 // GET /admin/seo/verify-dns — is the google-site-verification TXT record live?
 // On demand rather than on page load: it is a real DNS query, and the answer is
 // only interesting when someone is actually asking.

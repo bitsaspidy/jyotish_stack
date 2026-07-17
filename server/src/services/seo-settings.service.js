@@ -28,7 +28,11 @@ const KEYS = {
   method: 'seo_gsc_method',
   txt: 'seo_gsc_txt_token',
   overrides: 'seo_sitemap_overrides',
+  extras: 'seo_sitemap_extra_routes',
 };
+
+/** Sanity ceiling — a sitemap addition list is not a bulk URL importer. */
+const MAX_EXTRA_ROUTES = 200;
 
 /**
  * How the site proves ownership to Google.
@@ -121,6 +125,49 @@ function sanitizeOverrides(raw) {
   return out;
 }
 
+/**
+ * Routes the admin has added on top of the code catalogue — normally pages that
+ * were built after the catalogue was last edited, added from the "new pages
+ * detected" list.
+ *
+ * Same rule as overrides: paths only, never absolute URLs. A sitemap is a
+ * statement about THIS site, so letting an admin paste someone else's URL in is
+ * both wrong and a way to launder links through our domain's reputation.
+ */
+function sanitizeExtras(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  const seen = new Set();
+  for (const item of raw.slice(0, MAX_EXTRA_ROUTES)) {
+    if (!item || typeof item !== 'object') continue;
+    const p = String(item.path || '').trim();
+    if (!/^\/[A-Za-z0-9\-/_]*$/.test(p)) continue;
+    if (seen.has(p)) continue;
+    seen.add(p);
+
+    const priority = Number(item.priority);
+    const entry = {
+      path: p,
+      label: String(item.label || p).trim().slice(0, 80),
+      priority: Number.isFinite(priority) && priority >= 0 && priority <= 1 ? Math.round(priority * 100) / 100 : 0.5,
+      changeFrequency: ['always', 'hourly', 'daily', 'weekly', 'monthly', 'yearly', 'never'].includes(item.changeFrequency)
+        ? item.changeFrequency : 'monthly',
+      enabled: item.enabled !== false,
+    };
+    out.push(entry);
+  }
+  return out;
+}
+
+function parseExtras(value) {
+  if (!value) return [];
+  try {
+    return sanitizeExtras(JSON.parse(value));
+  } catch {
+    return [];
+  }
+}
+
 function parseOverrides(value) {
   if (!value) return {};
   try {
@@ -141,6 +188,7 @@ async function getSeoSettings({ fresh = false } = {}) {
     gscFile: map[KEYS.gsc] || '',
     gscTxtToken: map[KEYS.txt] || '',
     sitemapOverrides: parseOverrides(map[KEYS.overrides]),
+    sitemapExtraRoutes: parseExtras(map[KEYS.extras]),
   };
   cachedAt = Date.now();
   return cache;
@@ -174,6 +222,9 @@ async function saveSeoSettings(updates = {}) {
   }
   if ('sitemapOverrides' in updates) {
     writes.push([KEYS.overrides, JSON.stringify(sanitizeOverrides(updates.sitemapOverrides)), 'Per-route sitemap overrides']);
+  }
+  if ('sitemapExtraRoutes' in updates) {
+    writes.push([KEYS.extras, JSON.stringify(sanitizeExtras(updates.sitemapExtraRoutes)), 'Admin-added sitemap routes']);
   }
 
   if (errors.length) return { ok: false, errors };
@@ -304,6 +355,7 @@ module.exports = {
   validateTxtToken,
   validateMethod,
   sanitizeOverrides,
+  sanitizeExtras,
   apexDomain,
   METHODS,
   KEYS,

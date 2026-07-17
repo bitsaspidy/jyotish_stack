@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import adminApi from '../lib/adminApi';
 import toast from 'react-hot-toast';
-import { SITEMAP_ROUTES, BLOG_POSTS_ROUTE, ROUTE_GROUPS, CHANGE_FREQUENCIES, resolveRoutes, resolveBlogRoute } from '../lib/seoRoutes';
+import { SITEMAP_ROUTES, BLOG_POSTS_ROUTE, ROUTE_GROUPS, CHANGE_FREQUENCIES, resolveRoutes, resolveBlogRoute, resolveExtraRoutes } from '../lib/seoRoutes';
 
 /**
  * Admin → Settings → 🔍 SEO.
@@ -59,10 +59,13 @@ export default function SeoSettings() {
   const [method, setMethod] = useState('none');
   const [txtToken, setTxtToken] = useState('');
   const [overrides, setOverrides] = useState({});
+  const [extras, setExtras] = useState([]);
   const [siteUrl, setSiteUrl] = useState('');
   const [gscUrl, setGscUrl] = useState(null);
   const [dnsResult, setDnsResult] = useState(null);
   const [dnsChecking, setDnsChecking] = useState(false);
+  const [discovered, setDiscovered] = useState(null);
+  const [manualPath, setManualPath] = useState('');
 
   useEffect(() => {
     adminApi.get('/admin/seo')
@@ -72,11 +75,18 @@ export default function SeoSettings() {
         setMethod(data.settings?.gscMethod || 'none');
         setTxtToken(data.settings?.gscTxtToken || '');
         setOverrides(data.settings?.sitemapOverrides || {});
+        setExtras(data.settings?.sitemapExtraRoutes || []);
         setSiteUrl(data.siteUrl || '');
         setGscUrl(data.gscUrl || null);
       })
       .catch(() => toast.error('Failed to load SEO settings'))
       .finally(() => setLoading(false));
+
+    // Which pages exist in the code right now? Read-only; failure just means no
+    // suggestions, so it must not surface as an error.
+    adminApi.get('/admin/seo/discover-pages')
+      .then(({ data }) => setDiscovered(data))
+      .catch(() => setDiscovered({ found: false, pages: [] }));
   }, []);
 
   const checkDns = async () => {
@@ -92,8 +102,53 @@ export default function SeoSettings() {
 
   const routes = useMemo(() => resolveRoutes(overrides), [overrides]);
   const blogRoute = useMemo(() => resolveBlogRoute(overrides), [overrides]);
-  const allRows = useMemo(() => [...routes, blogRoute], [routes, blogRoute]);
+  const extraRows = useMemo(() => resolveExtraRoutes(extras), [extras]);
+  const allRows = useMemo(() => [...routes, ...extraRows, blogRoute], [routes, extraRows, blogRoute]);
   const enabledCount = allRows.filter((r) => r.enabled).length;
+
+  /**
+   * Pages that exist in code but are in neither the catalogue nor the extras —
+   * i.e. built since the sitemap was last thought about. Redirect-only, dynamic
+   * and private pages are already filtered out server-side.
+   */
+  const newPages = useMemo(() => {
+    if (!discovered?.found) return [];
+    const listed = new Set([...SITEMAP_ROUTES.map((r) => r.path), ...extras.map((e) => e.path)]);
+    return (discovered.pages || []).filter((p) => p.status === 'candidate' && !listed.has(p.route));
+  }, [discovered, extras]);
+
+  const skipped = useMemo(() => {
+    if (!discovered?.found) return [];
+    return (discovered.pages || []).filter((p) => p.status !== 'candidate');
+  }, [discovered]);
+
+  const addExtra = (path, label) => {
+    const clean = String(path || '').trim();
+    if (!/^\/[A-Za-z0-9\-/_]*$/.test(clean)) {
+      toast.error('Enter a path that starts with / — not a full URL');
+      return;
+    }
+    if (SITEMAP_ROUTES.some((r) => r.path === clean)) {
+      toast.error('That page is already in the sitemap');
+      return;
+    }
+    if (extras.some((e) => e.path === clean)) {
+      toast.error('That page has already been added');
+      return;
+    }
+    setExtras((prev) => [...prev, { path: clean, label: label || clean, priority: 0.5, changeFrequency: 'monthly', enabled: true }]);
+    setDirty(true);
+  };
+
+  const removeExtra = (path) => {
+    setExtras((prev) => prev.filter((e) => e.path !== path));
+    setDirty(true);
+  };
+
+  const patchExtra = (path, patch) => {
+    setExtras((prev) => prev.map((e) => (e.path === path ? { ...e, ...patch } : e)));
+    setDirty(true);
+  };
 
   /**
    * Store only what actually differs from the code default. Writing every field
@@ -124,12 +179,14 @@ export default function SeoSettings() {
         gscFile: gsc.trim(),
         gscTxtToken: txtToken.trim(),
         sitemapOverrides: overrides,
+        sitemapExtraRoutes: extras,
       });
       setGa(data.settings?.gaMeasurementId || '');
       setGsc(data.settings?.gscFile || '');
       setMethod(data.settings?.gscMethod || 'none');
       setTxtToken(data.settings?.gscTxtToken || '');
       setOverrides(data.settings?.sitemapOverrides || {});
+      setExtras(data.settings?.sitemapExtraRoutes || []);
       setGscUrl(data.gscUrl || null);
       setDirty(false);
       toast.success('SEO settings saved');
@@ -274,8 +331,67 @@ export default function SeoSettings() {
         </div>
         <p style={{ color: DIM, fontSize: 11.5, lineHeight: 1.7, marginBottom: 14 }}>
           Turn a page off to drop it from sitemap.xml. The page stays live and reachable — this only tells Google what to prioritise crawling.
-          Pages added in code appear here on their own. The sitemap is cached for up to an hour, so changes are not instant.
+          The sitemap is cached for up to an hour, so changes are not instant.
         </p>
+
+        {/* ── New pages detected in the code ─────────────────────────────── */}
+        {newPages.length > 0 && (
+          <div style={{ border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.05)', borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+            <h4 style={{ color: '#22C55E', fontSize: 12.5, fontWeight: 700, marginBottom: 4 }}>
+              ✨ {newPages.length} new page{newPages.length > 1 ? 's' : ''} found in the site that {newPages.length > 1 ? 'are' : 'is'} not in the sitemap
+            </h4>
+            <p style={{ color: DIM, fontSize: 11, lineHeight: 1.7, marginBottom: 10 }}>
+              Detected by reading the site&apos;s own pages, so these definitely exist — adding one cannot create a broken link.
+              Login-only, redirecting and dynamic pages are left out automatically.
+            </p>
+            {newPages.map((p) => (
+              <div key={p.route} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '5px 0' }}>
+                <code style={{ color: IVORY, fontSize: 11.5 }}>{p.route}</code>
+                <button onClick={() => addExtra(p.route)} style={{
+                  padding: '3px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  background: 'rgba(34,197,94,0.14)', border: '1px solid rgba(34,197,94,0.4)', color: '#22C55E',
+                }}>
+                  + Add to sitemap
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {discovered?.found && newPages.length === 0 && (
+          <p style={{ color: '#22C55E', fontSize: 11.5, marginBottom: 14 }}>
+            ✓ Every public page in the site is accounted for in the sitemap.
+            {skipped.length > 0 && <span style={{ color: DIM }}> ({skipped.length} skipped: login-only, dynamic or redirecting.)</span>}
+          </p>
+        )}
+        {discovered && !discovered.found && (
+          <p style={{ color: DIM, fontSize: 11.5, marginBottom: 14 }}>
+            New-page detection is unavailable here (the site&apos;s page folder could not be read). The sitemap itself is unaffected — you can still add a path manually below.
+          </p>
+        )}
+
+        {/* ── Manual add ─────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <input
+            value={manualPath}
+            onChange={(e) => setManualPath(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { addExtra(manualPath); setManualPath(''); } }}
+            placeholder="/some-new-page"
+            style={{ ...inputStyle, flex: 1, minWidth: 180 }}
+          />
+          <button onClick={() => { addExtra(manualPath); setManualPath(''); }} style={{
+            padding: '8px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            background: 'rgba(212,175,55,0.12)', border: '1px solid rgba(212,175,55,0.35)', color: GOLD,
+          }}>
+            + Add path
+          </button>
+        </div>
+        {manualPath.trim() && discovered?.found
+          && !(discovered.pages || []).some((p) => p.route === manualPath.trim()) && (
+          <p style={{ color: '#F59E0B', fontSize: 11, marginTop: -10, marginBottom: 14 }}>
+            ⚠ No page found at <code>{manualPath.trim()}</code> in the site. Adding it anyway would put a URL in the sitemap that may 404.
+          </p>
+        )}
 
         {grouped.map((g) => (
           <div key={g.key} style={{ marginBottom: 14 }}>
@@ -287,30 +403,47 @@ export default function SeoSettings() {
                   padding: '8px 11px', background: i % 2 ? 'rgba(255,255,255,0.015)' : 'transparent',
                   opacity: r.enabled ? 1 : 0.45,
                 }}>
-                  <Toggle checked={r.enabled} onChange={() => setOverride(r, { enabled: !r.enabled })} />
+                  {/* An extra lives in its own list, so its edits go there —
+                      routing them through overrides would write a setting for a
+                      path the catalogue has never heard of. */}
+                  <Toggle
+                    checked={r.enabled}
+                    onChange={() => (r.isExtra ? patchExtra(r.path, { enabled: !r.enabled }) : setOverride(r, { enabled: !r.enabled }))}
+                  />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ color: IVORY, fontSize: 12, fontWeight: 600 }}>
                       {r.label}
-                      {r.overridden && <span style={{ color: GOLD, fontSize: 9.5, marginLeft: 6 }}>● customised</span>}
+                      {r.isExtra && <span style={{ color: '#22C55E', fontSize: 9.5, marginLeft: 6 }}>● added</span>}
+                      {!r.isExtra && r.overridden && <span style={{ color: GOLD, fontSize: 9.5, marginLeft: 6 }}>● customised</span>}
                     </div>
                     <div style={{ color: DIM, fontSize: 10.5, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</div>
                   </div>
                   <select
                     value={r.changeFrequency}
-                    onChange={(e) => setOverride(r, { changeFrequency: e.target.value })}
+                    onChange={(e) => (r.isExtra ? patchExtra(r.path, { changeFrequency: e.target.value }) : setOverride(r, { changeFrequency: e.target.value }))}
                     disabled={!r.enabled}
                     style={{ ...inputStyle, width: 'auto', padding: '4px 7px', fontSize: 11 }}
                   >
                     {CHANGE_FREQUENCIES.map((f) => <option key={f} value={f} style={{ background: '#111428' }}>{f}</option>)}
                   </select>
-                  <input
-                    type="number" min="0" max="1" step="0.05"
-                    value={r.priority}
-                    onChange={(e) => setOverride(r, { priority: e.target.value })}
-                    disabled={!r.enabled}
-                    style={{ ...inputStyle, width: 66, padding: '4px 7px', fontSize: 11 }}
-                    title="Crawl priority 0.0–1.0"
-                  />
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="number" min="0" max="1" step="0.05"
+                      value={r.priority}
+                      onChange={(e) => (r.isExtra
+                        ? patchExtra(r.path, { priority: Number(e.target.value) })
+                        : setOverride(r, { priority: e.target.value }))}
+                      disabled={!r.enabled}
+                      style={{ ...inputStyle, width: 66, padding: '4px 7px', fontSize: 11 }}
+                      title="Crawl priority 0.0–1.0"
+                    />
+                    {r.isExtra && (
+                      <button onClick={() => removeExtra(r.path)} title="Remove this added page"
+                        style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', fontSize: 13, padding: '0 2px' }}>
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

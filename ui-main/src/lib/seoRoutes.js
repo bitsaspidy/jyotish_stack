@@ -26,6 +26,7 @@ export const ROUTE_GROUPS = {
   panchang: 'Panchang & Muhurat',
   content: 'Content',
   legal: 'Legal',
+  added: 'Added from admin',
 };
 
 export const SITEMAP_ROUTES = [
@@ -105,6 +106,33 @@ export function resolveRoutes(overrides = {}) {
       overridden: Object.keys(o).length > 0,
     };
   });
+}
+
+/**
+ * Routes the admin added on top of the catalogue — usually pages built after the
+ * catalogue was last touched, added from the "new pages detected" list.
+ *
+ * The catalogue always wins a collision: if a path later gets a proper entry in
+ * code, that entry is the truth and the stale admin copy is dropped rather than
+ * emitting the same URL twice.
+ */
+export function resolveExtraRoutes(extras = []) {
+  if (!Array.isArray(extras)) return [];
+  const known = new Set(SITEMAP_ROUTES.map((r) => r.path));
+  const seen = new Set();
+  return extras
+    .filter((e) => e && typeof e.path === 'string' && e.path.startsWith('/'))
+    .filter((e) => !known.has(e.path))
+    .filter((e) => (seen.has(e.path) ? false : seen.add(e.path)))
+    .map((e) => ({
+      path: e.path,
+      label: e.label || e.path,
+      group: 'added',
+      priority: typeof e.priority === 'number' ? e.priority : 0.5,
+      changeFrequency: e.changeFrequency || 'monthly',
+      enabled: e.enabled !== false,
+      isExtra: true,
+    }));
 }
 
 export function resolveBlogRoute(overrides = {}) {

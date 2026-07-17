@@ -566,19 +566,21 @@ router.get('/seo/config', async (_req, res) => {
 });
 
 /**
- * GET /api/public/seo/sitemap-overrides — per-route admin overrides.
+ * GET /api/public/seo/sitemap-overrides — per-route admin overrides + any routes
+ * the admin added on top of the catalogue.
  *
  * The route CATALOGUE is not here on purpose: it lives in the frontend
  * (lib/seoRoutes.js) so a build with this API down still emits a correct sitemap
- * from the defaults rather than an empty one.
+ * from the defaults rather than an empty one. Extras degrade the same way — they
+ * are additions, so losing them briefly costs coverage, never correctness.
  */
 router.get('/seo/sitemap-overrides', async (_req, res) => {
   try {
-    const { sitemapOverrides } = await getSeoSettings();
-    return ok(res, { overrides: sitemapOverrides });
+    const { sitemapOverrides, sitemapExtraRoutes } = await getSeoSettings();
+    return ok(res, { overrides: sitemapOverrides, extras: sitemapExtraRoutes });
   } catch (e) {
     console.error('[public/seo/sitemap-overrides]', e.message);
-    return ok(res, { overrides: {} });
+    return ok(res, { overrides: {}, extras: [] });
   }
 });
 
