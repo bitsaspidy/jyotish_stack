@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
@@ -8,7 +8,14 @@ import StarField from '../../components/StarField';
 import Logo from '../../components/Logo';
 import api from '../../lib/api';
 
-export default function ResetPasswordPage() {
+/**
+ * useSearchParams() forces a client-side bailout, so it must sit inside a Suspense
+ * boundary or the page cannot be prerendered at all. This was invisible until the
+ * PublicShell stopped returning a splash on the server — the gate meant this
+ * component never rendered during prerender, so the missing boundary never
+ * surfaced. See app/providers.jsx.
+ */
+function ResetPasswordForm() {
   const params = useSearchParams();
   const router = useRouter();
   const token = params.get('token');
@@ -48,5 +55,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen starfield-bg" />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

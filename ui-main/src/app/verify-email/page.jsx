@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import StarField from '../../components/StarField';
 import api from '../../lib/api';
 
-export default function VerifyEmailPage() {
+/** See reset-password/page.jsx — useSearchParams needs a Suspense boundary. */
+function VerifyEmailInner() {
   const params = useSearchParams();
   const token = params.get('token');
   const [status, setStatus] = useState('verifying'); // verifying | success | error
@@ -40,5 +41,13 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen starfield-bg" />}>
+      <VerifyEmailInner />
+    </Suspense>
   );
 }

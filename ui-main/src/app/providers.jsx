@@ -15,7 +15,26 @@ import api from '../lib/api';
 // ──────────────────────────────────────────────────────────────────────────────
 function PublicShell({ children }) {
   const { lang } = useLang();
-  const [maint, setMaint] = useState(null);   // null = loading | false = off | obj = on
+
+  /**
+   * FAIL OPEN. `maint` starts as false — "site is on" — not as a loading state.
+   *
+   * This used to be `useState(null)` with a spinner returned while `null`. Because
+   * the value only changed inside a useEffect, and effects never run during server
+   * rendering, the server ALWAYS returned that spinner. Every public page — the
+   * homepage included — was prerendered as 105 characters reading
+   * "🪐 JYOTISH STACK AI". Navbar, Footer and every page's content existed only
+   * after hydration, so first-wave crawlers saw an empty site and users waited for
+   * an API round-trip before seeing anything.
+   *
+   * Rendering the site first and switching to ComingSoon only if the API says
+   * maintenance is on costs a brief flash during the rare maintenance window. The
+   * old default cost every crawl and every first paint. The API is independently
+   * gated by server/src/middleware/maintenance.js, so this component is a UX
+   * courtesy, not the enforcement point — it must never be the thing that decides
+   * whether the site renders at all.
+   */
+  const [maint, setMaint] = useState(false);
 
   useEffect(() => {
     api.get('/settings/public')
@@ -23,27 +42,10 @@ function PublicShell({ children }) {
         const s = data?.settings || {};
         if (s.maintenance_mode === 'true') {
           setMaint({ title: s.maintenance_title, message: s.maintenance_message, message_hi: s.maintenance_message_hi });
-        } else {
-          setMaint(false);
         }
       })
-      .catch(() => setMaint(false));   // server offline → show site
+      .catch(() => { /* server offline → leave the site visible */ });
   }, []);
-
-  if (maint === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: 'radial-gradient(ellipse at top,#181C35 0%,#0B0D1A 60%,#06070F 100%)' }}>
-        <div className="text-center select-none">
-          <div style={{ fontSize: 52, animation: 'floatAnim 2s ease-in-out infinite' }}>🪐</div>
-          <p style={{ color: 'rgba(212,175,55,0.5)', fontSize: '0.7rem', marginTop: 14, letterSpacing: '0.35em', fontFamily: 'Inter,sans-serif' }}>
-            JYOTISH STACK AI
-          </p>
-        </div>
-        <style>{`@keyframes floatAnim{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}`}</style>
-      </div>
-    );
-  }
 
   if (maint) {
     return <ComingSoon lang={lang} title={maint.title} message={maint.message} messageHi={maint.message_hi} />;

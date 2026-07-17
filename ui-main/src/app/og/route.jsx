@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { SITE_NAME } from '../../lib/seo';
+import { BRAND_NAME, TRADEMARK_SYMBOL } from '../../lib/brand';
 
 /**
  * Social share image — 1200×630 PNG, generated on demand.
@@ -60,8 +60,14 @@ export async function GET(request) {
             <circle cx="50" cy="50" r="6" fill={GOLD} />
           </svg>
           <div style={{ display: 'flex', flexDirection: 'column', marginLeft: '20px' }}>
-            <div style={{ fontSize: '34px', fontWeight: 700, color: GOLD, letterSpacing: '-0.5px' }}>
-              {SITE_NAME}
+            {/* Satori has no <sup>; the ™ is a smaller span nudged up by hand. */}
+            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+              <div style={{ fontSize: '34px', fontWeight: 700, color: GOLD, letterSpacing: '-0.5px' }}>
+                {BRAND_NAME}
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: GOLD, marginTop: '2px', marginLeft: '3px' }}>
+                {TRADEMARK_SYMBOL}
+              </div>
             </div>
             {/* Latin only, deliberately. next/og's bundled font has no Devanagari
                 shaping — "वैदिक ज्योतिष" rendered with its matras detached and in

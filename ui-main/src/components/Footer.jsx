@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Logo from './Logo';
+import { BRAND_NAME, TRADEMARK_SYMBOL, copyrightLine } from '../lib/brand';
 import { useLang } from '../context/LangContext';
 import { t as translate } from '../lib/astroI18n';
 import api from '../lib/api';
@@ -36,7 +37,10 @@ export default function Footer() {
             <div className="flex items-center gap-3 mb-4">
               <Logo size={44} />
               <div>
-                <h3 className="font-serif text-gold text-xl font-bold">Jyotish Stack AI</h3>
+                <h3 className="font-serif text-gold text-xl font-bold">
+                  {BRAND_NAME}
+                  <sup className="text-[0.5em] font-normal ml-[1px] align-super">{TRADEMARK_SYMBOL}</sup>
+                </h3>
                 <p className="text-ivory/40 text-xs tracking-widest font-devanagari">ज्योतिष स्टैक</p>
               </div>
             </div>
@@ -99,7 +103,15 @@ export default function Footer() {
 
         <div className="divider-gold mt-10" />
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-ivory/40 text-xs">
-          <p>© {new Date().getFullYear()} Jyotish Stack AI — <span className="font-devanagari">ज्योतिष स्टैक</span></p>
+          <div className="text-center md:text-left">
+            <p>{copyrightLine()} — <span className="font-devanagari">ज्योतिष स्टैक</span></p>
+            {/* Names the mark and its owner. Says "trademark", never "registered
+                trademark" — the application is still pending. See lib/brand.js. */}
+            <p className="mt-1 text-ivory/30">
+              {BRAND_NAME}{TRADEMARK_SYMBOL} and the Jyot Chakra logo are trademarks of {BRAND_NAME}.
+              Logo artwork is copyright-protected.
+            </p>
+          </div>
           <p>jyotishstack.com</p>
         </div>
       </div>

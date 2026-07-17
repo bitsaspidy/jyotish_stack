@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from './Logo';
+import { BRAND_NAME_SHORT, TRADEMARK_SYMBOL } from '../lib/brand';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext';
 import { t } from '../lib/astroI18n';
@@ -85,7 +86,10 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-3 shrink-0">
           <Logo size={38} />
           <div className="hidden sm:block leading-tight">
-            <p className="font-serif text-gold font-bold text-base tracking-wide">Jyotish Stack</p>
+            <p className="font-serif text-gold font-bold text-base tracking-wide">
+              {BRAND_NAME_SHORT}
+              <sup className="text-[0.5em] font-normal ml-[1px] align-super tracking-normal">{TRADEMARK_SYMBOL}</sup>
+            </p>
             <p className="text-gold/40 text-[10px] tracking-[0.25em] uppercase">AI Platform</p>
           </div>
         </Link>
