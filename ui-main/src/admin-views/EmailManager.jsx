@@ -5,9 +5,9 @@ import toast from 'react-hot-toast';
 import RichTextEditor from '../admin-components/RichTextEditor';
 
 // ─── Colour palette ───────────────────────────────────────────────────────────
-const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8', all:'#D4AF37' };
-const DEPT_LABEL = { sales:'Sales', team:'Support', account:'Accounts', all:'All Inboxes' };
-const DEPT_EMAIL = { sales:'sales@jyotishstack.com', team:'team@jyotishstack.com', account:'account@jyotishstack.com' };
+const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8', legal:'#F472B6', all:'#D4AF37' };
+const DEPT_LABEL = { sales:'Sales', team:'Support', account:'Accounts', legal:'Legal', all:'All Inboxes' };
+const DEPT_EMAIL = { sales:'sales@jyotishstack.com', team:'team@jyotishstack.com', account:'account@jyotishstack.com', legal:'legal@jyotishstack.com' };
 
 const gold   = '#D4AF37';
 const navy   = '#0B0D1A';
@@ -573,7 +573,7 @@ export default function EmailManager() {
   const [search,       setSearch]       = useState('');
   const [signatures,   setSignatures]   = useState({});
   const [retrying,     setRetrying]     = useState({});
-  const [unreadCounts, setUnreadCounts] = useState({ all: 0, sales: 0, team: 0, account: 0 });
+  const [unreadCounts, setUnreadCounts] = useState({ all: 0, sales: 0, team: 0, account: 0, legal: 0 });
   const [starring,     setStarring]     = useState({});
   const [deleting,     setDeleting]     = useState({});
 
@@ -741,6 +741,7 @@ export default function EmailManager() {
     { key:'sales',   label:'💼 Sales',     color: DEPT_COLOR.sales   },
     { key:'team',    label:'🤝 Support',   color: DEPT_COLOR.team    },
     { key:'account', label:'🏦 Accounts',  color: DEPT_COLOR.account },
+    { key:'legal',   label:'⚖️ Legal',     color: DEPT_COLOR.legal   },
   ];
 
   const FOLDER_TABS = [

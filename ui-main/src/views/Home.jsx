@@ -332,6 +332,9 @@ function ContactSection({ lang }) {
     { value:'sales',   en:'Sales',             hi:'बिक्री' },
     { value:'team',    en:'Support',           hi:'सहायता' },
     { value:'account', en:'Account & Billing', hi:'खाता एवं भुगतान' },
+    // Grievance Officer channel named in the Terms — kept last so it does not
+    // catch ordinary support traffic that belongs in team@.
+    { value:'legal',   en:'Legal & Grievance', hi:'कानूनी एवं शिकायत' },
   ];
 
   const submit = async (e) => {

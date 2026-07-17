@@ -62,9 +62,24 @@ const DEPARTMENTS = {
     address: process.env.MAIL_ACCOUNT_USER || DEFAULT_ACCOUNT.user,
     label:   'Accounts',
   },
+  // legal@ — the Grievance Officer address named in the Terms. Kept as its own
+  // mailbox rather than an alias to team@ so statutory grievances (48h ack / 30d
+  // resolution under the Consumer Protection (E-Commerce) Rules 2020) do not mix
+  // with general support mail. Falls back to the shared account like every other
+  // department, so an unset MAIL_LEGAL_* cannot break sending.
+  legal: {
+    user:    process.env.MAIL_LEGAL_USER   || DEFAULT_ACCOUNT.user,
+    pass:    process.env.MAIL_LEGAL_PASS   || DEFAULT_ACCOUNT.pass,
+    from:    process.env.MAIL_LEGAL_FROM
+             || (process.env.MAIL_LEGAL_USER
+                  ? `Jyotish Stack Legal <${process.env.MAIL_LEGAL_USER}>`
+                  : DEFAULT_ACCOUNT.from),
+    address: process.env.MAIL_LEGAL_USER   || DEFAULT_ACCOUNT.user,
+    label:   'Legal',
+  },
 };
 
-const INBOX_FOR = { sales: 'sales', team: 'team', account: 'account', general: 'team' };
+const INBOX_FOR = { sales: 'sales', team: 'team', account: 'account', legal: 'legal', general: 'team' };
 
 const TEMPLATE_DEPARTMENT = {
   welcome:              'account',

@@ -4,9 +4,16 @@
 #   sudo bash scripts/setup-self-hosted-smtp.sh jyotishstack.com
 #
 # Creates these mailboxes by default:
-#   sales@DOMAIN, team@DOMAIN, account@DOMAIN
+#   sales@DOMAIN, team@DOMAIN, account@DOMAIN, legal@DOMAIN
 #
 # Passwords are generated once and stored at /root/jyotish-mailbox-passwords.txt.
+# Re-running is safe: password_for() reuses any password already in that file, so
+# existing mailboxes keep their credentials and only NEW ones get a fresh secret.
+#
+# ⚠️ MAILBOXES below is the single source of truth. This script REWRITES
+# /etc/dovecot/users and virtual_mailbox_maps wholesale, so a mailbox that is not
+# listed here is deleted the next time anyone runs this — silently. Never add a
+# mailbox by hand-editing those files without also adding it here.
 
 set -euo pipefail
 
@@ -14,7 +21,11 @@ DOMAIN="${1:-${MAIL_DOMAIN:-jyotishstack.com}}"
 MAIL_HOST="${MAIL_HOST:-mail.${DOMAIN}}"
 PASSWORD_FILE="${PASSWORD_FILE:-/root/jyotish-mailbox-passwords.txt}"
 DNS_FILE="${DNS_FILE:-/root/jyotish-mail-dns-records.txt}"
-MAILBOXES=(sales team account)
+# legal@ is the Grievance Officer address named in the Terms (IT Act 2000 +
+# Consumer Protection (E-Commerce) Rules 2020). It is a real mailbox, not an alias
+# to team@, so statutory grievance mail stays separate and auditable from general
+# support — the rules put it on a 48h acknowledgement / 30d resolution clock.
+MAILBOXES=(sales team account legal)
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 die() { echo "ERROR: $*" >&2; exit 1; }
@@ -266,6 +277,7 @@ App server/.env values:
   MAIL_SALES_USER=sales@${DOMAIN}
   MAIL_TEAM_USER=team@${DOMAIN}
   MAIL_ACCOUNT_USER=account@${DOMAIN}
+  MAIL_LEGAL_USER=legal@${DOMAIN}
 
 Mailbox passwords:
   ${PASSWORD_FILE}

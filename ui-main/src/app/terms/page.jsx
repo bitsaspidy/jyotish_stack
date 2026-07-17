@@ -141,7 +141,7 @@ export default function TermsPage() {
       <div className="notice-box">
         <p><strong>Entity:</strong> M/S. Sat Sai Infocom (proprietor: Devavrat Singh), trading as Jyotish Stack AI<br />
         <strong>Grievance Officer:</strong> Devavrat Singh<br />
-        <strong>Email:</strong> <a href="mailto:team@jyotishstack.com">team@jyotishstack.com</a><br />
+        <strong>Email:</strong> <a href="mailto:legal@jyotishstack.com">legal@jyotishstack.com</a><br />
         <strong>Response Time:</strong> We will acknowledge your grievance within 48 hours and endeavour to resolve it within 30 days of receipt.</p>
       </div>
 
@@ -153,7 +153,7 @@ export default function TermsPage() {
       <ul>
         <li><strong>Entity:</strong> M/S. Sat Sai Infocom (proprietor: Devavrat Singh), trading as Jyotish Stack AI</li>
         <li><strong>Email:</strong> <a href="mailto:support@jyotishstack.com">support@jyotishstack.com</a></li>
-        <li><strong>Legal:</strong> <a href="mailto:team@jyotishstack.com">team@jyotishstack.com</a></li>
+        <li><strong>Legal &amp; Grievance:</strong> <a href="mailto:legal@jyotishstack.com">legal@jyotishstack.com</a></li>
         <li><strong>Website:</strong> <a href="https://jyotishstack.com">jyotishstack.com</a></li>
       </ul>
     </LegalPage>

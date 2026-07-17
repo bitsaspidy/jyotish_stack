@@ -38,6 +38,7 @@ const DEPT_INFO = {
   sales:   { label:'Sales',    email:'sales@jyotishstack.com',   color:'#F59E0B' },
   team:    { label:'Support',  email:'team@jyotishstack.com',    color:'#10B981' },
   account: { label:'Accounts', email:'account@jyotishstack.com', color:'#818CF8' },
+  legal:   { label:'Legal',    email:'legal@jyotishstack.com',   color:'#F472B6' },
 };
 
 function EmailSignatureTab() {

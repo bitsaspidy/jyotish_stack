@@ -7,7 +7,9 @@ const { sendEmail, departmentInbox, DEPARTMENTS, DEPT_LABELS } = require('../ser
 const { randomToken } = require('../utils/token');
 const { getSeoSettings, gscFileBody } = require('../services/seo-settings.service');
 
-const VALID_DEPARTMENTS = ['sales', 'team', 'account', 'general'];
+// The application — not the column — decides what is accepted. inquiries.department
+// is VARCHAR since migration 052, so adding to this list needs no schema change.
+const VALID_DEPARTMENTS = ['sales', 'team', 'account', 'legal', 'general'];
 
 // ─── Blog ─────────────────────────────────────────────────────────────────────
 
