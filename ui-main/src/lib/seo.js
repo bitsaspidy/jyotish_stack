@@ -1,7 +1,24 @@
 // Centralised SEO helpers — canonical URLs, Open Graph, Twitter cards, JSON-LD.
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://jyotishstack.com').replace(/\/$/, '');
 export const SITE_NAME = 'Jyotish Stack AI';
-export const DEFAULT_OG_IMAGE = '/logo.svg';
+/**
+ * Social share image.
+ *
+ * MUST be a raster format. This was '/logo.svg' and produced a blank preview on
+ * every platform — none of WhatsApp, Facebook, LinkedIn or X render SVG as an
+ * og:image — while the metadata below declared 1200×630 for a vector logo.
+ * `/og` generates a real 1200×630 PNG (see app/og/route.jsx).
+ */
+export const DEFAULT_OG_IMAGE = '/og';
+
+/** Per-page share image with the page's own headline. */
+export function ogImageFor(title, subtitle) {
+  const qs = new URLSearchParams();
+  if (title) qs.set('title', title);
+  if (subtitle) qs.set('subtitle', subtitle);
+  const q = qs.toString();
+  return q ? `/og?${q}` : DEFAULT_OG_IMAGE;
+}
 
 // Server-side base for fetching during metadata/sitemap generation
 export const INTERNAL_API_URL = (process.env.INTERNAL_API_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -16,9 +33,12 @@ export function absUrl(path = '/') {
  * Build a complete Next.js metadata object for a public page.
  * Title is left plain so the root layout's title template ("%s | Jyotish Stack AI") applies.
  */
-export function pageMeta({ title, description, path = '/', keywords, image = DEFAULT_OG_IMAGE, type = 'website', noindex = false }) {
+export function pageMeta({ title, description, path = '/', keywords, image, type = 'website', noindex = false }) {
   const url = absUrl(path);
   const ogTitle = title ? `${title} | ${SITE_NAME}` : SITE_NAME;
+  // Default to a share image carrying THIS page's headline. An explicit `image`
+  // still wins, so a page with real artwork keeps it.
+  const ogImage = image || ogImageFor(title);
   return {
     title,
     description,
@@ -32,13 +52,13 @@ export function pageMeta({ title, description, path = '/', keywords, image = DEF
       siteName: SITE_NAME,
       type,
       locale: 'en_IN',
-      images: [{ url: image, width: 1200, height: 630, alt: SITE_NAME }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: ogTitle }],
     },
     twitter: {
       card: 'summary_large_image',
       title: ogTitle,
       description,
-      images: [image],
+      images: [ogImage],
     },
   };
 }

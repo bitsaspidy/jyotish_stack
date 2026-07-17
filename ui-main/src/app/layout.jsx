@@ -40,13 +40,14 @@ export const metadata = {
     siteName: SITE_NAME,
     locale: 'en_IN',
     type: 'website',
-    images: [{ url: '/logo.svg', width: 1200, height: 630, alt: SITE_NAME }],
+    // Raster, not the SVG logo — no platform renders SVG as a share image.
+    images: [{ url: '/og', width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Jyotish Stack AI',
     description: 'Free Kundli, matchmaking, daily horoscope & AI-powered Vedic predictions.',
-    images: ['/logo.svg'],
+    images: ['/og'],
   },
   robots: {
     index: true,
