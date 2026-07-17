@@ -988,7 +988,7 @@ router.put('/sales/business-config', ah(async (req, res) => {
 }));
 
 // ─── SEO (Google Analytics · Search Console · sitemap) ───────────────────────
-const { getSeoSettings, saveSeoSettings } = require('../services/seo-settings.service');
+const { getSeoSettings, saveSeoSettings, checkDnsVerification } = require('../services/seo-settings.service');
 const { SITE_URL: SEO_SITE_URL } = require('../config/seo-site');
 
 // GET /admin/seo — current SEO settings + the live verification URL to check
@@ -1000,6 +1000,14 @@ router.get('/seo', ah(async (_req, res) => {
     gscUrl: settings.gscFile ? `${SEO_SITE_URL}/${settings.gscFile}` : null,
     siteUrl: SEO_SITE_URL,
   });
+}));
+
+// GET /admin/seo/verify-dns — is the google-site-verification TXT record live?
+// On demand rather than on page load: it is a real DNS query, and the answer is
+// only interesting when someone is actually asking.
+router.get('/seo/verify-dns', ah(async (_req, res) => {
+  const result = await checkDnsVerification();
+  return ok(res, { dns: result });
 }));
 
 // PUT /admin/seo — save GA id / GSC file / sitemap overrides

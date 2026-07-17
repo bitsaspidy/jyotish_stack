@@ -56,15 +56,21 @@ export default function SeoSettings() {
   const [dirty, setDirty] = useState(false);
   const [ga, setGa] = useState('');
   const [gsc, setGsc] = useState('');
+  const [method, setMethod] = useState('none');
+  const [txtToken, setTxtToken] = useState('');
   const [overrides, setOverrides] = useState({});
   const [siteUrl, setSiteUrl] = useState('');
   const [gscUrl, setGscUrl] = useState(null);
+  const [dnsResult, setDnsResult] = useState(null);
+  const [dnsChecking, setDnsChecking] = useState(false);
 
   useEffect(() => {
     adminApi.get('/admin/seo')
       .then(({ data }) => {
         setGa(data.settings?.gaMeasurementId || '');
         setGsc(data.settings?.gscFile || '');
+        setMethod(data.settings?.gscMethod || 'none');
+        setTxtToken(data.settings?.gscTxtToken || '');
         setOverrides(data.settings?.sitemapOverrides || {});
         setSiteUrl(data.siteUrl || '');
         setGscUrl(data.gscUrl || null);
@@ -72,6 +78,17 @@ export default function SeoSettings() {
       .catch(() => toast.error('Failed to load SEO settings'))
       .finally(() => setLoading(false));
   }, []);
+
+  const checkDns = async () => {
+    setDnsChecking(true);
+    setDnsResult(null);
+    try {
+      const { data } = await adminApi.get('/admin/seo/verify-dns');
+      setDnsResult(data.dns);
+    } catch {
+      toast.error('DNS check failed');
+    } finally { setDnsChecking(false); }
+  };
 
   const routes = useMemo(() => resolveRoutes(overrides), [overrides]);
   const blogRoute = useMemo(() => resolveBlogRoute(overrides), [overrides]);
@@ -103,11 +120,15 @@ export default function SeoSettings() {
     try {
       const { data } = await adminApi.put('/admin/seo', {
         gaMeasurementId: ga.trim(),
+        gscMethod: method,
         gscFile: gsc.trim(),
+        gscTxtToken: txtToken.trim(),
         sitemapOverrides: overrides,
       });
       setGa(data.settings?.gaMeasurementId || '');
       setGsc(data.settings?.gscFile || '');
+      setMethod(data.settings?.gscMethod || 'none');
+      setTxtToken(data.settings?.gscTxtToken || '');
       setOverrides(data.settings?.sitemapOverrides || {});
       setGscUrl(data.gscUrl || null);
       setDirty(false);
@@ -148,22 +169,97 @@ export default function SeoSettings() {
       <section style={{ border: '1px solid rgba(212,175,55,0.14)', borderRadius: 12, padding: '18px 20px', marginBottom: 18, background: 'rgba(255,255,255,0.02)' }}>
         <h3 style={{ color: GOLD, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>🔎 Google Search Console</h3>
         <p style={{ color: DIM, fontSize: 11.5, lineHeight: 1.7, marginBottom: 14 }}>
-          In Search Console choose <strong style={{ color: IVORY }}>HTML file</strong> verification, then paste the filename it gives you.
-          You do not need to upload anything — the file is served from this setting.
+          Record how this site proves ownership to Google, so the method is written down rather than remembered.
         </p>
-        <Field
-          label="Verification filename"
-          hint={<>Example: <code style={{ color: GOLD }}>google1a2b3c4d5e6f7890.html</code>. Save it here first, then press Verify in Search Console. Leave empty to stop serving the file.</>}
-        >
-          <input value={gsc} onChange={(e) => { setGsc(e.target.value); setDirty(true); }} placeholder="google1a2b3c4d5e6f7890.html" style={inputStyle} />
+
+        <Field label="Verification method">
+          <select value={method} onChange={(e) => { setMethod(e.target.value); setDirty(true); }} style={inputStyle}>
+            <option value="none" style={{ background: '#111428' }}>Not verified / not recorded</option>
+            <option value="dns_txt" style={{ background: '#111428' }}>DNS TXT record (domain property)</option>
+            <option value="html_file" style={{ background: '#111428' }}>HTML file served by this site</option>
+          </select>
         </Field>
-        {gscUrl ? (
-          <div style={{ fontSize: 11.5, color: '#22C55E', lineHeight: 1.8 }}>
-            ● Serving at <a href={gscUrl} target="_blank" rel="noreferrer" style={{ color: GOLD, textDecoration: 'underline' }}>{gscUrl}</a>
-            <div style={{ color: DIM }}>Open that link to confirm Google will find it before pressing Verify.</div>
-          </div>
-        ) : (
-          <div style={{ fontSize: 11.5, color: DIM }}>○ No verification file is being served</div>
+
+        {/* ── DNS TXT ─────────────────────────────────────────────────────── */}
+        {method === 'dns_txt' && (
+          <>
+            <div style={{ border: '1px solid rgba(96,165,250,0.28)', background: 'rgba(96,165,250,0.06)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+              <p style={{ color: '#93C5FD', fontSize: 11.5, lineHeight: 1.75 }}>
+                <strong>This site serves nothing for DNS verification.</strong> The record lives at your DNS provider, and Google checks it there.
+                Verification is already done — there is nothing to deploy. A domain property also covers every subdomain, which is why it is the strongest method.
+              </p>
+            </div>
+            <Field
+              label="TXT token (for reference and monitoring)"
+              hint={<>Paste the whole record or just the token — both work. Storing it lets the check below tell you whether the record is still live. A TXT record dropped during a DNS change un-verifies the site silently, and nothing else here would notice.</>}
+            >
+              <input value={txtToken} onChange={(e) => { setTxtToken(e.target.value); setDirty(true); }}
+                placeholder="google-site-verification=…" style={inputStyle} />
+            </Field>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button onClick={checkDns} disabled={dnsChecking} style={{
+                padding: '6px 14px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+                background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.35)',
+                color: '#93C5FD', cursor: dnsChecking ? 'default' : 'pointer',
+              }}>
+                {dnsChecking ? 'Checking DNS…' : '🔄 Check DNS now'}
+              </button>
+              {dirty && <span style={{ color: DIM, fontSize: 11 }}>Save first — the check reads the stored token.</span>}
+            </div>
+
+            {dnsResult && (
+              <div style={{ marginTop: 10, fontSize: 11.5, lineHeight: 1.85 }}>
+                {!dnsResult.ok ? (
+                  <div style={{ color: '#F59E0B' }}>⚠ {dnsResult.error} — this means the lookup itself failed, not necessarily that the record is gone.</div>
+                ) : dnsResult.matches ? (
+                  <div style={{ color: '#22C55E' }}>
+                    ✓ The stored token is live in DNS for <strong>{dnsResult.domain}</strong>.
+                    <div style={{ color: DIM }}>Answered by {dnsResult.resolver}. Google can verify this domain.</div>
+                  </div>
+                ) : dnsResult.present ? (
+                  <div style={{ color: '#F59E0B' }}>
+                    ⚠ A google-site-verification record exists, but it does not match the token saved here.
+                    <div style={{ color: DIM, wordBreak: 'break-all' }}>
+                      Live: {dnsResult.found.join(', ')}<br />
+                      {dnsResult.expected ? <>Saved: {dnsResult.expected}</> : 'No token saved here yet — save the live value above to monitor it.'}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: '#EF4444' }}>
+                    ✗ No google-site-verification TXT record found for <strong>{dnsResult.domain}</strong>.
+                    <div style={{ color: DIM }}>If Search Console previously showed this domain as verified, the record may have been removed — Google will drop the verification.</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── HTML file ───────────────────────────────────────────────────── */}
+        {method === 'html_file' && (
+          <>
+            <Field
+              label="Verification filename"
+              hint={<>In Search Console choose <strong style={{ color: IVORY }}>HTML file</strong>, then paste the filename it gives you — e.g. <code style={{ color: GOLD }}>google1a2b3c4d5e6f7890.html</code>. Nothing needs uploading; the file is served from this setting. Save it here first, then press Verify in Search Console.</>}
+            >
+              <input value={gsc} onChange={(e) => { setGsc(e.target.value); setDirty(true); }} placeholder="google1a2b3c4d5e6f7890.html" style={inputStyle} />
+            </Field>
+            {gscUrl ? (
+              <div style={{ fontSize: 11.5, color: '#22C55E', lineHeight: 1.8 }}>
+                ● Serving at <a href={gscUrl} target="_blank" rel="noreferrer" style={{ color: GOLD, textDecoration: 'underline' }}>{gscUrl}</a>
+                <div style={{ color: DIM }}>Open that link to confirm Google will find it before pressing Verify.</div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 11.5, color: DIM }}>○ No verification file is being served</div>
+            )}
+          </>
+        )}
+
+        {method === 'none' && (
+          <p style={{ color: DIM, fontSize: 11.5, lineHeight: 1.75 }}>
+            Pick the method you used in Search Console. If you verified with a DNS TXT record, choose that — it is already done and needs nothing from this site.
+          </p>
         )}
       </section>
 

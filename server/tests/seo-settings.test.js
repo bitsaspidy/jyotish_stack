@@ -60,6 +60,45 @@ test('SEO-gsc: empty means the file is not served', () => {
   assert.deepStrictEqual(seo.validateGscFile(''), { ok: true, value: '' });
 });
 
+// ── DNS TXT verification ─────────────────────────────────────────────────────
+
+test('SEO-txt: accepts the bare token', () => {
+  const r = seo.validateTxtToken('8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I');
+  assert.deepStrictEqual(r, { ok: true, value: '8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I' });
+});
+
+test('SEO-txt: accepts a pasted full record, quoted or not', () => {
+  // Admins copy the record out of the DNS panel, not the bare token.
+  const expected = '8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I';
+  for (const input of [
+    'google-site-verification=8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I',
+    '"google-site-verification=8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I"',
+    '  google-site-verification = 8uHYQVuUYvCy1V67ZLTWMur_KBAbEgS12l-ggkAxA4I  ',
+  ]) {
+    assert.strictEqual(seo.validateTxtToken(input).value, expected, `failed for: ${input}`);
+  }
+});
+
+test('SEO-txt: rejects junk, allows empty', () => {
+  assert.deepStrictEqual(seo.validateTxtToken(''), { ok: true, value: '' });
+  for (const bad of ['short', 'has spaces in it here', 'bad!!token@@']) {
+    assert.strictEqual(seo.validateTxtToken(bad).ok, false, `${bad} should be rejected`);
+  }
+});
+
+test('SEO-method: only the known methods are accepted', () => {
+  for (const m of seo.METHODS) assert.strictEqual(seo.validateMethod(m).ok, true);
+  assert.strictEqual(seo.validateMethod('').value, 'none', 'empty defaults to none');
+  assert.strictEqual(seo.validateMethod('carrier_pigeon').ok, false);
+});
+
+test('SEO-dns: the apex domain drops www', () => {
+  // Google verifies the domain property on the apex, not on www.
+  const apex = seo.apexDomain();
+  assert.ok(apex && !apex.startsWith('www.'), `apex should not include www, got ${apex}`);
+  assert.ok(!apex.includes('/') && !apex.includes(':'), 'apex must be a hostname, not a URL');
+});
+
 // ── Sitemap overrides ────────────────────────────────────────────────────────
 
 test('SEO-overrides: keeps only the three fields the sitemap understands', () => {
