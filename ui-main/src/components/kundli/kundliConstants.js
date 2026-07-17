@@ -77,7 +77,6 @@ export const MAIN_TABS = [
   { key:'fav-days',    en:'Fav Days',      hi:'शुभ दिन',        icon:'📅' },
   { key:'results',     en:'Final Results', hi:'संपूर्ण निर्णय',  icon:'🌟' },
   { key:'upagrahas',   en:'Upagrahas',    hi:'उपग्रह',           icon:'🪐' },
-  { key:'judgement',   en:'Judgement',    hi:'निर्णय',           icon:'⚖️' },
 ];
 
 // Life area icons (Drishti section)

@@ -36,6 +36,8 @@ import {
 import { ChartToggle, SouthIndianChart, NorthIndianChart } from '../components/kundli/KundliChart';
 import EditKundliModal    from '../components/kundli/EditKundliModal';
 import BasicDetailsPanel  from '../components/kundli/BasicDetailsPanel';
+import LifeActivationCard  from '../components/kundli/LifeActivationCard';
+import LifeActivationPanel from '../components/kundli/LifeActivationPanel';
 import PersonalityInsights from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel  from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
@@ -53,7 +55,6 @@ import DashaJourneyPanel    from '../components/DashaJourneyPanel';
 import KundliSynthesisPanel from '../components/KundliSynthesisPanel';
 import KundliQuestionPanel  from '../components/KundliQuestionPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
-import JudgementPanel      from '../components/kundli/JudgementPanel';
 import MantrasPanel        from '../components/MantrasPanel';
 import UpagrahasPanel      from '../components/UpagrahasPanel';
 import VargaChartsPanel   from '../components/kundli/VargaChartsPanel';
@@ -80,6 +81,15 @@ export default function KundliDetail({ uuid }) {
   const [vargaReference,      setVargaReference]      = useState(null);
   const [vargaReferenceError, setVargaReferenceError] = useState(null);
   const [activeTab,           setActiveTab]           = useState('kundli');
+
+  // Dashboard card CTA → open the Life Report tab, then scroll to the detailed
+  // activation section. The tab must render before the anchor exists, hence rAF.
+  const openLifeActivationDetail = useCallback(() => {
+    setActiveTab('life-report');
+    requestAnimationFrame(() => {
+      document.getElementById('life-activation')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
 
   // Persist chart style preference
   useEffect(() => {
@@ -426,6 +436,17 @@ export default function KundliDetail({ uuid }) {
             {kundli?.user_summary && (
               <div className="mb-6">
                 <KundliSummaryView userSummary={kundli.user_summary} lang={lang} />
+              </div>
+            )}
+
+            {/* Compact age + activation summary → opens the detail in Life Report */}
+            {kundli?.life_activation && (
+              <div className="mb-6">
+                <LifeActivationCard
+                  activation={kundli.life_activation}
+                  lang={lang}
+                  onOpenDetail={openLifeActivationDetail}
+                />
               </div>
             )}
           </>
@@ -1069,6 +1090,8 @@ export default function KundliDetail({ uuid }) {
         {/* ══ TAB: LIFE REPORT ════════════════════════════════════════════ */}
         {activeTab === 'life-report' && (
         <div>
+          {/* 🧬 Age & Life Activation — near the beginning of the Life Report */}
+          <LifeActivationPanel activation={kundli?.life_activation} lang={lang} />
           {(chart?.life_report?.sections || kundli?.life_report_friendly) && <LifeReportPanel lifeReport={chart?.life_report} lang={lang} narratives={kundli?.life_report_narratives} lifeReportFriendly={kundli?.life_report_friendly} />}
         </div>
         )}
@@ -1435,18 +1458,6 @@ export default function KundliDetail({ uuid }) {
         {activeTab === 'upagrahas' && (
           <div className="mt-4">
             <UpagrahasPanel uuid={kundli?.uuid || uuid} lang={lang} />
-          </div>
-        )}
-
-        {/* ══ TAB: JUDGEMENT SCORE ════════════════════════════════════════ */}
-        {activeTab === 'judgement' && (
-          <div className="mt-6">
-            <JudgementPanel judgement={kundli?.judgement} lang={lang} admin={false} />
-            {!kundli?.judgement && (
-              <p className="text-ivory/35 text-xs text-center py-8">
-                {lang==='hi' ? 'निर्णय डेटा उपलब्ध नहीं है। कुंडली को पुनः गणना करें।' : 'Judgement data not available. Recalculate the kundli to generate it.'}
-              </p>
-            )}
           </div>
         )}
 

@@ -14,6 +14,7 @@ const { buildPlacementNarratives } = require('./helpers/placement-narratives');
 const { generateVarshphal, compactVarshphal } = require('./helpers/varshphal');
 const { computeKundliStrength } = require('./helpers/kundli-strength');
 const { generateJudgement }     = require('./judgement-engine');
+const { generateLifeActivation } = require('./life-activation');
 const { generatePersonalizedRemedies } = require('./remedy-engine');
 const { composeLifeReportUserFriendly } = require('./report-engine/life-report-humanizer');
 const { regionalCols } = require('./helpers/lang-fields');
@@ -515,6 +516,8 @@ async function buildFullKundliResponse(uuid) {
     gender:profile.gender,
     marital_status:profile.marital_status,
   }, { lang: 'hi', admin: true });
+  // same engine, same normalized shape as the user side — admin only adds evidence
+  profile.life_activation = generateLifeActivation(chart, profile, { lang: 'hi', admin: true });
   profile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, profile.judgement, {});
   profile.personalized_remedies = generatePersonalizedRemedies(chart, { remedyManual: remedy_manual });
 

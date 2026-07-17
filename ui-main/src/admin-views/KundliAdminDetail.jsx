@@ -31,10 +31,11 @@ import {
 import { ChartToggle, SouthIndianChart, NorthIndianChart } from '../components/kundli/KundliChart';
 import KundliQuestionPanel  from '../components/KundliQuestionPanel';
 import BasicDetailsPanel    from '../components/kundli/BasicDetailsPanel';
+import LifeActivationCard   from '../components/kundli/LifeActivationCard';
+import LifeActivationPanel  from '../components/kundli/LifeActivationPanel';
 import PersonalityInsights  from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel    from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
-import JudgementPanel       from '../components/kundli/JudgementPanel';
 import DetailedReportsPanel from '../components/kundli/DetailedReportsPanel';
 import MantrasPanel         from '../components/MantrasPanel';
 import UpagrahasPanel       from '../components/UpagrahasPanel';
@@ -711,6 +712,15 @@ export default function KundliAdminDetail({ kundliUuid }) {
   // Astrologer's Guide translation helper — picks Hindi when the admin toggles to हि
   const G = (en, hi) => (lang === 'hi' ? hi : en);
 
+  // Dashboard card CTA → open the Life Report tab, then scroll to the detailed
+  // activation section. The tab must render before the anchor exists, hence rAF.
+  const openLifeActivationDetail = useCallback(() => {
+    setActiveTab('life-report');
+    requestAnimationFrame(() => {
+      document.getElementById('life-activation')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('kundli_chart_style') : null;
     if (saved === 'south' || saved === 'north') setChartStyle(saved);
@@ -864,6 +874,17 @@ export default function KundliAdminDetail({ kundliUuid }) {
       {/* ══ TAB: KUNDLI ═══════════════════════════════════════════════════════ */}
       {activeTab === 'kundli' && (
         <TodayPredictionPanel uuid={kundliUuid} lang={lang} admin />
+      )}
+
+      {/* Compact age + activation summary → opens the detail in Life Report */}
+      {activeTab === 'kundli' && kundli?.life_activation && (
+        <div style={{ marginBottom: 16 }}>
+          <LifeActivationCard
+            activation={kundli.life_activation}
+            lang={lang}
+            onOpenDetail={openLifeActivationDetail}
+          />
+        </div>
       )}
 
       {activeTab === 'kundli' && (
@@ -1300,6 +1321,9 @@ export default function KundliAdminDetail({ kundliUuid }) {
             ]} />
             <GLine label="Admin use" text="Compare life report themes against what the client reports as current issues. Strong alignment = high chart reliability. Use this to build trust with the client." color="#60A5FA" />
           </AdminGuide>
+          {/* 🧬 Age & Life Activation — same user-facing report, plus the
+              expandable technical evidence panel (admin only). */}
+          <LifeActivationPanel activation={kundli?.life_activation} lang={lang} admin />
           {(chart?.life_report?.sections || kundli?.life_report_friendly) && <LifeReportPanel lifeReport={chart?.life_report} lang={lang} narratives={kundli?.life_report_narratives} lifeReportFriendly={kundli?.life_report_friendly} admin={true} />}
         </div>
       )}
@@ -1729,30 +1753,6 @@ export default function KundliAdminDetail({ kundliUuid }) {
       {activeTab === 'upagrahas' && (
         <div className="mt-4">
           <UpagrahasPanel uuid={kundliUuid} lang={lang} admin />
-        </div>
-      )}
-
-      {/* ══ TAB: JUDGEMENT ═══════════════════════════════════════════════════ */}
-      {activeTab === 'judgement' && (
-        <div>
-          <AdminGuide title="Judgement Priority Engine — 11-Layer Rule Analysis">
-            <GLine label="What this shows" text="The Judgement engine runs 11 layers of pure Vedic rule checks (no AI) across lagna lord, Sun/Moon pillars, yoga activation, house lords, income, marriage, children, Rahu maturity, Navamsha, and Ashtakavarga guard. Each area gets a score 0–100." />
-            <GLine label="Overall score" text="65+ = strong; 48–64 = balanced; 35–47 = needs care; below 35 = challenging. Aggregated with weighted priorities." color="#60A5FA" />
-            <GSection title="Yoga activation levels" items={[
-              'full — yoga fully operates in this chart (all conditions met)',
-              'partial — partially active due to afflictions or weak lord',
-              'weak — low effective strength, results require extra dasha support',
-              'blocked — neutralised by opposing factors (debilitation, dusthana, enemy)',
-            ]} />
-            <GLine label="Admin technical details" text="Each area card shows raw score, number of blockers, and the blocker list (plain Vedic terms). This is only visible in admin mode." color="#A78BFA" />
-          </AdminGuide>
-          {kundli?.judgement ? (
-            <JudgementPanel judgement={kundli.judgement} lang={lang} admin />
-          ) : (
-            <p style={{ color:'rgba(245,240,232,0.38)', padding:'32px 0', textAlign:'center', fontSize:13 }}>
-              Judgement data not available. Recalculate the kundli to generate it.
-            </p>
-          )}
         </div>
       )}
 
