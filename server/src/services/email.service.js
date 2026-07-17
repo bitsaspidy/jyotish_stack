@@ -369,7 +369,18 @@ const templates = {
   }),
 };
 
-const DEPT_LABELS = { sales: 'Sales', team: 'Support', account: 'Accounts', general: 'Support' };
+/**
+ * CUSTOMER-FACING labels — these go into the contact acknowledgement email the
+ * sender receives (public.routes.js), so they are written for the person writing
+ * in, not for the admin. `team` stays "Support" for that reason: the mailbox is
+ * team@, but a customer is contacting support, and the admin panel labels it
+ * "Team" separately.
+ *
+ * `legal` was missing here, so a grievance fell through to the `|| 'Support'`
+ * fallback and the acknowledgement told the sender their statutory grievance had
+ * gone to Support.
+ */
+const DEPT_LABELS = { sales: 'Sales', team: 'Support', account: 'Accounts', legal: 'Legal & Grievance', general: 'Support' };
 
 /**
  * Send an email.

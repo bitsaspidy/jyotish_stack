@@ -34,9 +34,12 @@ const TABS = [
   { key:'seo',         label:'🔍 SEO',          icon:'🔍' },
 ];
 
+// ADMIN-facing labels. `team` is shown as "Team" (the mailbox is team@) rather
+// than "Support", so the mailbox is findable by name in here. Customers still see
+// "Support" — that wording lives in DEPT_LABELS in server/src/services/email.service.js.
 const DEPT_INFO = {
   sales:   { label:'Sales',    email:'sales@jyotishstack.com',   color:'#F59E0B' },
-  team:    { label:'Support',  email:'team@jyotishstack.com',    color:'#10B981' },
+  team:    { label:'Team',     email:'team@jyotishstack.com',    color:'#10B981' },
   account: { label:'Accounts', email:'account@jyotishstack.com', color:'#818CF8' },
   legal:   { label:'Legal',    email:'legal@jyotishstack.com',   color:'#F472B6' },
 };

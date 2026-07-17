@@ -6,7 +6,9 @@ import RichTextEditor from '../admin-components/RichTextEditor';
 
 // ─── Colour palette ───────────────────────────────────────────────────────────
 const DEPT_COLOR = { sales:'#F59E0B', team:'#10B981', account:'#818CF8', legal:'#F472B6', all:'#D4AF37' };
-const DEPT_LABEL = { sales:'Sales', team:'Support', account:'Accounts', legal:'Legal', all:'All Inboxes' };
+// ADMIN-facing. "Team" names the actual mailbox (team@); customers still see
+// "Support" via DEPT_LABELS in server/src/services/email.service.js.
+const DEPT_LABEL = { sales:'Sales', team:'Team', account:'Accounts', legal:'Legal', all:'All Inboxes' };
 const DEPT_EMAIL = { sales:'sales@jyotishstack.com', team:'team@jyotishstack.com', account:'account@jyotishstack.com', legal:'legal@jyotishstack.com' };
 
 const gold   = '#D4AF37';
@@ -739,7 +741,7 @@ export default function EmailManager() {
   const DEPT_TABS = [
     { key:'all',     label:'🌐 All',       color: DEPT_COLOR.all     },
     { key:'sales',   label:'💼 Sales',     color: DEPT_COLOR.sales   },
-    { key:'team',    label:'🤝 Support',   color: DEPT_COLOR.team    },
+    { key:'team',    label:'🤝 Team',      color: DEPT_COLOR.team    },
     { key:'account', label:'🏦 Accounts',  color: DEPT_COLOR.account },
     { key:'legal',   label:'⚖️ Legal',     color: DEPT_COLOR.legal   },
   ];
