@@ -33,6 +33,7 @@ import KundliQuestionPanel  from '../components/KundliQuestionPanel';
 import BasicDetailsPanel    from '../components/kundli/BasicDetailsPanel';
 import LifeActivationCard   from '../components/kundli/LifeActivationCard';
 import LifeActivationPanel  from '../components/kundli/LifeActivationPanel';
+import TransitPanel         from '../components/kundli/TransitPanel';
 import PersonalityInsights  from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel    from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
@@ -1753,6 +1754,19 @@ export default function KundliAdminDetail({ kundliUuid }) {
       {activeTab === 'upagrahas' && (
         <div className="mt-4">
           <UpagrahasPanel uuid={kundliUuid} lang={lang} admin />
+        </div>
+      )}
+
+      {/* ══ TAB: TRANSIT (GOCHAR) ═══════════════════════════════════════════ */}
+      {activeTab === 'transit' && (
+        <div className="mt-4">
+          <AdminGuide title="Gochar (Transit) — today's sky over this chart">
+            <GLine label="What this shows" text="Where the 9 planets are transiting right now, mapped onto this native's chart. The life AREA is read from the Lagna; the FAVOURABILITY verdict is read from the Moon, which is the classical Gochar seat." />
+            <GLine label="Two reference points" text="House-from-Lagna tells you which bhava's affairs are lit up. House-from-Moon decides supportive vs demanding via the classical benefic-transit table (Saturn good in 3/6/11 from Moon, Jupiter in 2/5/7/9/11, etc.). Both are in the technical table." color="#60A5FA" />
+            <GLine label="Sade Sati / Dhaiyya" text="Flagged automatically from Saturn's house-from-Moon: 12/1/2 = Sade Sati (with phase), 4 = Kantaka, 8 = Ashtama Shani." color="#A78BFA" />
+            <GLine label="Freshness" text="Computed live for the current instant via the gochar helper — NOT the stale gochar snapshot stored in the chart blob." color="#F59E0B" />
+          </AdminGuide>
+          <TransitPanel transit={kundli?.transit} lang={lang} admin />
         </div>
       )}
 

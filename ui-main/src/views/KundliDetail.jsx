@@ -38,6 +38,7 @@ import EditKundliModal    from '../components/kundli/EditKundliModal';
 import BasicDetailsPanel  from '../components/kundli/BasicDetailsPanel';
 import LifeActivationCard  from '../components/kundli/LifeActivationCard';
 import LifeActivationPanel from '../components/kundli/LifeActivationPanel';
+import TransitPanel        from '../components/kundli/TransitPanel';
 import PersonalityInsights from '../components/kundli/PersonalityInsights';
 import LifePortraitPanel  from '../components/kundli/LifePortraitPanel';
 import YogasAndDoshasPanel  from '../components/kundli/YogasAndDoshasPanel';
@@ -1458,6 +1459,13 @@ export default function KundliDetail({ uuid }) {
         {activeTab === 'upagrahas' && (
           <div className="mt-4">
             <UpagrahasPanel uuid={kundli?.uuid || uuid} lang={lang} />
+          </div>
+        )}
+
+        {/* ══ TAB: TRANSIT (GOCHAR) ═══════════════════════════════════════ */}
+        {activeTab === 'transit' && (
+          <div className="mt-4">
+            <TransitPanel transit={kundli?.transit} lang={lang} />
           </div>
         )}
 

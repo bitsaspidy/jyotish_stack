@@ -20,6 +20,7 @@ const { computeKundliStrength }               = require('../services/helpers/kun
 const { generateLifeReport, generateDailyGuidance } = require('../services/report-engine');
 const { generateJudgement } = require('../services/judgement-engine');
 const { generateLifeActivation } = require('../services/life-activation');
+const { generateTransit } = require('../services/transit');
 const { composeKundliUserSummary } = require('../services/kundli-user-summary.service');
 const { composeLifeReportUserFriendly } = require('../services/report-engine/life-report-humanizer');
 const { composeStrengthUserFriendly }   = require('../services/report-engine/strength-humanizer');
@@ -735,6 +736,7 @@ router.get('/:id', async (req, res) => {
   if (profile.remedy_data) profile.remedy_data.suite = computeRemedySuite(cd);
   profile.judgement    = generateJudgement(cd, profile, { lang: 'hi', admin: false });
   profile.life_activation = generateLifeActivation(cd, profile, { lang: 'hi', admin: false });
+  profile.transit = generateTransit(cd, { lang: 'hi', admin: false });
   profile.user_summary = composeKundliUserSummary(cd, profile.judgement);
   profile.life_report_friendly = composeLifeReportUserFriendly(cd, cd.life_report, profile.judgement, {});
   profile.predictions_friendly = composePredictionUserFriendly(cd, cd.predictions);
@@ -799,6 +801,7 @@ router.post('/:id/recalculate', async (req, res) => {
     marital_status:freshProfile.marital_status,
   }, { lang: 'hi', admin: false });
   freshProfile.life_activation = generateLifeActivation(chart, freshProfile, { lang: 'hi', admin: false });
+  freshProfile.transit = generateTransit(chart, { lang: 'hi', admin: false });
   freshProfile.user_summary = composeKundliUserSummary(chart, freshProfile.judgement);
   freshProfile.life_report_friendly = composeLifeReportUserFriendly(chart, chart.life_report, freshProfile.judgement, {});
   freshProfile.predictions_friendly = composePredictionUserFriendly(chart, chart.predictions);
