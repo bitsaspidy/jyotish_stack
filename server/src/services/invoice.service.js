@@ -8,7 +8,11 @@ const db = require('../config/db');
 // Stored in app_settings (editable from the admin Sales page). Code defaults
 // below keep everything working before the owner fills in the real values.
 const CONFIG_DEFAULTS = {
-  business_legal_name: 'Jyotish Stack AI',
+  // The LEGAL entity, not the brand. A GST invoice names the registered person —
+  // the GSTIN belongs to M/S. Sat Sai Infocom, and "Jyotish Stack AI" is its
+  // trading name. Only used when the admin has not set a value in
+  // Sales → Business Settings, which overrides this.
+  business_legal_name: 'M/S. Sat Sai Infocom',
   business_gstin: '',
   business_pan: '',
   business_address: '',

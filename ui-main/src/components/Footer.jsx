@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Logo from './Logo';
-import { BRAND_NAME, TRADEMARK_SYMBOL, copyrightLine } from '../lib/brand';
+import { BRAND_NAME, TRADEMARK_SYMBOL, LEGAL_ENTITY, TRADEMARK_APP_NO, TRADEMARK_CLASS, copyrightLine } from '../lib/brand';
 import { useLang } from '../context/LangContext';
 import { t as translate } from '../lib/astroI18n';
 import api from '../lib/api';
@@ -105,10 +105,12 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-ivory/40 text-xs">
           <div className="text-center md:text-left">
             <p>{copyrightLine()} — <span className="font-devanagari">ज्योतिष स्टैक</span></p>
-            {/* Names the mark and its owner. Says "trademark", never "registered
-                trademark" — the application is still pending. See lib/brand.js. */}
+            {/* Names the mark, its real OWNER (the entity, not the brand) and the
+                public application number. Says "trade mark", never "registered
+                trade mark" — the application is pending. See lib/brand.js. */}
             <p className="mt-1 text-ivory/30">
-              {BRAND_NAME}{TRADEMARK_SYMBOL} and the Jyot Chakra logo are trademarks of {BRAND_NAME}.
+              {BRAND_NAME}{TRADEMARK_SYMBOL} and the Jyot Chakra logo are trade marks of {LEGAL_ENTITY}
+              {' '}(TM Application No. {TRADEMARK_APP_NO}, Class {TRADEMARK_CLASS} — pending).
               Logo artwork is copyright-protected.
             </p>
           </div>

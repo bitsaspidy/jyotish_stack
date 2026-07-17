@@ -29,17 +29,49 @@
 export const BRAND_NAME = 'Jyotish Stack AI';
 export const BRAND_NAME_SHORT = 'Jyotish Stack';
 
+/**
+ * The LEGAL ENTITY behind the brand.
+ *
+ * "Jyotish Stack AI" is a brand; it cannot own a trademark, cannot enter a
+ * contract, and cannot be the seller on a GST invoice. The trademark application
+ * is filed by M/S. Sat Sai Infocom (proprietor: Devavrat Singh), and that is who
+ * the Terms bind, who owns the marks, and who Indian e-commerce disclosure rules
+ * require to be named. Everything user-facing must say the entity, not the brand,
+ * wherever ownership or obligation is being asserted.
+ */
+export const LEGAL_ENTITY = 'M/S. Sat Sai Infocom';
+export const LEGAL_PROPRIETOR = 'Devavrat Singh';
+
 /** '™' while the application is pending · '®' only once granted. */
 export const TRADEMARK_SYMBOL = '™';
 
 /** 'unregistered' | 'pending' | 'registered' — drives the Terms wording. */
 export const TRADEMARK_STATUS = 'pending';
 
+/**
+ * Trade mark application, filed on Form TM-A.
+ *
+ * PUBLISHED ON PURPOSE. Indian trade mark applications are public record — anyone
+ * can look 7841777 up on the IP India public search and see the mark, class,
+ * applicant and status, and the mark is published in the Trade Marks Journal by
+ * law. So there is nothing to protect by hiding it, and naming it deters copying,
+ * puts the world on notice of the claim (useful in a passing-off action), and is
+ * independently verifiable.
+ *
+ * ⛔ The IP India **Party Code** is deliberately NOT here and must never be added.
+ * It identifies the applicant's account in the filing portal, the public has no
+ * use for it, and publishing it only creates surface for mischief in future
+ * filings. Same for any e-filing credentials.
+ */
+export const TRADEMARK_APP_NO = '7841777';
+export const TRADEMARK_CLASS = 45; // astrological & personal services
+export const TRADEMARK_APP_FORM = 'TM-A';
+
 /** Fill in from the certificate when the registration is granted. */
 export const TRADEMARK_REG_NO = null;
 
-/** Copyright in the logo artwork and site content. */
-export const COPYRIGHT_HOLDER = 'Jyotish Stack AI';
+/** Copyright in the logo artwork and site content — held by the entity. */
+export const COPYRIGHT_HOLDER = LEGAL_ENTITY;
 export const COPYRIGHT_START_YEAR = 2026;
 
 /** "© 2026 Jyotish Stack AI" — collapses to one year until the range is real. */
