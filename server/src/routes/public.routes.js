@@ -50,6 +50,31 @@ router.get('/blog', async (req, res) => {
   }
 });
 
+// GET /api/public/blog-sitemap — EVERY published post, slim, for sitemap.xml.
+//
+// The paginated /blog endpoint caps limit at 24 by design (it returns full rows
+// with excerpts). The sitemap asked it for ?limit=1000 and silently got 24, so
+// the 25th post onward never appeared in sitemap.xml. This endpoint is separate
+// so the listing cap stays tight while the sitemap sees everything: it selects
+// only slug + dates, orders deterministically, and returns updated_at so the
+// sitemap's <lastmod> is a REAL modification date instead of a fallback.
+//
+// The '-sitemap' suffix (not '/blog/sitemap') keeps it clear of the /blog/:slug
+// route, exactly as /blog-categories already does.
+router.get('/blog-sitemap', async (_req, res) => {
+  try {
+    const posts = await db('blog_posts')
+      .where('status', 'published')
+      .select('slug', 'published_at', 'updated_at')
+      .orderBy('published_at', 'desc')
+      .limit(50000); // sitemap.org's hard ceiling per file; we are far below it
+    return ok(res, { posts });
+  } catch (e) {
+    console.error('[public/blog-sitemap]', e.message);
+    return ok(res, { posts: [] }); // a sitemap must degrade to fewer URLs, never 500
+  }
+});
+
 // GET /api/public/blog/categories
 router.get('/blog-categories', async (_req, res) => {
   try {

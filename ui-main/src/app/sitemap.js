@@ -25,7 +25,9 @@ async function fetchSitemapConfig() {
 
 async function fetchBlogPosts() {
   try {
-    const res = await fetch(`${INTERNAL_API_URL}/api/public/blog?limit=1000`, { next: { revalidate: 3600 } });
+    // Dedicated slim endpoint — the paginated /blog caps at 24, which silently
+    // dropped every post past the 24th from the sitemap.
+    const res = await fetch(`${INTERNAL_API_URL}/api/public/blog-sitemap`, { next: { revalidate: 3600 } });
     if (!res.ok) return [];
     const json = await res.json();
     const posts = json?.data?.posts || json?.posts || [];
@@ -36,17 +38,21 @@ async function fetchBlogPosts() {
 }
 
 export default async function sitemap() {
-  const now = new Date();
   const { overrides, extras } = await fetchSitemapConfig();
 
   // Catalogue routes + anything the admin added on top of it. resolveExtraRoutes
   // drops extras that the catalogue has since claimed, so a URL cannot appear
   // twice while a page is being promoted from "added in admin" to "in code".
+  //
+  // No lastModified on static routes: we do not track a real per-page modification
+  // date, and stamping every page with `now` on every build tells Google all 37
+  // pages changed at each deploy — which trains it to distrust and ignore our
+  // <lastmod> everywhere, including the blog where the date IS real. Omitting it is
+  // honest; Google handles its absence fine. Blog entries below carry updated_at.
   const staticEntries = [...resolveRoutes(overrides), ...resolveExtraRoutes(extras)]
     .filter((r) => r.enabled)
     .map((r) => ({
       url: `${SITE_URL}${r.path === '/' ? '' : r.path}`,
-      lastModified: now,
       changeFrequency: r.changeFrequency,
       priority: r.priority,
     }));
@@ -55,12 +61,17 @@ export default async function sitemap() {
   let blogEntries = [];
   if (blogRoute.enabled) {
     const posts = await fetchBlogPosts();
-    blogEntries = posts.map((p) => ({
-      url: `${SITE_URL}/blog/${p.slug}`,
-      lastModified: p.updated_at || p.published_at || now,
-      changeFrequency: blogRoute.changeFrequency,
-      priority: blogRoute.priority,
-    }));
+    blogEntries = posts.map((p) => {
+      const lastmod = p.updated_at || p.published_at;
+      return {
+        url: `${SITE_URL}/blog/${p.slug}`,
+        // Only a REAL date — a post with neither timestamp omits lastModified
+        // rather than claiming it changed at build time.
+        ...(lastmod ? { lastModified: new Date(lastmod) } : {}),
+        changeFrequency: blogRoute.changeFrequency,
+        priority: blogRoute.priority,
+      };
+    });
   }
 
   return [...staticEntries, ...blogEntries];
