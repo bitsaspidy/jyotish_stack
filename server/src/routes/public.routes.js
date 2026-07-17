@@ -5,6 +5,7 @@ const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { sendEmail, departmentInbox, DEPARTMENTS, DEPT_LABELS } = require('../services/email.service');
 const { randomToken } = require('../utils/token');
+const { getSeoSettings, gscFileBody } = require('../services/seo-settings.service');
 
 const VALID_DEPARTMENTS = ['sales', 'team', 'account', 'general'];
 
@@ -541,6 +542,64 @@ router.get('/mantras', async (req, res) => {
   } catch (e) {
     console.error('[public/mantras]', e.message);
     return fail(res, 'Failed to load mantras', 500);
+  }
+});
+
+// ─── SEO (admin-controlled, read at runtime) ──────────────────────────────────
+
+/**
+ * GET /api/public/seo/config — what the browser needs to boot analytics.
+ *
+ * Deliberately tiny and public: a GA4 measurement ID is visible in the page source
+ * of every site that uses one, so this exposes nothing. It is a separate endpoint
+ * from the sitemap overrides so the client fetch stays cheap.
+ */
+router.get('/seo/config', async (_req, res) => {
+  try {
+    const { gaMeasurementId } = await getSeoSettings();
+    return ok(res, { gaMeasurementId });
+  } catch (e) {
+    console.error('[public/seo/config]', e.message);
+    // Analytics must never be able to break a page render.
+    return ok(res, { gaMeasurementId: '' });
+  }
+});
+
+/**
+ * GET /api/public/seo/sitemap-overrides — per-route admin overrides.
+ *
+ * The route CATALOGUE is not here on purpose: it lives in the frontend
+ * (lib/seoRoutes.js) so a build with this API down still emits a correct sitemap
+ * from the defaults rather than an empty one.
+ */
+router.get('/seo/sitemap-overrides', async (_req, res) => {
+  try {
+    const { sitemapOverrides } = await getSeoSettings();
+    return ok(res, { overrides: sitemapOverrides });
+  } catch (e) {
+    console.error('[public/seo/sitemap-overrides]', e.message);
+    return ok(res, { overrides: {} });
+  }
+});
+
+/**
+ * GET /api/public/seo/gsc/:file — Google Search Console HTML verification.
+ *
+ * next.config.js rewrites /google<token>.html here, so the file appears at the
+ * site root where Google demands it, while the token stays admin-editable with no
+ * rebuild. Serves ONLY the exact configured filename — otherwise 404, so this
+ * cannot be used to echo an arbitrary verification token for someone else's
+ * property.
+ */
+router.get('/seo/gsc/:file', async (req, res) => {
+  try {
+    const body = await gscFileBody(req.params.file);
+    if (!body) return res.status(404).type('text/plain').send('Not found');
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.type('text/html').send(body);
+  } catch (e) {
+    console.error('[public/seo/gsc]', e.message);
+    return res.status(404).type('text/plain').send('Not found');
   }
 });
 

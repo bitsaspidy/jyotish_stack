@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import adminApi from '../lib/adminApi';
 import toast from 'react-hot-toast';
 import RichTextEditor from '../admin-components/RichTextEditor';
+import SeoSettings from '../admin-components/SeoSettings';
 
 function Toggle({ checked, onChange, disabled }) {
   return (
@@ -30,6 +31,7 @@ const TABS = [
   { key:'maintenance', label:'🚧 Maintenance',  icon:'🚧' },
   { key:'payments',    label:'💳 Payments',     icon:'💳' },
   { key:'email',       label:'✉️ Email Sig',    icon:'✉️' },
+  { key:'seo',         label:'🔍 SEO',          icon:'🔍' },
 ];
 
 const DEPT_INFO = {
@@ -377,8 +379,11 @@ export default function Settings() {
       {/* ── Email Signature Tab ───────────────────────────────────────────── */}
       {tab === 'email' && <EmailSignatureTab />}
 
-      {/* ── Save Bar (hidden on email tab which has its own save) ────────── */}
-      {tab !== 'email' && (
+      {/* ── SEO Tab ──────────────────────────────────────────────────────── */}
+      {tab === 'seo' && <SeoSettings />}
+
+      {/* ── Save Bar (hidden on tabs that own their save) ─────────────────── */}
+      {tab !== 'email' && tab !== 'seo' && (
         <div style={{ marginTop:20, display:'flex', alignItems:'center', justifyContent:'space-between', background:'#111428', border:'1px solid rgba(212,175,55,0.12)', borderRadius:8, padding:'14px 22px' }}>
           <span style={{ color: dirty ? '#FBBF24' : 'rgba(245,240,232,0.35)', fontSize:12 }}>
             {dirty ? '● Unsaved changes' : '✓ All settings saved'}

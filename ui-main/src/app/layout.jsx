@@ -1,6 +1,7 @@
 import { Inter, Playfair_Display, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
 import Providers from './providers';
+import Analytics from '../components/Analytics';
 import { SITE_URL, SITE_NAME, JsonLd, organizationLd, websiteLd } from '../lib/seo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -52,6 +53,11 @@ export const metadata = {
     follow: true,
     googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
   },
+  // Build-time meta-tag verification, kept as a fallback for anyone already using
+  // it. The runtime path is the HTML-file method: the admin panel stores the
+  // filename and next.config.js rewrites /google<token>.html to the API, which
+  // needs no rebuild. This env var is inlined at build time and cannot be changed
+  // from the admin panel.
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,
@@ -69,6 +75,9 @@ export default function RootLayout({ children }) {
       <body className="bg-cosmos-800 text-ivory font-sans antialiased">
         <JsonLd data={organizationLd()} />
         <JsonLd data={websiteLd()} />
+        {/* GA4 — measurement ID is read from /admin/settings at runtime, so the
+            owner can change it without a rebuild. Renders nothing when unset. */}
+        <Analytics />
         <Providers>{children}</Providers>
       </body>
     </html>

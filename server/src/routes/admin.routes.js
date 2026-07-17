@@ -987,6 +987,32 @@ router.put('/sales/business-config', ah(async (req, res) => {
   return ok(res, { config }, 'Business settings saved');
 }));
 
+// ─── SEO (Google Analytics · Search Console · sitemap) ───────────────────────
+const { getSeoSettings, saveSeoSettings } = require('../services/seo-settings.service');
+const { SITE_URL: SEO_SITE_URL } = require('../config/seo-site');
+
+// GET /admin/seo — current SEO settings + the live verification URL to check
+router.get('/seo', ah(async (_req, res) => {
+  const settings = await getSeoSettings({ fresh: true });
+  return ok(res, {
+    settings,
+    // Where the admin can confirm Google will find the file
+    gscUrl: settings.gscFile ? `${SEO_SITE_URL}/${settings.gscFile}` : null,
+    siteUrl: SEO_SITE_URL,
+  });
+}));
+
+// PUT /admin/seo — save GA id / GSC file / sitemap overrides
+router.put('/seo', ah(async (req, res) => {
+  const result = await saveSeoSettings(req.body || {});
+  if (!result.ok) return fail(res, result.errors.join(' '), 400, { errors: result.errors });
+  return ok(res, {
+    settings: result.settings,
+    gscUrl: result.settings.gscFile ? `${SEO_SITE_URL}/${result.settings.gscFile}` : null,
+    siteUrl: SEO_SITE_URL,
+  }, 'SEO settings saved');
+}));
+
 // ─── PANCHANG ────────────────────────────────────────────────────────────────
 const { calculateDailyPanchang } = require('../services/helpers/panchang');
 
