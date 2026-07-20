@@ -20,6 +20,37 @@ const PLANET_META = {
   Ketu:    { icon:'☋', color:'#9CA3AF' },
 };
 
+/**
+ * Upagrahas (sub-planets). Deliberately rendered SUBORDINATE to the planets —
+ * dimmer, smaller, dashed — because that is their astrological weight: they are
+ * shadow points derived from the Sun, not grahas in their own right. They must
+ * never push a planet out of a chart cell.
+ *
+ * There are no standard Unicode glyphs for these, so short abbreviations are used
+ * (in each language) rather than borrowing an unrelated symbol.
+ */
+const UPAGRAHA_META = {
+  dhuma:      { short_en:'Dh', short_hi:'धू', color:'#94A3B8' },
+  vyatipata:  { short_en:'Vy', short_hi:'व्य', color:'#94A3B8' },
+  parivesha:  { short_en:'Pv', short_hi:'परि', color:'#7DD3FC' },
+  indrachapa: { short_en:'In', short_hi:'इं', color:'#7DD3FC' },
+  upaketu:    { short_en:'Up', short_hi:'उप', color:'#94A3B8' },
+};
+
+const upagrahaShort = (slug, lang) => {
+  const m = UPAGRAHA_META[slug] || {};
+  return (lang === 'hi' ? m.short_hi : m.short_en) || slug.slice(0, 2);
+};
+
+function groupUpagrahasByRashi(list = []) {
+  const grouped = Object.fromEntries(Array.from({ length: 12 }, (_, i) => [i + 1, []]));
+  for (const u of list) {
+    const r = Number(u?.rashi_num);
+    if (Number.isInteger(r) && grouped[r]) grouped[r].push(u);
+  }
+  return grouped;
+}
+
 const RASHI_META = {
   1:  { symbol:'♈', en:'Aries',       hi:'मेष',    row:1, col:2 },
   2:  { symbol:'♉', en:'Taurus',      hi:'वृषभ',   row:1, col:3 },
@@ -59,7 +90,7 @@ function pointCentre(points) {
   };
 }
 
-function NorthIndianTransitChart({ byRashi, formattedDate, lang }) {
+function NorthIndianTransitChart({ byRashi, upaByRashi = {}, formattedDate, lang }) {
   return (
     <div className="north-transit-shell">
       <svg
@@ -125,6 +156,23 @@ function NorthIndianTransitChart({ byRashi, formattedDate, lang }) {
                   {row.join('  ')}
                 </text>
               ))}
+              {/* Upagrahas on one dim line beneath the planets. Abbreviations
+                  only — these cells already truncate planets at six, so degrees
+                  here would push a graha off the chart. */}
+              {(upaByRashi[sign] || []).length > 0 && (
+                <text
+                  x={centre.x}
+                  y={centre.y + 3 + tokenRows.length * 10}
+                  textAnchor="middle"
+                  fill="rgba(148,163,184,0.92)"
+                  fontSize={isKendra ? 6.5 : 6}
+                  fontWeight="600"
+                  fontFamily="Inter, sans-serif"
+                  filter="url(#north-transit-shadow)"
+                >
+                  {(upaByRashi[sign] || []).map((u) => upagrahaShort(u.slug, lang)).join(' ')}
+                </text>
+              )}
             </g>
           );
         })}
@@ -139,8 +187,9 @@ function NorthIndianTransitChart({ byRashi, formattedDate, lang }) {
   );
 }
 
-export default function PlanetaryTransitChart({ positions = [], date, lang = 'en', style = 'south' }) {
+export default function PlanetaryTransitChart({ positions = [], upagrahas = [], showUpagrahas = true, date, lang = 'en', style = 'south' }) {
   const byRashi = groupPlanetPositionsByRashi(positions);
+  const upaByRashi = groupUpagrahasByRashi(showUpagrahas ? upagrahas : []);
 
   const formattedDate = date
     ? new Date(`${date}T12:00:00Z`).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
@@ -151,7 +200,7 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
   return (
     <div className="transit-chart-shell">
       {style === 'north' ? (
-        <NorthIndianTransitChart byRashi={byRashi} formattedDate={formattedDate} lang={lang} />
+        <NorthIndianTransitChart byRashi={byRashi} upaByRashi={upaByRashi} formattedDate={formattedDate} lang={lang} />
       ) : (
       <div className="transit-chart" role="img" aria-label={t(lang, 'South Indian planetary positions chart', 'दक्षिण भारतीय ग्रह स्थिति चार्ट')}>
         {Object.entries(RASHI_META).map(([rashiNum, rashi]) => {
@@ -178,6 +227,25 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
                       <span className="planet-icon">{meta.icon}</span>
                       <span>{degreeInSign(position)}</span>
                       {position.is_retrograde && <span className="retrograde">℞</span>}
+                    </span>
+                  );
+                })}
+
+                {/* Upagrahas — secondary by design: dimmer, dashed, always after
+                    the planets so they can never displace one. */}
+                {(upaByRashi[rashiNum] || []).map((u) => {
+                  const meta = UPAGRAHA_META[u.slug] || {};
+                  const label = `${t(lang, u.name_en || u.slug, u.name_hi || u.slug)} · ${t(lang, u.rashi_en, u.rashi_hi)} ${u.degree_dms || ''}`;
+                  return (
+                    <span
+                      key={u.slug}
+                      className="upagraha-token"
+                      title={label}
+                      aria-label={label}
+                      style={{ color: meta.color || '#94A3B8', borderColor: `${meta.color || '#94A3B8'}44` }}
+                    >
+                      {upagrahaShort(u.slug, lang)}
+                      <span className="upa-degree">{degreeInSign(u)}</span>
                     </span>
                   );
                 })}
@@ -289,6 +357,24 @@ export default function PlanetaryTransitChart({ positions = [], date, lang = 'en
           flex-wrap: wrap;
           gap: 3px;
           margin-top: 7px;
+        }
+        .upagraha-token {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          min-width: 0;
+          padding: 2px 4px;
+          border: 1px dashed;
+          border-radius: 999px;
+          background: rgba(4,7,22,0.55);
+          font-size: 7px;
+          font-weight: 700;
+          line-height: 1;
+          opacity: 0.85;
+          font-variant-numeric: tabular-nums;
+        }
+        .upa-degree {
+          opacity: 0.7;
         }
         .planet-token {
           display: inline-flex;

@@ -38,6 +38,10 @@ export default function PlanetaryPositions({ initialDate }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chartStyle, setChartStyle] = useState('south');
+  // Upagrahas are shadow points, not grahas — on by default because they are the
+  // reason many readers come to a Gochar page, but dismissible for anyone who
+  // just wants the nine planets.
+  const [showUpagrahas, setShowUpagrahas] = useState(true);
 
   useEffect(() => {
     try {
@@ -128,6 +132,8 @@ export default function PlanetaryPositions({ initialDate }) {
               >
                 <PlanetaryTransitChart
                   positions={data.positions}
+                  upagrahas={data.upagrahas || []}
+                  showUpagrahas={showUpagrahas}
                   date={data.date || date}
                   lang={lang}
                   style={chartStyle}
@@ -223,6 +229,76 @@ export default function PlanetaryPositions({ initialDate }) {
                 </p>
               )}
             </section>
+
+            {/* ── Upagrahas (sub-planets) ─────────────────────────────────── */}
+            {data.upagrahas?.length > 0 && (
+              <section className="card-royal p-4 mt-4" aria-label={t(lang,'Upagrahas','उपग्रह')}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:6, flexWrap:'wrap' }}>
+                  <h2 style={{ fontSize:15, fontWeight:700, color:GOLD }}>
+                    {t(lang,'Upagrahas — the shadow points','उपग्रह — छाया बिंदु')}
+                  </h2>
+                  <button
+                    onClick={() => setShowUpagrahas((v) => !v)}
+                    style={{
+                      fontSize:11, padding:'4px 11px', borderRadius:7, cursor:'pointer',
+                      background:'rgba(212,175,55,0.1)', border:'1px solid rgba(212,175,55,0.3)', color:GOLD,
+                    }}
+                  >
+                    {showUpagrahas
+                      ? t(lang,'Hide from chart','चार्ट से हटाएँ')
+                      : t(lang,'Show in chart','चार्ट में दिखाएँ')}
+                  </button>
+                </div>
+                <p style={{ fontSize:11.5, color:MUTED, lineHeight:1.75, marginBottom:12 }}>
+                  {t(lang,
+                    'These five are not planets. They are sensitive points calculated from the Sun\'s position, and classical texts read them for the subtler texture of a period — where clarity clouds, where recognition comes, where things break suddenly.',
+                    'ये पाँच ग्रह नहीं हैं। ये सूर्य की स्थिति से गणना किए गए संवेदनशील बिंदु हैं, और शास्त्र इन्हें समय की सूक्ष्म बनावट के लिए देखते हैं — कहाँ स्पष्टता धुँधली होती है, कहाँ मान्यता मिलती है, कहाँ अचानक टूटन आती है।')}
+                </p>
+
+                <div style={{ display:'grid', gap:9 }}>
+                  {data.upagrahas.map((u) => {
+                    const col = u.is_benefic ? '#22C55E' : u.is_malefic ? '#F59E0B' : MUTED;
+                    return (
+                      <div key={u.slug} style={{ border:'1px solid rgba(255,255,255,0.07)', borderRadius:9, padding:'10px 12px', background:'rgba(255,255,255,0.02)' }}>
+                        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:5 }}>
+                          <span style={{ fontSize:13, fontWeight:700, color:'#F5F0E8' }}>
+                            {t(lang, u.name_en, u.name_hi)}
+                          </span>
+                          <span style={{ fontSize:11.5, color:GOLD }}>
+                            {t(lang, u.rashi_en, u.rashi_hi)} {u.degree_dms}
+                          </span>
+                          <span style={{ fontSize:10.5, color:MUTED }}>
+                            {t(lang, u.nakshatra_en, u.nakshatra_hi)} · {t(lang,'Pada','पद')} {u.pada}
+                          </span>
+                          <span style={{
+                            fontSize:9.5, fontWeight:700, padding:'2px 8px', borderRadius:9,
+                            color:col, background:'rgba(255,255,255,0.04)', border:`1px solid ${col}44`,
+                          }}>
+                            {u.is_benefic ? t(lang,'Benefic','शुभ') : u.is_malefic ? t(lang,'Malefic','अशुभ') : t(lang,'Mixed','मिश्रित')}
+                          </span>
+                        </div>
+                        {u.nature && (
+                          <p style={{ fontSize:12, color:'rgba(245,240,232,0.72)', lineHeight:1.7, margin:0 }}>
+                            {t(lang, u.nature.en, u.nature.hi)}
+                          </p>
+                        )}
+                        {u.key_indication && (
+                          <p style={{ fontSize:11.5, color:MUTED, lineHeight:1.7, margin:'5px 0 0' }}>
+                            {t(lang, u.key_indication.en, u.key_indication.hi)}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p style={{ fontSize:11, color:MUTED, lineHeight:1.7, marginTop:11, paddingTop:9, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+                  {t(lang,
+                    'An upagraha matters most when it falls on a planet or an important house in a birth chart — which house that is differs for every reader.',
+                    'उपग्रह का महत्व तब सबसे अधिक होता है जब वह किसी जन्म-कुंडली में किसी ग्रह या महत्वपूर्ण भाव पर पड़े — और वह भाव हर व्यक्ति के लिए अलग होता है।')}
+                </p>
+              </section>
+            )}
           </motion.div>
         )}
 

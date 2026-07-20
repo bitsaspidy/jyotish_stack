@@ -18,6 +18,7 @@ const {
   isRetrogradePlanet, toDMS, lahiriAyanamsa, getPlanetDignity, getPlanetRelation,
 } = require('./core-helpers');
 const { signWindow } = require('../deterministic-qa/dated-transit');
+const { computePositions: computeUpagrahaPositions } = require('./upagrahas');
 const CFG = require('../../config/gochar-public.config');
 
 const PLANETS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
@@ -152,6 +153,43 @@ function computePlanetPositions(dateStr, opts = {}) {
 
   const out = { date: dateStr, ayanamsa, positions };
   if (enrich) {
+    /**
+     * Upagrahas (sub-planets).
+     *
+     * This project's five — Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu —
+     * are derived ARITHMETICALLY FROM THE SUN'S LONGITUDE alone, so they need no
+     * birth time and no location and belong on a public page just as much as the
+     * planets do. (Gulika/Mandi would need sunrise and a place; they are not
+     * implemented here and are not faked.)
+     *
+     * The formula is imported from helpers/upagrahas.js rather than repeated —
+     * two copies of an astrological constant is exactly how the two halves of a
+     * product start disagreeing.
+     *
+     * Positions only. Their master content (nature, key indication, malefic or
+     * benefic) lives in the `upagrahas` table and is merged by the route, so this
+     * helper stays synchronous and DB-free at call time.
+     */
+    try {
+      const up = computeUpagrahaPositions(sunLon);
+      out.upagrahas = ['dhuma', 'vyatipata', 'parivesha', 'indrachapa', 'upaketu']
+        .filter((slug) => Number.isFinite(up[slug]))
+        .map((slug) => {
+          const lon = ((up[slug] % 360) + 360) % 360;
+          const rashi = rashiFromDeg(lon);
+          const nak = nakshatraFromDeg(lon);
+          return {
+            slug,
+            longitude: +lon.toFixed(4),
+            degree_dms: toDMS(lon % 30),
+            rashi_num: rashi.num, rashi_en: rashi.en, rashi_hi: rashi.hi,
+            nakshatra_en: nak.en, nakshatra_hi: nak.hi, pada: nak.pada,
+          };
+        });
+    } catch {
+      out.upagrahas = [];
+    }
+
     out.rule_version = CFG.RULE_VERSION;
     // Stated on every enriched response so the "this is not personalised" framing
     // travels with the data rather than living only in the page markup.

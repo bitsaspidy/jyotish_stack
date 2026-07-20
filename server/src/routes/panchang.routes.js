@@ -1,5 +1,6 @@
 'use strict';
 const router = require('express').Router();
+const db = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { calculateDailyPanchang } = require('../services/helpers/panchang');
 
@@ -81,7 +82,7 @@ const { computePlanetPositions } = require('../services/helpers/planet-positions
 const ppCache = new Map();
 
 // GET /api/panchang/planet-positions?date=YYYY-MM-DD (defaults today IST). Public.
-router.get('/planet-positions', (req, res) => {
+router.get('/planet-positions', async (req, res) => {
   try {
     let date = String(req.query.date || '');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -99,6 +100,33 @@ router.get('/planet-positions', (req, res) => {
     let data = ppCache.get(cacheKey);
     if (!data) {
       data = computePlanetPositions(date, { enrich });
+      // Upagraha POSITIONS come from the ephemeris helper; their meaning lives in
+      // the `upagrahas` master table (already bilingual + 6 regional languages).
+      // Merged here so the helper stays synchronous. A DB hiccup drops the
+      // descriptions, never the page.
+      if (enrich && data.upagrahas?.length) {
+        try {
+          const masters = await db('upagrahas')
+            .select('slug', 'name_en', 'name_hi', 'nature_en', 'nature_hi',
+              'key_indication_en', 'key_indication_hi', 'is_malefic', 'is_benefic', 'display_order');
+          const bySlug = Object.fromEntries(masters.map((m) => [m.slug, m]));
+          data.upagrahas = data.upagrahas.map((u) => {
+            const m = bySlug[u.slug] || {};
+            return {
+              ...u,
+              name_en: m.name_en || u.slug,
+              name_hi: m.name_hi || u.slug,
+              nature: { en: m.nature_en || '', hi: m.nature_hi || '' },
+              key_indication: { en: m.key_indication_en || '', hi: m.key_indication_hi || '' },
+              is_malefic: !!m.is_malefic,
+              is_benefic: !!m.is_benefic,
+              display_order: m.display_order ?? 99,
+            };
+          }).sort((a, b) => a.display_order - b.display_order);
+        } catch (dbErr) {
+          console.error('[PanchangRoute:upagraha-content]', dbErr.message);
+        }
+      }
       if (ppCache.size > 60) ppCache.clear();
       ppCache.set(cacheKey, data);
     }

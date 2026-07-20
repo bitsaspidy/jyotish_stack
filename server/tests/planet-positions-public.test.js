@@ -115,6 +115,47 @@ test('PP-hindi: the composed sentence has a verb and no word collision', () => {
   }
 });
 
+test('PP-upagraha: all five are computed, from the Sun alone', () => {
+  const r = computePlanetPositions(DATE, { enrich: true });
+  const slugs = r.upagrahas.map((u) => u.slug);
+  assert.deepStrictEqual(slugs.sort(), ['dhuma', 'indrachapa', 'parivesha', 'upaketu', 'vyatipata']);
+  for (const u of r.upagrahas) {
+    assert.ok(u.rashi_num >= 1 && u.rashi_num <= 12, `${u.slug} sign`);
+    assert.ok(u.rashi_en && u.rashi_hi && u.degree_dms, `${u.slug} position`);
+    assert.ok(u.nakshatra_en && u.pada >= 1 && u.pada <= 4, `${u.slug} nakshatra`);
+  }
+});
+
+test('PP-upagraha: positions follow the classical Sun-derived formulae', () => {
+  // Dhuma = Sun + 133°20'; Vyatipata = 360 − Dhuma; Parivesha = Vyatipata + 180;
+  // Indrachapa = 360 − Parivesha; Upaketu = Indrachapa + 16°40'.
+  const r = computePlanetPositions(DATE, { enrich: true });
+  const sun = r.positions.find((p) => p.planet === 'Sun').longitude;
+  const by = Object.fromEntries(r.upagrahas.map((u) => [u.slug, u.longitude]));
+  const mod = (v) => ((v % 360) + 360) % 360;
+  const near = (a, b) => assert.ok(Math.abs(mod(a - b)) < 0.02 || Math.abs(mod(a - b) - 360) < 0.02,
+    `expected ${b.toFixed(4)}, got ${a.toFixed(4)}`);
+  near(by.dhuma, mod(sun + 133 + 20 / 60));
+  near(by.vyatipata, mod(360 - by.dhuma));
+  near(by.parivesha, mod(by.vyatipata + 180));
+  near(by.indrachapa, mod(360 - by.parivesha));
+  near(by.upaketu, mod(by.indrachapa + 16 + 40 / 60));
+});
+
+test('PP-upagraha: absent from the plain payload', () => {
+  // They belong to the enriched public reading, not to the panchang/chart callers.
+  assert.strictEqual(computePlanetPositions(DATE).upagrahas, undefined);
+});
+
+test('PP-upagraha: no house placement is claimed without a Lagna', () => {
+  // Houses need an ascendant, which a public page does not have.
+  const r = computePlanetPositions(DATE, { enrich: true });
+  for (const u of r.upagrahas) {
+    assert.strictEqual(u.house, undefined, `${u.slug} must not claim a house`);
+    assert.strictEqual(u.house_num, undefined);
+  }
+});
+
 test('PP-safety: no NaN or undefined reaches the page', () => {
   const r = computePlanetPositions(DATE, { enrich: true });
   assert.ok(!/NaN|undefined/.test(JSON.stringify(r)));
