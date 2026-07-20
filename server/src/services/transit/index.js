@@ -140,8 +140,10 @@ function generateTransit(chart, opts = {}) {
         variant: dh.key,
         title: { en: 'Dhaiyya (small Sade Sati)', hi: 'ढैया (लघु साढ़े साती)' },
         detail: {
-          en: `Saturn is in the ${saturnMoon}th from your Moon — ${dh.en}. A roughly two-and-a-half year phase that tests one area steadily rather than across the board.`,
-          hi: `शनि आपके चंद्र से ${saturnMoon}वें भाव में है — ${dh.hi}। लगभग ढाई वर्ष का यह चरण किसी एक क्षेत्र की स्थिर परीक्षा लेता है।`,
+          // houseLabel, not `${n}वें` — Hindi ordinals 1–4 are irregular, so the
+          // interpolated form produced "4वें भाव", which is not a word.
+          en: `Saturn is in the ${houseLabel(saturnMoon, 'en')} from your Moon — ${dh.en}. A roughly two-and-a-half year phase that tests one area steadily rather than across the board.`,
+          hi: `शनि आपके चंद्र से ${houseLabel(saturnMoon, 'hi')} में है — ${dh.hi}। लगभग ढाई वर्ष का यह चरण किसी एक क्षेत्र की स्थिर परीक्षा लेता है।`,
         },
         house_from_moon: saturnMoon,
       });

@@ -9,6 +9,7 @@ const db = require('../config/db');
 const { sendEmail } = require('./email.service');
 const { ensureCalculatedChart } = require('./kundli-admin.service');
 const { getOrCreateTodayPrediction } = require('./kundli-admin.service');
+const { PLANET_NAME_HI } = require('./helpers/prediction-data');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const APP_URL   = process.env.APP_URL || 'https://jyotishstack.com';
@@ -60,9 +61,23 @@ function buildDailyDigestHtml(user, kundliName, prediction, lang) {
       ].filter(Boolean).join(' · ')
     : null;
 
-  const moonRashi = meta.moon_rashi_en || (meta.transit?.list?.[0]?.sign_en) || '';
-  const dashaLord  = meta.current_md_lord || (meta.dasha_guidance?.lord) || '';
-  const taraName   = meta.tara?.name || '';
+  // These read the fields the prediction ACTUALLY emits. They used to look for
+  // `meta.moon_rashi_en`, `meta.current_md_lord` and `meta.dasha_guidance.lord` —
+  // none of which exist — so both chips silently resolved to '' and were filtered
+  // out of the header. Every email went out with only the Tara chip showing.
+  const moonRashi = (isHi ? meta.moon_rashi?.hi : meta.moon_rashi?.en) || '';
+  // Planet names must be translated in the Hindi email — the chip used to read
+  // "दशा: Rahu / Sun" with the lords left in English.
+  const pl = (name) => (isHi ? (PLANET_NAME_HI[name] || name) : name);
+  const mahaLord  = meta.dasha?.maha || meta.dasha_guidance?.maha || '';
+  const antarLord = meta.dasha?.antar || meta.dasha_guidance?.antar || '';
+  const dashaLord = mahaLord
+    ? (antarLord ? `${pl(mahaLord)} / ${pl(antarLord)}` : pl(mahaLord))
+    : '';
+  const taraName  = (isHi ? meta.tara?.name_hi : meta.tara?.name) || '';
+  // An inauspicious tara must not be presented as a neutral badge next to five
+  // stars — the score already accounts for it, and the chip says so too.
+  const taraFav   = meta.tara?.is_favorable;
 
   // Life areas grid (2×2)
   const AREA_LABEL = isHi
@@ -87,15 +102,86 @@ function buildDailyDigestHtml(user, kundliName, prediction, lang) {
     <tr>${areaCards[2]}${areaCards[3]}</tr>
   </table>`;
 
+  const taraSuffix = taraFav === false
+    ? (isHi ? ' (सतर्कता)' : ' (take care)')
+    : taraFav === true ? (isHi ? ' (शुभ)' : ' (favourable)') : '';
+
+  /**
+   * Today's planetary positions, read against THIS chart.
+   *
+   * Comes from meta.planet_positions, which the prediction builds with the same
+   * transit engine the Kundli's Gochar tab uses — so the email and the app cannot
+   * tell the reader different things. Each row: where the planet is, which of the
+   * reader's houses that falls in, and whether the classical from-Moon reading
+   * makes it supportive or demanding.
+   *
+   * Built with tables and inline styles because Gmail/Outlook strip flexbox.
+   */
+  const pp = meta.planet_positions;
+  const FAV_COLOR = { favorable: GREEN, neutral: '#60A5FA', challenging: AMBER };
+  const FAV_WORD = isHi
+    ? { favorable: 'अनुकूल', neutral: 'मिश्रित', challenging: 'सतर्कता' }
+    : { favorable: 'supportive', neutral: 'mixed', challenging: 'demanding' };
+
+  const planetRows = pp?.list?.length
+    ? pp.list.map((p, i) => {
+      const name = isHi ? p.planet_hi : p.planet;
+      const sign = isHi ? p.rashi_hi : p.rashi_en;
+      const area = isHi ? p.area_hi : p.area_en;
+      const col = FAV_COLOR[p.favour] || '#60A5FA';
+      const bg = i % 2 ? 'rgba(255,255,255,0.02)' : 'transparent';
+      return `<tr style="background:${bg};">
+        <td style="padding:7px 8px;font-size:12.5px;color:${IVORY};white-space:nowrap;">
+          ${name}${p.is_retrograde ? ' <span style="color:#F97316;font-size:10px;">℞</span>' : ''}
+        </td>
+        <td style="padding:7px 8px;font-size:12px;color:rgba(245,240,232,0.6);white-space:nowrap;">${sign}</td>
+        <td style="padding:7px 8px;font-size:12px;color:rgba(245,240,232,0.75);">
+          ${(isHi ? p.house_label_hi : p.house_label_en) || (isHi ? `भाव ${p.house_from_lagna}` : `House ${p.house_from_lagna}`)}
+          <span style="color:rgba(245,240,232,0.4);">· ${area}</span>
+        </td>
+        <td style="padding:7px 8px;font-size:11px;color:${col};white-space:nowrap;text-align:right;">${FAV_WORD[p.favour] || ''}</td>
+      </tr>`;
+    }).join('')
+    : '';
+
+  const planetSection = planetRows ? `
+      <p style="font-size:11px;font-weight:700;color:rgba(212,175,55,0.55);text-transform:uppercase;letter-spacing:0.12em;margin:22px 0 6px;">
+        ${isHi ? 'आज ग्रह कहाँ हैं' : 'Where the planets are today'}
+      </p>
+      <p style="font-size:12px;color:rgba(245,240,232,0.5);line-height:1.7;margin:0 0 10px;">
+        ${isHi
+    ? 'हर ग्रह अभी आकाश में कहाँ है, वह आपकी कुंडली के किस भाव को छू रहा है, और चंद्र से उसकी पारंपरिक स्थिति कैसी है।'
+    : 'Where each planet is right now, which of your houses it falls in, and how the classical reading from your Moon rates it.'}
+      </p>
+      <table style="width:100%;border-collapse:collapse;border:1px solid rgba(212,175,55,0.15);border-radius:8px;overflow:hidden;">
+        ${planetRows}
+      </table>
+      <p style="font-size:11.5px;color:rgba(245,240,232,0.45);line-height:1.75;margin:9px 0 0;">
+        ${isHi
+    ? 'ध्यान दें: शनि, गुरु, राहु और केतु धीरे चलते हैं — ये आपके वर्तमान <em>दौर</em> की बात कहते हैं, आज की नहीं। चंद्र, सूर्य, बुध, शुक्र और मंगल तेज़ चलते हैं और दिन का रंग तय करते हैं। इसीलिए ऊपर का दैनिक स्कोर अच्छा हो सकता है जबकि कोई धीमा ग्रह अभी दबाव में हो।'
+    : 'Note: Saturn, Jupiter, Rahu and Ketu move slowly — they describe the <em>season</em> you are in, not today. The Moon, Sun, Mercury, Venus and Mars move quickly and colour the day itself. That is why the daily score above can be good while a slow planet is still demanding.'}
+      </p>
+      ${(pp.special || []).map((s) => `
+        <div style="margin-top:10px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:11px 14px;">
+          <p style="font-size:12.5px;font-weight:700;color:${AMBER};margin:0 0 4px;">⚠ ${isHi ? s.title?.hi : s.title?.en}</p>
+          <p style="font-size:12.5px;color:rgba(245,240,232,0.8);line-height:1.7;margin:0;">${isHi ? s.detail?.hi : s.detail?.en}</p>
+        </div>`).join('')}` : '';
+
   const chips = [
     moonRashi  ? (isHi ? `🌙 चंद्र: ${moonRashi}` : `🌙 Moon: ${moonRashi}`) : null,
     dashaLord  ? (isHi ? `⏳ दशा: ${dashaLord}` : `⏳ Dasha: ${dashaLord}`) : null,
-    taraName   ? (isHi ? `🌟 तारा: ${taraName}` : `🌟 Tara: ${taraName}`) : null,
+    taraName   ? (isHi ? `🌟 तारा: ${taraName}${taraSuffix}` : `🌟 Tara: ${taraName}${taraSuffix}`) : null,
   ].filter(Boolean).map((c) =>
     `<span style="display:inline-block;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);color:${GOLD};margin:2px 4px 2px 0;">${c}</span>`
   ).join('');
 
-  const greeting = isHi ? `नमस्ते ${user.name}` : `Namaste ${user.name}`;
+  // First name only — "Namaste Devavrat Singh" reads like a form letter; a daily
+  // note from your astrologer should not. Falls back to the full string if there
+  // is only one word, and to a neutral greeting if the name is missing.
+  const firstName = String(user.name || '').trim().split(/\s+/)[0] || '';
+  const greeting = firstName
+    ? (isHi ? `नमस्ते ${firstName}` : `Namaste ${firstName}`)
+    : (isHi ? 'नमस्ते' : 'Namaste');
   const heading  = isHi ? '🪐 आज आपके लिए' : '🪐 Today for You';
   const subhead  = isHi ? `${kundliName || 'आपकी कुंडली'} के लिए` : `Guidance for ${kundliName || 'your kundli'}`;
   const ctaLabel = isHi ? 'पूरी रिपोर्ट देखें →' : 'View Full Prediction →';
@@ -129,6 +215,9 @@ function buildDailyDigestHtml(user, kundliName, prediction, lang) {
         ${isHi ? 'जीवन क्षेत्र आज' : 'Life Areas Today'}
       </p>
       ${areasGrid}
+
+      <!-- Where the planets are today (this chart) -->
+      ${planetSection}
 
       <!-- Advice box -->
       ${advice ? `<div style="margin-top:16px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:12px 16px;">

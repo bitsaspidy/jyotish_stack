@@ -2,6 +2,9 @@
 const { generateDailyHoroscope } = require('./daily-horoscope');
 const { computeFavouriteDays }   = require('./favourite-days');
 const { DASHA_LORD_MEANINGS }    = require('./prediction-data');
+// Same engine the Kundli Gochar tab uses, so the email and the app agree.
+const { generateTransit }        = require('../transit');
+const { houseLabel }             = require('../deterministic-qa/house-label');
 
 const PLANET_HI = {
   Sun:'सूर्य', Moon:'चंद्र', Mars:'मंगल', Mercury:'बुध', Jupiter:'गुरु',
@@ -126,7 +129,10 @@ function _buildDashaGuidance(mahaLord, antarLord) {
   const m = DASHA_LORD_MEANINGS[mahaLord];
   if (!m) return null;
   const a = antarLord ? DASHA_LORD_MEANINGS[antarLord] : null;
-  const antarCareer = a?.career_en?.split('.')[0] || '';
+  // `nature` strings end with a full stop ("Soul, authority, father… vitality.").
+  // Interpolating them mid-sentence produced "themes of X. — this is a period of…",
+  // a full stop followed by a dash. Trim the terminal punctuation first.
+  const clean = (s) => String(s || '').trim().replace(/[.।]\s*$/, '');
   const mahaHi   = PLANET_HI[mahaLord] || mahaLord;
   const antarHi  = antarLord ? (PLANET_HI[antarLord] || antarLord) : null;
   return {
@@ -148,11 +154,15 @@ function _buildDashaGuidance(mahaLord, antarLord) {
     opportunities_hi: m.opportunities_hi || m.opportunities || [],
     cautions: m.cautions || [],
     cautions_hi: m.cautions_hi || m.cautions || [],
+    // No career clause here on purpose. `career_en` is a full sentence, not a noun
+    // phrase — slotting it in produced "so this is a period of authority and
+    // recognition is where you feel it most". It also belongs to the Career area,
+    // and repeating it here is the duplication this file already had once.
     antar_note_en: a
-      ? `The ${antarLord} Antardasha currently adds themes of ${a.nature}${antarCareer ? ` — ${antarCareer.toLowerCase()}` : ''}, blending with the overarching ${mahaLord} Mahadasha cycle.`
+      ? `Within it, the ${antarLord} Antardasha is running — it layers ${clean(a.nature).toLowerCase()} over the broader ${mahaLord} cycle.`
       : null,
     antar_note_hi: a
-      ? `${antarHi} अंतर्दशा अभी ${a.nature_hi || a.nature} के विषयों को जोड़ रही है — ${mahaHi} महादशा के साथ मिलकर।`
+      ? `इसके भीतर ${antarHi} अंतर्दशा चल रही है — यह ${clean(a.nature_hi || a.nature)} के विषयों को ${mahaHi} महादशा के ऊपर जोड़ती है।`
       : null,
   };
 }
@@ -261,6 +271,83 @@ function _favDayLines(chart, weekdayIdx) {
   return { en, hi, favs, avoids };
 }
 
+/**
+ * Personalise the day's rating, advice and caution.
+ *
+ * `rh.score` comes from computeDayScore(), which is generic PER RASHI — it is the
+ * same number every Sagittarius-Moon reader sees, and it is shared with the public
+ * weekly/monthly engines, so it must not be changed there.
+ *
+ * Tara Bala is PERSONAL: it is measured from the reader's own natal nakshatra. It
+ * was computed and displayed prominently next to the stars, but never fed into the
+ * rating — so a day could show "🌟 Tara: Pratyak" (an obstacle tara) alongside five
+ * stars and "the stars are aligned in your favour". That contradiction is what this
+ * fixes: the three inauspicious taras (Vipat, Pratyak, Naidhana) pull the day down
+ * and, more importantly, stop it from ever being sold as excellent.
+ *
+ * The advice text is then rebuilt FROM the personalised score. Leaving the generic
+ * advice in place would just move the contradiction rather than remove it.
+ */
+function _personaliseDay(rh, taraData, transitData, sadeSatiActive) {
+  const base = Number(rh.score) || 3;
+  let score = base;
+
+  if (taraData) {
+    if (taraData.is_favorable === false) score = Math.min(score - 1, 3); // never "excellent"
+    else if (taraData.is_favorable === true && score < 5) score += 1;
+  }
+  score = Math.max(1, Math.min(5, Math.round(score)));
+
+  const advice = score >= 4
+    ? {
+      en: 'A genuinely good day for you. Move important work forward, ask for what you want, and trust your read on things.',
+      hi: 'आज का दिन आपके लिए वास्तव में अच्छा है। ज़रूरी काम आगे बढ़ाएं, जो चाहिए वह माँगें, और अपनी समझ पर भरोसा रखें।',
+    }
+    : score === 3
+      ? {
+        en: 'A steady, ordinary day — neither a green light nor a red one. Regular work goes well; save the big commitments for a stronger day.',
+        hi: 'एक सामान्य, स्थिर दिन — न पूरी हरी झंडी, न रोक। रोज़मर्रा का काम ठीक चलेगा; बड़े निर्णय किसी मज़बूत दिन के लिए रखें।',
+      }
+      : {
+        en: 'Today asks for patience rather than push. Keep to routine work, avoid new commitments, and let contentious matters wait a day or two.',
+        hi: 'आज ज़ोर लगाने से ज़्यादा धैर्य का दिन है। नियमित काम करें, नई ज़िम्मेदारी न लें, और विवाद वाले मामले एक-दो दिन टाल दें।',
+      };
+
+  // Caution built from what is ACTUALLY difficult in this chart today, in priority
+  // order. The old text was a fixed "avoid overcommitting / quality over quantity",
+  // which said nothing and often contradicted the advice block above it.
+  const reasons = [];
+  if (sadeSatiActive) {
+    reasons.push({
+      en: 'Sade Sati is running, so progress feels slower than your effort deserves. That is the phase, not a verdict on you — steady beats fast right now.',
+      hi: 'साढ़े साती चल रही है, इसलिए मेहनत के अनुपात में प्रगति धीमी लगती है। यह चरण की बात है, आपकी क्षमता की नहीं — अभी तेज़ी से बेहतर है निरंतरता।',
+    });
+  }
+  if (taraData && taraData.is_favorable === false) {
+    reasons.push({
+      en: `The Moon is in your ${taraData.name} tara today, which tends to put small obstacles in the way. Expect friction on new starts; routine work is unaffected.`,
+      hi: `आज चंद्र आपकी ${taraData.name_hi} तारा में है, जो छोटी-छोटी बाधाएं लाती है। नई शुरुआत में अटकाव संभव; नियमित काम पर असर नहीं।`,
+    });
+  }
+  const rough = (transitData?.list || []).filter((t) => t.tone === 'challenging');
+  if (rough.length) {
+    const names = rough.map((t) => t.planet);
+    reasons.push({
+      en: `${names.join(' and ')} ${names.length > 1 ? 'are' : 'is'} sitting awkwardly for you at the moment — that is where the day is most likely to test your patience.`,
+      hi: `${names.join(' और ')} इस समय आपके लिए असहज स्थिति में ${names.length > 1 ? 'हैं' : 'है'} — दिन की परीक्षा सबसे अधिक यहीं से आ सकती है।`,
+    });
+  }
+
+  const caution = reasons.length
+    ? { en: reasons.map((r) => r.en).join(' '), hi: reasons.map((r) => r.hi).join(' ') }
+    : {
+      en: 'Nothing in your chart is flagging a warning today. Use the day normally.',
+      hi: 'आज आपकी कुंडली में कोई विशेष चेतावनी नहीं है। दिन सामान्य रूप से उपयोग करें।',
+    };
+
+  return { score, stars: '★'.repeat(score) + '☆'.repeat(5 - score), advice, caution, base_score: base };
+}
+
 // ── Main entry — returns a row-shaped object ready to insert into `predictions` ──
 function generateTodayPrediction(chart, atDate = new Date()) {
   const moonRashi = chart?.planets?.Moon?.rashi_num;
@@ -302,12 +389,66 @@ function generateTodayPrediction(chart, atDate = new Date()) {
   const favLine        = _favDayLines(chart, atDate.getDay());
 
   // Content paragraphs (used as preview text)
+  // The body describes the dasha's overall NATURE and names the antardasha. It
+  // deliberately does NOT use `career_en` — that text is already merged into the
+  // Career life-area below, and using it here printed the identical paragraph
+  // twice in one email. Same reason `spiritual_en` is dropped: the areas grid
+  // carries the per-area detail, the body carries the frame.
   const dashaLine_en = dashaGuidance
-    ? `You are in ${maha?.lord || ''} Mahadasha${antar?.lord ? ` / ${antar.lord} Antardasha` : ''}. ${dashaGuidance.career_en} ${dashaGuidance.spiritual_en || ''}`
+    ? [
+      `You are running ${maha?.lord || ''} Mahadasha${antar?.lord ? ` with ${antar.lord} Antardasha` : ''}.`,
+      dashaGuidance.nature_en ? `${String(dashaGuidance.nature_en).trim().replace(/[.]\s*$/, '')} — that is the backdrop to everything below.` : '',
+      dashaGuidance.antar_note_en || '',
+    ].filter(Boolean).join(' ')
     : '';
-  const dashaLine_hi = maha?.lord
-    ? `आप ${PLANET_HI[maha.lord]} महादशा${antar?.lord ? ` / ${PLANET_HI[antar.lord]} अंतर्दशा` : ''} में हैं।`
+  // Hindi previously stopped at "आप X महादशा में हैं।" with no interpretation at
+  // all, while English got a full paragraph. Same substance in both now.
+  const dashaLine_hi = dashaGuidance
+    ? [
+      `आप ${PLANET_HI[maha?.lord] || maha?.lord || ''} महादशा${antar?.lord ? ` और ${PLANET_HI[antar.lord] || antar.lord} अंतर्दशा` : ''} में चल रहे हैं।`,
+      dashaGuidance.nature_hi ? `${String(dashaGuidance.nature_hi).trim().replace(/[।.]\s*$/, '')} — यही नीचे लिखी हर बात की पृष्ठभूमि है।` : '',
+      dashaGuidance.antar_note_hi || '',
+    ].filter(Boolean).join(' ')
     : '';
+
+  // Personalised rating + matching advice/caution (Tara Bala is personal; rh.score
+  // is not). Must be computed after taraData and transitData exist.
+  const personal = _personaliseDay(rh, taraData, transitData, !!daily.transit_summary?.highlights?.sade_sati?.active);
+
+  // Today's planetary positions read against THIS chart. Reuses the same engine as
+  // the Kundli's Gochar tab so the email and the app cannot disagree: per planet it
+  // gives the sign, the house from the Lagna (which life area is lit up) and the
+  // house from the Moon (the classical seat that decides favourable vs demanding).
+  let planetPositions = null;
+  try {
+    const t = generateTransit(chart, { lang: 'en', admin: false, now: atDate });
+    if (t?.available) {
+      planetPositions = {
+        date: t.date,
+        tone: t.overall?.tone || null,
+        tone_label: t.overall?.tone_label || null,
+        special: t.special || [],
+        list: t.planets.map((p) => ({
+          planet: p.planet,
+          planet_hi: PLANET_HI[p.planet] || p.planet,
+          rashi_en: p.rashi?.en || '',
+          rashi_hi: p.rashi?.hi || '',
+          house_from_lagna: p.house_from_lagna,
+          house_from_moon: p.house_from_moon,
+          // Pre-formatted here so the email never builds "9 भाव" by hand — Hindi
+          // needs the classical word (नवम भाव), not a digit + भाव.
+          house_label_en: houseLabel(p.house_from_lagna, 'en'),
+          house_label_hi: houseLabel(p.house_from_lagna, 'hi'),
+          favour: p.favour,
+          area_en: p.area_label?.en || '',
+          area_hi: p.area_label?.hi || '',
+          is_retrograde: p.is_retrograde,
+        })),
+      };
+    }
+  } catch {
+    planetPositions = null; // never let this break the daily email
+  }
 
   const content_en = [rh.description_en, moonLagnaLine_en, dashaLine_en, favLine.en].filter(Boolean).join('\n\n');
   const content_hi = [rh.description_hi, moonLagnaLine_hi, dashaLine_hi, favLine.hi].filter(Boolean).join('\n\n');
@@ -325,8 +466,11 @@ function generateTodayPrediction(chart, atDate = new Date()) {
     valid_until: dayEnd,
     meta: {
       date:     rh.date,
-      score:    rh.score,
-      stars:    rh.stars,
+      // Personalised: rh.score is the generic per-rashi number; this one includes
+      // the reader's own Tara Bala. base_score keeps the generic value visible.
+      score:    personal.score,
+      stars:    personal.stars,
+      base_score: personal.base_score,
       title_hi: `${rh.title_hi} · ${lagnaName?.hi || ''} लग्न · ${rh.rashi_hi} चंद्र`,
       moon_rashi:  { num: rh.rashi_num, en: rh.rashi_en, hi: rh.rashi_hi, symbol: rh.symbol },
       lagna:       { num: lagnaNum, en: lagnaName?.en || '', hi: lagnaName?.hi || '' },
@@ -334,14 +478,15 @@ function generateTodayPrediction(chart, atDate = new Date()) {
       dasha_guidance: dashaGuidance,
       areas:       enrichedAreas,
       transit:     transitData,
+      planet_positions: planetPositions,
       tara:        taraData,
       moon_nakshatra_today: NAKSHATRA_NAMES[transitMoonNakNum]
         ? { num: transitMoonNakNum, ...NAKSHATRA_NAMES[transitMoonNakNum] } : null,
       natal_moon_nakshatra: natalMoonNakNum && NAKSHATRA_NAMES[natalMoonNakNum]
         ? { num: natalMoonNakNum, ...NAKSHATRA_NAMES[natalMoonNakNum] } : null,
       active_yogas: activeYogas,
-      advice:   rh.advice,
-      caution:  rh.caution,
+      advice:   personal.advice,
+      caution:  personal.caution,
       lucky:    rh.lucky,
       sade_sati: rh.sade_sati,
       fav_purposes:   favLine.favs.map((p)  => ({ key: p.key, icon: p.icon, en: p.purpose_en, hi: p.purpose_hi })),
