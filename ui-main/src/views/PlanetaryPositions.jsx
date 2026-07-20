@@ -12,6 +12,9 @@ import api from '../lib/api';
 
 const GOLD  = '#D4AF37';
 const MUTED = 'rgba(245,240,232,0.55)';
+// Strength of the planet in the sign it currently occupies (exalted/own/friend =
+// strong, debilitated/rival = weak). Set by the API's dignity_tone.
+const TONE_COLOR = { strong: '#22C55E', neutral: '#60A5FA', weak: '#F59E0B' };
 
 const PLANET_META = {
   Sun:     { icon:'☉', color:'#F59E0B' }, Moon:    { icon:'☽', color:'#94A3B8' },
@@ -57,7 +60,9 @@ export default function PlanetaryPositions({ initialDate }) {
 
   useEffect(() => {
     setLoading(true);
-    api.get(`/panchang/planet-positions?date=${date}`)
+    // detail=1 asks for the enriched payload: dignity, the composed effect line,
+    // retrograde/combustion notes and the transit window.
+    api.get(`/panchang/planet-positions?date=${date}&detail=1`)
       .then((res) => setData(res.data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
@@ -160,6 +165,52 @@ export default function PlanetaryPositions({ initialDate }) {
                         <span style={{ fontSize:11.5, color:'rgba(245,240,232,0.75)' }}>
                           {t(lang, p.nakshatra_en, p.nakshatra_hi)} <span style={{ color:MUTED }}>· {t(lang,'Pada','पद')} {p.pada}</span>
                         </span>
+
+                        {/* Reading — only present when the API returned detail=1 */}
+                        {p.effect && (
+                          <div style={{ gridColumn:'1 / -1', paddingTop:8, marginTop:2 }}>
+                            <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', marginBottom:6 }}>
+                              {p.dignity_label && (
+                                <span style={{
+                                  fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:10,
+                                  color: TONE_COLOR[p.dignity_tone] || MUTED,
+                                  background:'rgba(255,255,255,0.04)',
+                                  border:`1px solid ${TONE_COLOR[p.dignity_tone] || MUTED}44`,
+                                }}>
+                                  {t(lang, p.dignity_label.en, p.dignity_label.hi)}
+                                </span>
+                              )}
+                              {p.is_combust && (
+                                <span style={{ fontSize:10, color:'#F59E0B' }}>{t(lang,'Combust','अस्त')}</span>
+                              )}
+                              {p.transit_window?.leaves_on && (
+                                <span style={{ fontSize:10, color:MUTED }}>
+                                  {t(lang,'in this sign until','इस राशि में')} {p.transit_window.leaves_on}
+                                  {p.transit_window.days_remaining != null && (
+                                    <> · {p.transit_window.days_remaining} {
+                                      lang === 'hi'
+                                        ? 'दिन शेष'
+                                        : (p.transit_window.days_remaining === 1 ? 'day left' : 'days left')
+                                    }</>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize:12, color:'rgba(245,240,232,0.72)', lineHeight:1.75, margin:0 }}>
+                              {t(lang, p.effect.en, p.effect.hi)}
+                            </p>
+                            {p.retrograde_note && (
+                              <p style={{ fontSize:11.5, color:'rgba(249,115,22,0.8)', lineHeight:1.7, margin:'6px 0 0' }}>
+                                ℞ {t(lang, p.retrograde_note.en, p.retrograde_note.hi)}
+                              </p>
+                            )}
+                            {p.combust_note && (
+                              <p style={{ fontSize:11.5, color:'rgba(245,158,11,0.8)', lineHeight:1.7, margin:'6px 0 0' }}>
+                                {t(lang, p.combust_note.en, p.combust_note.hi)}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}

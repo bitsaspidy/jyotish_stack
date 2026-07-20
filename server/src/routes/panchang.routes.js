@@ -90,11 +90,17 @@ router.get('/planet-positions', (req, res) => {
     const [y] = date.split('-').map(Number);
     if (y < 1900 || y > 2100) return fail(res, 'Date out of range', 400);
 
-    let data = ppCache.get(date);
+    // The public Gochar page asks for the enriched payload (dignity, composed
+    // effect, retrograde/combustion notes, transit window). Cached separately so a
+    // plain caller never pays the ~66ms of sign-window scanning.
+    const enrich = String(req.query.detail || '') === '1';
+    const cacheKey = enrich ? `${date}:d` : date;
+
+    let data = ppCache.get(cacheKey);
     if (!data) {
-      data = computePlanetPositions(date);
+      data = computePlanetPositions(date, { enrich });
       if (ppCache.size > 60) ppCache.clear();
-      ppCache.set(date, data);
+      ppCache.set(cacheKey, data);
     }
     return ok(res, data);
   } catch (e) {
