@@ -32,6 +32,7 @@ export const ROUTE_GROUPS = {
 export const SITEMAP_ROUTES = [
   // ── Core ────────────────────────────────────────────────────────────────
   { path: '/', label: 'Home', group: 'core', priority: 1.0, changeFrequency: 'daily' },
+  { path: '/about', label: 'About Us', group: 'core', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/pricing', label: 'Pricing', group: 'core', priority: 0.9, changeFrequency: 'weekly' },
 
   // ── Kundli & calculators ────────────────────────────────────────────────

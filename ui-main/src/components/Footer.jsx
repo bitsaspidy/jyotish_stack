@@ -85,6 +85,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-sm text-ivory/60">
               {[
+                ['/about',           'About Us',           'हमारे बारे में'],
                 ['/pricing',         'Pricing',            'मूल्य'],
                 ['/terms',           'Terms & Conditions', 'नियम व शर्तें'],
                 ['/privacy',         'Privacy Policy',     'गोपनीयता नीति'],
