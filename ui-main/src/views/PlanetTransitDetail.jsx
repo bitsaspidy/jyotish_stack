@@ -63,7 +63,18 @@ export default function PlanetTransitDetail({ slug }) {
       .finally(() => setLoading(false));
   }, [planet, year, type]);
 
-  const curSignNum = data?.current?.sign_num;
+  // The single ingress in effect right now = the latest one already past. Only
+  // meaningful when the shown year contains today, so past/future years mark
+  // nothing. (Highlighting by sign matched EVERY visit to the current sign — for
+  // a fast body like the Moon that lit up all ~13 of them.)
+  let currentIdx = -1;
+  if (data?.ingresses && year === new Date().getUTCFullYear()) {
+    const nowMs = Date.now();
+    for (let i = 0; i < data.ingresses.length; i++) {
+      if (new Date(data.ingresses[i].at).getTime() <= nowMs) currentIdx = i;
+      else break;
+    }
+  }
 
   return (
     <div className="min-h-screen relative" style={{ background:'linear-gradient(180deg, #0B0E23 0%, #141838 100%)' }}>
@@ -112,7 +123,7 @@ export default function PlanetTransitDetail({ slug }) {
         ) : (
           <motion.div key={`${planet}-${year}-${type}`} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} style={{ display:'grid', gap:8 }}>
             {data.ingresses.map((ing, i) => {
-              const isCurrent = type === 'rashi' && ing.sign_num === curSignNum;
+              const isCurrent = i === currentIdx;
               const label = type === 'nakshatra' ? t(ing.nak_en, ing.nak_hi) : t(ing.sign_en, ing.sign_hi);
               return (
                 <div key={i} style={{
