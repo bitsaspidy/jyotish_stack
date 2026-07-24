@@ -152,10 +152,25 @@ function composeEffect(planet, rashiNum, stand, lang) {
 
 function computePlanetPositions(dateStr, opts = {}) {
   const [y, m, d] = dateStr.split('-').map(Number);
-  const JD = eph.julianDay(y, m, d, 6, 30, 0); // 12:00 IST (06:30 UTC)
+
+  // Observer = the place + local clock time the sky is read for. Defaults to New
+  // Delhi at 12:00 IST, which reproduces the original behaviour exactly, so the
+  // chart/panchang callers that pass nothing are unaffected. Time shifts every
+  // body (the Moon most); location only moves the ascendant.
+  const obs = {
+    lat: Number.isFinite(opts.lat) ? opts.lat : NEW_DELHI.lat,
+    lon: Number.isFinite(opts.lon) ? opts.lon : NEW_DELHI.lon,
+    tz:  Number.isFinite(opts.tzOffset) ? opts.tzOffset : 5.5,
+    time: /^\d{1,2}:\d{2}$/.test(opts.time || '') ? opts.time : '12:00',
+    place_en: opts.placeEn || 'New Delhi, India',
+    place_hi: opts.placeHi || 'नई दिल्ली, भारत',
+  };
+  const [oh, om] = obs.time.split(':').map(Number);
+  const utHours = (oh + om / 60) - obs.tz;                 // local clock → UT
+  const JD = eph.julianDay(y, m, d, 0, 0, 0) + utHours / 24;
+  const at = new Date(Date.UTC(y, m - 1, d) + utHours * 3600000);
   // `enrich` is opt-in so the panchang/chart callers keep their original payload.
   const enrich = opts.enrich === true;
-  const at = new Date(Date.UTC(y, m - 1, d, 6, 30, 0));
 
   const sunLon = ((siderealLongitudeForPlanet('Sun', JD) % 360) + 360) % 360;
 
@@ -227,13 +242,23 @@ function computePlanetPositions(dateStr, opts = {}) {
 
   const out = { date: dateStr, ayanamsa, positions };
   if (enrich) {
+    // Echo the observer back so the page can caption "for <place> at <time>".
+    out.observer = {
+      place: { en: obs.place_en, hi: obs.place_hi },
+      time: obs.time,
+      tz: obs.tz,
+      lat: +obs.lat.toFixed(4),
+      lon: +obs.lon.toFixed(4),
+    };
+
     /**
-     * Ascendant (Lagna) — anchored to New Delhi at 12:00 IST. Unlike the planets,
-     * the rising sign depends on place and time, so this is a fixed reference the
-     * page labels honestly, never the anonymous reader's own Lagna.
+     * Ascendant (Lagna) — for the chosen place and local clock time (default New
+     * Delhi at 12:00 IST). Unlike the planets, the rising sign depends on place
+     * and time; the page labels which it used rather than pretending to be the
+     * anonymous reader's own Lagna.
      */
     try {
-      const ascTrop = eph.tropicalAscendant(JD, NEW_DELHI.lat, NEW_DELHI.lon);
+      const ascTrop = eph.tropicalAscendant(JD, obs.lat, obs.lon);
       const ascLon  = norm(ascTrop - lahiriAyanamsa(JD));
       const ascRashi = rashiFromDeg(ascLon);
       const ascNak   = nakshatraFromDeg(ascLon);
@@ -241,8 +266,8 @@ function computePlanetPositions(dateStr, opts = {}) {
       // Instantaneous rising rate: central difference of the ascendant over ±1 min.
       const dt = 1 / 1440;
       const ascSpeed = signedAngleDelta(
-        eph.tropicalAscendant(JD - dt, NEW_DELHI.lat, NEW_DELHI.lon),
-        eph.tropicalAscendant(JD + dt, NEW_DELHI.lat, NEW_DELHI.lon),
+        eph.tropicalAscendant(JD - dt, obs.lat, obs.lon),
+        eph.tropicalAscendant(JD + dt, obs.lat, obs.lon),
       ) / (2 * dt);
       out.ascendant = {
         planet: 'Ascendant',
@@ -260,8 +285,8 @@ function computePlanetPositions(dateStr, opts = {}) {
         motion: 'forward',
         state: STATE_LABEL.never,
         residing_in: null,
-        location: { en: 'New Delhi, India', hi: 'नई दिल्ली, भारत' },
-        computed_at: '12:00 IST',
+        location: { en: obs.place_en, hi: obs.place_hi },
+        computed_at: `${obs.time} · UTC${obs.tz >= 0 ? '+' : ''}${obs.tz}`,
       };
     } catch { /* the ascendant is optional; the planets carry the page without it */ }
 

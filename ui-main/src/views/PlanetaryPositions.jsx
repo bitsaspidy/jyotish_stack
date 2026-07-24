@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import StarField from '../components/StarField';
@@ -29,6 +29,16 @@ const PLANET_META = {
 
 const STATE_TONE = { asta:'#F59E0B', udita:'#22C55E', never:'rgba(245,240,232,0.55)' };
 
+// Observer defaults + quick-pick cities for the location/time bar.
+const DEFAULT_LOC = { lat:'28.6139', lon:'77.2090', tz:'5.5', time:'12:00', place:'New Delhi, India' };
+const CITY_PRESETS = [
+  { label:'New Delhi', place:'New Delhi, India', lat:'28.6139', lon:'77.2090', tz:'5.5' },
+  { label:'Mumbai',    place:'Mumbai, India',    lat:'19.0760', lon:'72.8777', tz:'5.5' },
+  { label:'Kolkata',   place:'Kolkata, India',   lat:'22.5726', lon:'88.3639', tz:'5.5' },
+  { label:'Chennai',   place:'Chennai, India',   lat:'13.0827', lon:'80.2707', tz:'5.5' },
+  { label:'Bengaluru', place:'Bengaluru, India', lat:'12.9716', lon:'77.5946', tz:'5.5' },
+];
+
 // 11 columns, Drik order. Fixed fr ratios inside a 940px min-width scroller.
 const TABLE_COLS = '1.3fr 1.5fr 1.2fr 0.4fr 0.95fr 0.95fr 0.75fr 1.25fr 0.8fr 0.8fr 0.8fr';
 
@@ -50,6 +60,53 @@ export default function PlanetaryPositions({ initialDate }) {
   // reason many readers come to a Gochar page, but dismissible for anyone who
   // just wants the nine planets.
   const [showUpagrahas, setShowUpagrahas] = useState(true);
+
+  // Observer: place + local clock time the sky is read for. `loc` is what's been
+  // applied (drives the fetch); `pending` is what the user is editing until they
+  // press "Show positions". Defaults to New Delhi at 12:00.
+  const [loc, setLoc]         = useState(DEFAULT_LOC);
+  const [pending, setPending] = useState(DEFAULT_LOC);
+  const [locQuery, setLocQuery]     = useState('');
+  const [locResults, setLocResults] = useState([]);
+  const [searching, setSearching]   = useState(false);
+  const [searchErr, setSearchErr]   = useState('');
+  const searchRef = useRef(null);
+
+  useEffect(() => {
+    const onDoc = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setLocResults([]); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  async function handleLocationSearch() {
+    if (!locQuery.trim()) return;
+    setSearching(true); setLocResults([]); setSearchErr('');
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locQuery)}&format=json&limit=6&addressdetails=1`;
+      const res = await fetch(url, { headers: { 'Accept-Language': hi ? 'hi' : 'en', 'Accept': 'application/json' } });
+      const results = await res.json();
+      if (!results.length) setSearchErr(t(lang, 'No results — try a different name.', 'कोई परिणाम नहीं — अलग नाम आज़माएं।'));
+      setLocResults(results);
+    } catch {
+      setSearchErr(t(lang, 'Location search failed.', 'स्थान खोज विफल रही।'));
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  function selectLocResult(r) {
+    const latN = parseFloat(r.lat), lonN = parseFloat(r.lon);
+    // Rough tz from longitude, forced to IST inside the Indian bounding box —
+    // the same heuristic the birth-chart forms use.
+    let tz = Math.round((lonN / 15) * 2) / 2;
+    if (latN >= 6 && latN <= 37 && lonN >= 68 && lonN <= 98) tz = 5.5;
+    setPending((p) => ({ ...p, lat: latN.toFixed(4), lon: lonN.toFixed(4), tz: String(tz), place: r.display_name }));
+    setLocQuery(r.display_name.split(',')[0]);
+    setLocResults([]);
+  }
+
+  const applyPreset = (c) => setPending((p) => ({ ...p, lat: c.lat, lon: c.lon, tz: c.tz, place: c.place }));
+  const submitObserver = () => { setLoc(pending); setLocResults([]); };
 
   useEffect(() => {
     try {
@@ -73,12 +130,16 @@ export default function PlanetaryPositions({ initialDate }) {
   useEffect(() => {
     setLoading(true);
     // detail=1 asks for the enriched payload: dignity, the composed effect line,
-    // retrograde/combustion notes and the transit window.
-    api.get(`/panchang/planet-positions?date=${date}&detail=1`)
+    // retrograde/combustion notes and the transit window. lat/lon/tz/time set the
+    // observer (default New Delhi 12:00); time shifts every body, place the Lagna.
+    const q = new URLSearchParams({
+      date, detail: '1', lat: loc.lat, lon: loc.lon, tz: loc.tz, time: loc.time, place: loc.place,
+    });
+    api.get(`/panchang/planet-positions?${q.toString()}`)
       .then((res) => setData(res.data))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [date]);
+  }, [date, loc]);
 
   // Full table order, Drik-style: Lagna first, then the nine grahas, then the
   // outer planets. The chart above still uses data.positions (the nine) alone.
@@ -99,10 +160,10 @@ export default function PlanetaryPositions({ initialDate }) {
           <h1 className="font-serif text-gold" style={{ fontSize:28, fontWeight:800 }}>
             🌌 {t(lang, 'Planetary Positions', 'ग्रह स्थिति (गोचर)')}
           </h1>
-          <p style={{ color:MUTED, fontSize:13, marginTop:8, maxWidth:560, margin:'8px auto 0', lineHeight:1.7 }}>
+          <p style={{ color:MUTED, fontSize:13, marginTop:8, maxWidth:580, margin:'8px auto 0', lineHeight:1.7 }}>
             {t(lang,
-              'Sidereal (Lahiri) positions of all nine planets for any day — sign, degree, nakshatra and retrograde status.',
-              'किसी भी दिन नवग्रहों की निरयन (लाहिरी) स्थिति — राशि, अंश, नक्षत्र एवं वक्री स्थिति।')}
+              'Sidereal (Lahiri) positions for any place, day and time — sign, degree, nakshatra, sub-lord, latitude, speed, RA/declination and retrograde status, plus the ascendant.',
+              'किसी भी स्थान, दिन एवं समय हेतु निरयन (लाहिरी) स्थिति — राशि, अंश, नक्षत्र, उप-स्वामी, शर, गति, विषुवांश/क्रांति एवं वक्री स्थिति, साथ में लग्न।')}
           </p>
         </motion.div>
 
@@ -114,7 +175,92 @@ export default function PlanetaryPositions({ initialDate }) {
           <button onClick={() => setDate(shiftDate(date, 1))} style={navBtn}>→</button>
           <button onClick={() => setDate(todayIST())} style={{ ...navBtn, width:'auto', padding:'0 14px', fontSize:11 }}>{t(lang,'Today','आज')}</button>
         </div>
-        <p style={{ textAlign:'center', color:MUTED, fontSize:12, marginBottom:20 }}>{fmtDate(date, lang)}</p>
+        <p style={{ textAlign:'center', color:MUTED, fontSize:12, marginBottom:14 }}>{fmtDate(date, lang)}</p>
+
+        {/* Location & time — sets the observer (default New Delhi 12:00). */}
+        <div className="card-royal p-4" style={{ maxWidth:640, margin:'0 auto 20px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+            <span style={{ color:GOLD, fontSize:13, fontWeight:700 }}>📍 {t(lang, 'Location & Time', 'स्थान एवं समय')}</span>
+            <span style={{ color:MUTED, fontSize:10 }}>{t(lang, '(for the ascendant & the moment read)', '(लग्न एवं क्षण हेतु)')}</span>
+          </div>
+
+          <div style={{ position:'relative' }} ref={searchRef}>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+              <input
+                className="input-royal"
+                value={locQuery}
+                onChange={(e) => setLocQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleLocationSearch(); } }}
+                placeholder={t(lang, 'Search a city — e.g. Jaipur, India', 'शहर खोजें — जैसे जयपुर, भारत')}
+                style={{ flex:'1 1 220px', fontSize:13, padding:'8px 12px', colorScheme:'dark' }}
+              />
+              <button onClick={handleLocationSearch} className="btn-gold" style={{ fontSize:12, padding:'0 16px', borderRadius:8, whiteSpace:'nowrap' }}>
+                {searching ? '…' : t(lang, 'Search', 'खोजें')}
+              </button>
+              <input
+                type="time"
+                value={pending.time}
+                onChange={(e) => setPending((p) => ({ ...p, time: e.target.value || '12:00' }))}
+                className="input-royal"
+                style={{ fontSize:13, padding:'8px 10px', width:'auto', colorScheme:'dark' }}
+                aria-label={t(lang, 'Local time', 'स्थानीय समय')}
+              />
+            </div>
+
+            {locResults.length > 0 && (
+              <div style={{
+                position:'absolute', top:'100%', left:0, right:0, zIndex:30,
+                background:'#141838', border:'1px solid rgba(212,175,55,0.3)', borderRadius:10,
+                marginTop:4, maxHeight:220, overflowY:'auto',
+              }}>
+                {locResults.map((r, i) => (
+                  <button key={i} type="button" onClick={() => selectLocResult(r)} style={{
+                    display:'block', width:'100%', textAlign:'left', padding:'9px 12px',
+                    fontSize:11, color:'#F5F0E8', background:'transparent', border:'none',
+                    borderBottom:'1px solid rgba(255,255,255,0.06)', cursor:'pointer',
+                  }}>
+                    📍 {r.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {searchErr && <p style={{ color:'#F59E0B', fontSize:11, marginTop:6 }}>{searchErr}</p>}
+
+          {/* City quick-picks */}
+          <div style={{ display:'flex', gap:6, marginTop:10, flexWrap:'wrap', alignItems:'center' }}>
+            {CITY_PRESETS.map((c) => {
+              const active = pending.place === c.place;
+              return (
+                <button key={c.label} type="button" onClick={() => applyPreset(c)} style={{
+                  fontSize:10.5, borderRadius:14, padding:'3px 11px', cursor:'pointer',
+                  color: active ? '#0B0E23' : MUTED,
+                  background: active ? GOLD : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${active ? GOLD : 'rgba(255,255,255,0.12)'}`,
+                  fontWeight: active ? 700 : 400,
+                }}>
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Pending selection + submit */}
+          <div style={{ display:'flex', gap:10, alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', marginTop:12, paddingTop:10, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize:11, color:'rgba(245,240,232,0.7)' }}>
+              {pending.place.split(',')[0]} · {pending.time} · UTC{Number(pending.tz) >= 0 ? '+' : ''}{pending.tz}
+              <span style={{ color:MUTED }}> · {pending.lat}, {pending.lon}</span>
+            </span>
+            <button
+              onClick={submitObserver}
+              className="btn-gold"
+              style={{ fontSize:12, padding:'8px 20px', borderRadius:9, fontWeight:700 }}
+            >
+              {t(lang, 'Show positions', 'स्थिति दिखाएँ')}
+            </button>
+          </div>
+        </div>
 
         {loading ? (
           <p style={{ textAlign:'center', color:MUTED, padding:40 }}>{t(lang, 'Calculating positions…', 'स्थिति गणना हो रही है…')}</p>
@@ -122,7 +268,7 @@ export default function PlanetaryPositions({ initialDate }) {
           <p style={{ textAlign:'center', color:MUTED, padding:40 }}>{t(lang, 'Unable to load positions.', 'स्थिति लोड नहीं हो सकी।')}</p>
         ) : (
           <motion.div
-            key={date}
+            key={`${date}|${loc.place}|${loc.time}`}
             initial={{ opacity:0, y:12 }}
             animate={{ opacity:1, y:0 }}
             style={{ display:'flex', flexDirection:'column', gap:16 }}
@@ -204,8 +350,9 @@ export default function PlanetaryPositions({ initialDate }) {
 
               {data.ayanamsa != null && (
                 <p style={{ fontSize:10, color:MUTED, textAlign:'right', marginTop:10 }}>
-                  {t(lang,'Lahiri Ayanamsa','लाहिरी अयनांश')}: {data.ayanamsa}° · {t(lang,'computed at 12:00 IST','12:00 IST पर गणना')}
-                  {data.ascendant?.location && <> · {t(lang,'Lagna','लग्न')}: {t(lang, data.ascendant.location.en, data.ascendant.location.hi)}</>}
+                  {t(lang,'Lahiri Ayanamsa','लाहिरी अयनांश')}: {data.ayanamsa}°
+                  {data.observer && <> · {data.observer.time} · UTC{data.observer.tz >= 0 ? '+' : ''}{data.observer.tz}
+                    {' · '}{t(lang, data.observer.place.en, data.observer.place.hi).split(',')[0]}</>}
                 </p>
               )}
             </section>

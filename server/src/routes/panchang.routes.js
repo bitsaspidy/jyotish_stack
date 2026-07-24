@@ -91,15 +91,31 @@ router.get('/planet-positions', async (req, res) => {
     const [y] = date.split('-').map(Number);
     if (y < 1900 || y > 2100) return fail(res, 'Date out of range', 400);
 
+    // Optional observer — place + local clock time the sky is read for. All are
+    // clamped/validated; anything missing or malformed falls back to the New
+    // Delhi / 12:00 IST default inside the helper.
+    const num = (v, lo, hi) => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) && n >= lo && n <= hi ? n : undefined;
+    };
+    const obsOpts = {
+      lat: num(req.query.lat, -90, 90),
+      lon: num(req.query.lon, -180, 180),
+      tzOffset: num(req.query.tz, -14, 14),
+      time: /^\d{1,2}:\d{2}$/.test(String(req.query.time || '')) ? String(req.query.time) : undefined,
+      placeEn: req.query.place ? String(req.query.place).slice(0, 120) : undefined,
+    };
+
     // The public Gochar page asks for the enriched payload (dignity, composed
     // effect, retrograde/combustion notes, transit window). Cached separately so a
     // plain caller never pays the ~66ms of sign-window scanning.
     const enrich = String(req.query.detail || '') === '1';
-    const cacheKey = enrich ? `${date}:d` : date;
+    const obsSig = `${obsOpts.lat ?? ''}|${obsOpts.lon ?? ''}|${obsOpts.tzOffset ?? ''}|${obsOpts.time ?? ''}`;
+    const cacheKey = `${date}:${enrich ? 'd' : 'p'}:${obsSig}`;
 
     let data = ppCache.get(cacheKey);
     if (!data) {
-      data = computePlanetPositions(date, { enrich });
+      data = computePlanetPositions(date, { enrich, ...obsOpts });
       // Upagraha POSITIONS come from the ephemeris helper; their meaning lives in
       // the `upagrahas` master table (already bilingual + 6 regional languages).
       // Merged here so the helper stays synchronous. A DB hiccup drops the
