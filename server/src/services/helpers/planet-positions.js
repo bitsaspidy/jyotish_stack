@@ -14,8 +14,9 @@
  */
 const eph = require('../ephemeris.service');
 const {
-  siderealLongitudeForPlanet, rashiFromDeg, nakshatraFromDeg,
-  isRetrogradePlanet, toDMS, lahiriAyanamsa, getPlanetDignity, getPlanetRelation,
+  siderealLongitudeForPlanet, tropicalLongitudeForPlanet, rashiFromDeg, nakshatraFromDeg,
+  nakshatraSubLord, isRetrogradePlanet, dailyMotionForPlanet, signedAngleDelta,
+  toDMS, lahiriAyanamsa, getPlanetDignity, getPlanetRelation, norm,
 } = require('./core-helpers');
 const { signWindow } = require('../deterministic-qa/dated-transit');
 const { computePositions: computeUpagrahaPositions } = require('./upagrahas');
@@ -56,6 +57,76 @@ function standing(planet, lon, rashiNum) {
   const rel = getPlanetRelation(planet, lord); // 'friend' | 'enemy' | 'neutral' | 'self'
   const eff = CFG.RELATION_EFFECT[rel] || CFG.RELATION_EFFECT.neutral;
   return { source: 'relation', raw, relation: rel, sign_lord: lord, ...eff };
+}
+
+// ── Drik-style detail fields ────────────────────────────────────────────────
+// The Ascendant is location + time dependent; the rest of this page is location-
+// less "sky at noon IST", so the Lagna is anchored to one fixed reference —
+// New Delhi at 12:00 IST — and labelled as such rather than pretending to be the
+// reader's own rising sign.
+const NEW_DELHI = { lat: 28.6139, lon: 77.2090 };
+const OUTER = ['Uranus', 'Neptune', 'Pluto'];
+const NODES = new Set(['Rahu', 'Ketu']);
+
+// Combustion state (Asta = too close to the Sun to be seen; Udita = risen/visible).
+const STATE_LABEL = {
+  never: { key: 'never', en: 'Never Asta',      hi: 'अस्त रहित' },
+  asta:  { key: 'asta',  en: 'Asta (Combust)',  hi: 'अस्त' },
+  udita: { key: 'udita', en: 'Udita (Risen)',   hi: 'उदित' },
+};
+// The planet's standing WITH THE LORD of the sign it sits in ("residing in").
+const RESIDING_LABEL = {
+  own:     { key: 'own',     en: 'Own House',            hi: 'स्वगृह' },
+  friend:  { key: 'friend',  en: "Friend's House",       hi: 'मित्र गृह' },
+  enemy:   { key: 'enemy',   en: "Enemy's House",        hi: 'शत्रु गृह' },
+  neutral: { key: 'neutral', en: 'Neutral with Landlord', hi: 'सम गृह' },
+};
+
+// "05° S 12′ 20″" — signed ecliptic latitude, hemisphere as N/S like Drik.
+function latDMS(latDeg) {
+  const hemi = latDeg >= 0 ? 'N' : 'S';
+  const a = Math.abs(latDeg);
+  const d = Math.floor(a);
+  const mF = (a - d) * 60;
+  const mm = Math.floor(mF);
+  const ss = Math.round((mF - mm) * 60);
+  return `${String(d).padStart(2, '0')}° ${hemi} ${String(mm).padStart(2, '0')}′ ${String(ss).padStart(2, '0')}″`;
+}
+
+// The astronomical block shared by planets, nodes and the ascendant: ecliptic
+// latitude (Shara), daily speed, geocentric of-date RA/Dec, KP sub-lord, motion.
+// ⚠️ astronomy-engine's Pluto model can differ from Drik's by ~0.3–0.4°, enough
+// to shift Pluto's nakshatra near a boundary. Every value here is internally
+// consistent (one ephemeris throughout); only Pluto disagrees with Drik.
+function astroBlock(name, lon, JD) {
+  const speed = dailyMotionForPlanet(name, JD);
+  const eq = NODES.has(name)
+    ? { latitude: 0, ...eph.eclipticToEquatorial(tropicalLongitudeForPlanet(name, JD), 0, JD) }
+    : eph.bodyEquatorial(name, JD);
+  return {
+    raw_longitude: +lon.toFixed(2),
+    latitude: +eq.latitude.toFixed(2),
+    latitude_dms: latDMS(eq.latitude),
+    speed: +speed.toFixed(2),
+    right_ascension: +eq.ra.toFixed(2),
+    declination: +eq.dec.toFixed(2),
+    nakshatra_sub_lord: nakshatraSubLord(lon),
+    motion: speed < 0 ? 'retrograde' : 'forward',
+  };
+}
+
+function residingIn(planet, rashiNum) {
+  if (NODES.has(planet)) return null; // nodes rule no sign — do not fabricate a friendship
+  const lord = SIGN_LORD[rashiNum - 1];
+  if (!lord) return null;
+  if (lord === planet) return RESIDING_LABEL.own;
+  return RESIDING_LABEL[getPlanetRelation(planet, lord)] || RESIDING_LABEL.neutral;
+}
+
+function planetState(name, isCombust, isOuter) {
+  if (name === 'Sun' || NODES.has(name)) return STATE_LABEL.never;
+  if (isOuter) return STATE_LABEL.udita; // outside the classical combustion scheme
+  return isCombust ? STATE_LABEL.asta : STATE_LABEL.udita;
 }
 
 const iso = (d) => (d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : null);
@@ -121,6 +192,9 @@ function computePlanetPositions(dateStr, opts = {}) {
 
     return {
       ...base,
+      ...astroBlock(name, lon, JD),     // latitude/shara, speed, RA/Dec, sub-lord, motion
+      state: planetState(name, isCombust, false),   // Asta / Udita / Never Asta
+      residing_in: residingIn(name, rashi.num),      // Own / Friend's / Enemy's / Neutral house
       dignity: stand.raw,               // canonical engine string
       dignity_key: stand.key,           // exalted | own | debilitated | friend | enemy | neutral …
       dignity_tone: stand.tone,         // strong | weak | neutral — drives the UI colour
@@ -153,6 +227,68 @@ function computePlanetPositions(dateStr, opts = {}) {
 
   const out = { date: dateStr, ayanamsa, positions };
   if (enrich) {
+    /**
+     * Ascendant (Lagna) — anchored to New Delhi at 12:00 IST. Unlike the planets,
+     * the rising sign depends on place and time, so this is a fixed reference the
+     * page labels honestly, never the anonymous reader's own Lagna.
+     */
+    try {
+      const ascTrop = eph.tropicalAscendant(JD, NEW_DELHI.lat, NEW_DELHI.lon);
+      const ascLon  = norm(ascTrop - lahiriAyanamsa(JD));
+      const ascRashi = rashiFromDeg(ascLon);
+      const ascNak   = nakshatraFromDeg(ascLon);
+      const ascEq    = eph.eclipticToEquatorial(ascTrop, 0, JD);
+      // Instantaneous rising rate: central difference of the ascendant over ±1 min.
+      const dt = 1 / 1440;
+      const ascSpeed = signedAngleDelta(
+        eph.tropicalAscendant(JD - dt, NEW_DELHI.lat, NEW_DELHI.lon),
+        eph.tropicalAscendant(JD + dt, NEW_DELHI.lat, NEW_DELHI.lon),
+      ) / (2 * dt);
+      out.ascendant = {
+        planet: 'Ascendant',
+        longitude: +ascLon.toFixed(4),
+        degree_dms: toDMS(ascLon % 30),
+        rashi_num: ascRashi.num, rashi_en: ascRashi.en, rashi_hi: ascRashi.hi,
+        nakshatra_en: ascNak.en, nakshatra_hi: ascNak.hi, nakshatra_lord: ascNak.lord, pada: ascNak.pada,
+        nakshatra_sub_lord: nakshatraSubLord(ascLon),
+        is_retrograde: false,
+        raw_longitude: +ascLon.toFixed(2),
+        latitude: 0, latitude_dms: latDMS(0),
+        speed: +ascSpeed.toFixed(2),
+        right_ascension: +ascEq.ra.toFixed(2),
+        declination: +ascEq.dec.toFixed(2),
+        motion: 'forward',
+        state: STATE_LABEL.never,
+        residing_in: null,
+        location: { en: 'New Delhi, India', hi: 'नई दिल्ली, भारत' },
+        computed_at: '12:00 IST',
+      };
+    } catch { /* the ascendant is optional; the planets carry the page without it */ }
+
+    /**
+     * Outer planets — Uranus, Neptune, Pluto. Not part of the navagraha, so they
+     * carry no dignity/effect reading, only their measured position. Listed after
+     * the nodes exactly as Drik-style position pages do.
+     */
+    out.outer_positions = OUTER.map((name) => {
+      const lon   = norm(siderealLongitudeForPlanet(name, JD));
+      const rashi = rashiFromDeg(lon);
+      const nak   = nakshatraFromDeg(lon);
+      const retro = isRetrogradePlanet(name, JD);
+      return {
+        planet: name,
+        is_outer: true,
+        longitude: +lon.toFixed(4),
+        degree_dms: toDMS(lon % 30),
+        rashi_num: rashi.num, rashi_en: rashi.en, rashi_hi: rashi.hi,
+        nakshatra_en: nak.en, nakshatra_hi: nak.hi, nakshatra_lord: nak.lord, pada: nak.pada,
+        is_retrograde: !!retro,
+        ...astroBlock(name, lon, JD),
+        state: planetState(name, false, true),
+        residing_in: null,
+      };
+    });
+
     /**
      * Upagrahas (sub-planets).
      *

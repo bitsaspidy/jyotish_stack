@@ -21,6 +21,7 @@ function tropicalLongitudeForPlanet(name, JD) {
     case 'Rahu':    return eph.rahuTropicalLongitude(JD);
     case 'Ketu':    return norm(eph.rahuTropicalLongitude(JD) + 180);
     case 'Mars': case 'Mercury': case 'Jupiter': case 'Venus': case 'Saturn':
+    case 'Uranus': case 'Neptune': case 'Pluto':
       return eph.planetTropicalLongitude(name.toLowerCase(), JD);
     default: throw new Error(`Unsupported planet: ${name}`);
   }
@@ -57,6 +58,29 @@ function nakshatraFromDeg(siderealDeg) {
   const idx = Math.floor(n / NAK_SPAN);
   const degN = n - idx * NAK_SPAN;
   return { ...NAKSHATRAS[idx], degree_in_nakshatra: +degN.toFixed(4), pada: Math.floor(degN / (NAK_SPAN / 4)) + 1 };
+}
+
+// ── KP Nakshatra Sub-Lord ──────────────────────────────────────────────────────
+// Each nakshatra (13°20′) is sub-divided in Vimshottari-dasha order, starting from
+// the nakshatra's own lord, each sub spanning (lord-years / 120) of the nakshatra.
+// This is the Krishnamurti-Paddhati "sub lord" Drik prints beside the star lord.
+const VIM_ORDER = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
+const VIM_YEARS = { Ketu: 7, Venus: 20, Sun: 6, Moon: 10, Mars: 7, Rahu: 18, Jupiter: 16, Saturn: 19, Mercury: 17 };
+
+function nakshatraSubLord(siderealDeg) {
+  const n = norm(siderealDeg);
+  const nakIdx = Math.floor(n / NAK_SPAN);          // 0..26
+  const offset = n - nakIdx * NAK_SPAN;             // position within the nakshatra
+  const startLordIdx = nakIdx % 9;                  // the nakshatra lord's index in the cycle
+  let acc = 0;
+  for (let k = 0; k < 9; k++) {
+    const lord = VIM_ORDER[(startLordIdx + k) % 9];
+    const span = (VIM_YEARS[lord] / 120) * NAK_SPAN;
+    // last sub absorbs any floating-point remainder so the walk always resolves
+    if (offset < acc + span || k === 8) return lord;
+    acc += span;
+  }
+  return VIM_ORDER[startLordIdx]; // unreachable, keeps the linter happy
 }
 
 function getPlanetDignity(planet, siderealDeg) {
@@ -187,7 +211,7 @@ module.exports = {
   norm, NAK_SPAN, lahiriAyanamsa, toSidereal,
   tropicalLongitudeForPlanet, siderealLongitudeForPlanet,
   signedAngleDelta, dailyMotionForPlanet, isRetrogradePlanet,
-  rashiFromDeg, nakshatraFromDeg, getPlanetDignity, getDignityStrength, getPlanetRelation,
+  rashiFromDeg, nakshatraFromDeg, nakshatraSubLord, getPlanetDignity, getDignityStrength, getPlanetRelation,
   houseFromSign, wrapSign, rashiSummary, toDMS,
   startSignByQuality, startSignByElement,
   nakExtra, inclusiveNakDistance, varnaForRashi, vashyaForRashi, relationScore,

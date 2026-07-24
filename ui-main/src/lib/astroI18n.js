@@ -8,6 +8,11 @@ export const PLANET_HI = {
   Saturn: 'शनि',
   Rahu: 'राहु',
   Ketu: 'केतु',
+  // Outer planets + the ascendant, for the Drik-style positions table.
+  Uranus: 'अरुण',
+  Neptune: 'वरुण',
+  Pluto: 'यम',
+  Ascendant: 'लग्न',
 };
 
 import { DICTS } from './i18nDicts';

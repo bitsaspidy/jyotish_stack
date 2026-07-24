@@ -22,7 +22,15 @@ const PLANET_META = {
   Jupiter: { icon:'♃', color:'#FBBF24' }, Venus:   { icon:'♀', color:'#F472B6' },
   Saturn:  { icon:'♄', color:'#818CF8' }, Rahu:    { icon:'☊', color:'#A78BFA' },
   Ketu:    { icon:'☋', color:'#6B7280' },
+  // Outer planets + the ascendant, for the full Drik-style table & detail cards.
+  Uranus:  { icon:'⛢', color:'#7DD3FC' }, Neptune: { icon:'♆', color:'#60A5FA' },
+  Pluto:   { icon:'♇', color:'#C4B5FD' }, Ascendant: { icon:'▲', color:'#D4AF37' },
 };
+
+const STATE_TONE = { asta:'#F59E0B', udita:'#22C55E', never:'rgba(245,240,232,0.55)' };
+
+// 11 columns, Drik order. Fixed fr ratios inside a 940px min-width scroller.
+const TABLE_COLS = '1.3fr 1.5fr 1.2fr 0.4fr 0.95fr 0.95fr 0.75fr 1.25fr 0.8fr 0.8fr 0.8fr';
 
 const todayIST = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
 function shiftDate(dateStr, n) { const d = new Date(dateStr + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
@@ -72,6 +80,16 @@ export default function PlanetaryPositions({ initialDate }) {
       .finally(() => setLoading(false));
   }, [date]);
 
+  // Full table order, Drik-style: Lagna first, then the nine grahas, then the
+  // outer planets. The chart above still uses data.positions (the nine) alone.
+  const rows = data
+    ? [
+        ...(data.ascendant ? [data.ascendant] : []),
+        ...data.positions,
+        ...(data.outer_positions || []),
+      ]
+    : [];
+
   return (
     <div className="min-h-screen relative" style={{ background:'linear-gradient(180deg, #0B0E23 0%, #141838 100%)' }}>
       <StarField />
@@ -107,9 +125,9 @@ export default function PlanetaryPositions({ initialDate }) {
             key={date}
             initial={{ opacity:0, y:12 }}
             animate={{ opacity:1, y:0 }}
-            style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 390px), 1fr))', gap:16, alignItems:'start' }}
+            style={{ display:'flex', flexDirection:'column', gap:16 }}
           >
-            <section className="card-royal p-4" aria-label={t(lang, 'Chart', 'चार्ट')}>
+            <section className="card-royal p-4" style={{ width:'100%', maxWidth:460, margin:'0 auto' }} aria-label={t(lang, 'Chart', 'चार्ट')}>
               <ChartToggle style={chartStyle} onChange={handleChartStyleChange} lang={lang} />
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:12 }}>
                 <div>
@@ -142,81 +160,42 @@ export default function PlanetaryPositions({ initialDate }) {
             </section>
 
             <section className="card-royal p-4" aria-label={t(lang, 'Planetary Positions', 'ग्रह स्थिति')}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8, flexWrap:'wrap' }}>
                 <p style={{ color:GOLD, fontFamily:'Georgia,serif', fontSize:15, fontWeight:700 }}>
                   ☷ {t(lang, 'Planetary Positions', 'ग्रह स्थिति')}
                 </p>
-                <span style={{ color:MUTED, fontSize:9 }}>{data.positions.length} {t(lang, 'Planet', 'ग्रह')}</span>
+                <span style={{ color:MUTED, fontSize:9 }}>{rows.length} {t(lang, 'Bodies', 'पिंड')}</span>
               </div>
 
+              {/* Wide Drik-style grid — scrolls horizontally on narrow screens. */}
               <div style={{ overflowX:'auto' }}>
-                <div style={{ minWidth:440 }}>
-                  {/* header row */}
-                  <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1.3fr 1fr 1.6fr', gap:8, padding:'6px 10px', borderBottom:'1px solid rgba(212,175,55,0.2)' }}>
-                    {[['Planet','ग्रह'],['Sign','राशि'],['Degree','अंश'],['Nakshatra','नक्षत्र']].map((h, i) => (
-                      <span key={i} style={{ fontSize:9, color:GOLD, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em' }}>{t(lang, h[0], h[1])}</span>
+                <div style={{ minWidth:940 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:TABLE_COLS, gap:8, padding:'6px 10px', borderBottom:'1px solid rgba(212,175,55,0.2)' }}>
+                    {[['Planet','ग्रह'],['Longitude','देशांतर'],['Nakshatra','नक्षत्र'],['Pada','पद'],
+                      ['Nak Lord','नक्षत्र स्वामी'],['Sub Lord','उप-स्वामी'],['Full°','पूर्ण अंश'],
+                      ['Lat / Shara','शर'],['Speed','गति'],['R.A.','विषुवांश'],['Decl.','क्रांति']].map((h, i) => (
+                      <span key={i} style={{ fontSize:8.5, color:GOLD, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>{t(lang, h[0], h[1])}</span>
                     ))}
                   </div>
-                  {data.positions.map((p) => {
+                  {rows.map((p) => {
                     const meta = PLANET_META[p.planet] || {};
                     return (
-                      <div key={p.planet} style={{ display:'grid', gridTemplateColumns:'1.4fr 1.3fr 1fr 1.6fr', gap:8, padding:'10px', borderBottom:'1px solid rgba(255,255,255,0.05)', alignItems:'center' }}>
-                        <span style={{ display:'flex', alignItems:'center', gap:7, fontSize:13, fontWeight:600, color:'#F5F0E8' }}>
-                          <span style={{ color: meta.color, fontSize:15 }}>{meta.icon}</span>
+                      <div key={p.planet} style={{ display:'grid', gridTemplateColumns:TABLE_COLS, gap:8, padding:'9px 10px', borderBottom:'1px solid rgba(255,255,255,0.05)', alignItems:'center', fontVariantNumeric:'tabular-nums' }}>
+                        <span style={{ display:'flex', alignItems:'center', gap:6, fontSize:12.5, fontWeight:600, color:'#F5F0E8' }}>
+                          <span style={{ color: meta.color, fontSize:14 }}>{meta.icon}</span>
                           {planetName(p.planet, lang)}
-                          {p.is_retrograde && <span style={{ fontSize:10, color:'#F59E0B', fontWeight:700 }} title={t(lang,'Retrograde','वक्री')}>℞</span>}
+                          {p.is_retrograde && <span style={{ fontSize:9.5, color:'#F59E0B', fontWeight:700 }} title={t(lang,'Retrograde','वक्री')}>℞</span>}
                         </span>
-                        <span style={{ fontSize:12.5, color: meta.color }}>{t(lang, p.rashi_en, p.rashi_hi)}</span>
-                        <span style={{ fontSize:11.5, color:MUTED, fontVariantNumeric:'tabular-nums' }}>{p.degree_dms}</span>
-                        <span style={{ fontSize:11.5, color:'rgba(245,240,232,0.75)' }}>
-                          {t(lang, p.nakshatra_en, p.nakshatra_hi)} <span style={{ color:MUTED }}>· {t(lang,'Pada','पद')} {p.pada}</span>
-                        </span>
-
-                        {/* Reading — only present when the API returned detail=1 */}
-                        {p.effect && (
-                          <div style={{ gridColumn:'1 / -1', paddingTop:8, marginTop:2 }}>
-                            <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', marginBottom:6 }}>
-                              {p.dignity_label && (
-                                <span style={{
-                                  fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:10,
-                                  color: TONE_COLOR[p.dignity_tone] || MUTED,
-                                  background:'rgba(255,255,255,0.04)',
-                                  border:`1px solid ${TONE_COLOR[p.dignity_tone] || MUTED}44`,
-                                }}>
-                                  {t(lang, p.dignity_label.en, p.dignity_label.hi)}
-                                </span>
-                              )}
-                              {p.is_combust && (
-                                <span style={{ fontSize:10, color:'#F59E0B' }}>{t(lang,'Combust','अस्त')}</span>
-                              )}
-                              {p.transit_window?.leaves_on && (
-                                <span style={{ fontSize:10, color:MUTED }}>
-                                  {t(lang,'in this sign until','इस राशि में')} {p.transit_window.leaves_on}
-                                  {p.transit_window.days_remaining != null && (
-                                    <> · {p.transit_window.days_remaining} {
-                                      lang === 'hi'
-                                        ? 'दिन शेष'
-                                        : (p.transit_window.days_remaining === 1 ? 'day left' : 'days left')
-                                    }</>
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                            <p style={{ fontSize:12, color:'rgba(245,240,232,0.72)', lineHeight:1.75, margin:0 }}>
-                              {t(lang, p.effect.en, p.effect.hi)}
-                            </p>
-                            {p.retrograde_note && (
-                              <p style={{ fontSize:11.5, color:'rgba(249,115,22,0.8)', lineHeight:1.7, margin:'6px 0 0' }}>
-                                ℞ {t(lang, p.retrograde_note.en, p.retrograde_note.hi)}
-                              </p>
-                            )}
-                            {p.combust_note && (
-                              <p style={{ fontSize:11.5, color:'rgba(245,158,11,0.8)', lineHeight:1.7, margin:'6px 0 0' }}>
-                                {t(lang, p.combust_note.en, p.combust_note.hi)}
-                              </p>
-                            )}
-                          </div>
-                        )}
+                        <span style={{ fontSize:11.5, color: meta.color }}>{t(lang, p.rashi_en, p.rashi_hi)} <span style={{ color:MUTED }}>{p.degree_dms}</span></span>
+                        <span style={{ fontSize:11, color:'rgba(245,240,232,0.75)' }}>{t(lang, p.nakshatra_en, p.nakshatra_hi)}</span>
+                        <span style={{ fontSize:11, color:MUTED, textAlign:'center' }}>{p.pada}</span>
+                        <span style={{ fontSize:11, color:'rgba(245,240,232,0.75)' }}>{planetName(p.nakshatra_lord, lang)}</span>
+                        <span style={{ fontSize:11, color:'rgba(245,240,232,0.75)' }}>{planetName(p.nakshatra_sub_lord, lang)}</span>
+                        <span style={{ fontSize:11, color:MUTED }}>{p.raw_longitude}</span>
+                        <span style={{ fontSize:10.5, color:MUTED }}>{p.latitude_dms}</span>
+                        <span style={{ fontSize:11, color: p.speed < 0 ? '#F59E0B' : MUTED }}>{p.speed > 0 ? '+' : ''}{p.speed}</span>
+                        <span style={{ fontSize:11, color:MUTED }}>{p.right_ascension}</span>
+                        <span style={{ fontSize:11, color:MUTED }}>{p.declination}</span>
                       </div>
                     );
                   })}
@@ -226,8 +205,19 @@ export default function PlanetaryPositions({ initialDate }) {
               {data.ayanamsa != null && (
                 <p style={{ fontSize:10, color:MUTED, textAlign:'right', marginTop:10 }}>
                   {t(lang,'Lahiri Ayanamsa','लाहिरी अयनांश')}: {data.ayanamsa}° · {t(lang,'computed at 12:00 IST','12:00 IST पर गणना')}
+                  {data.ascendant?.location && <> · {t(lang,'Lagna','लग्न')}: {t(lang, data.ascendant.location.en, data.ascendant.location.hi)}</>}
                 </p>
               )}
+            </section>
+
+            {/* ── Per-planet detail cards (Drik-style) ────────────────────── */}
+            <section className="card-royal p-4" style={{ gridColumn:'1 / -1' }} aria-label={t(lang,'Planet Details','ग्रह विवरण')}>
+              <p style={{ color:GOLD, fontFamily:'Georgia,serif', fontSize:15, fontWeight:700, marginBottom:12 }}>
+                🔭 {t(lang, 'Each Body in Detail', 'प्रत्येक पिंड — विस्तार से')}
+              </p>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(min(100%, 290px), 1fr))', gap:12 }}>
+                {rows.map((p) => <DetailCard key={p.planet} p={p} lang={lang} />)}
+              </div>
             </section>
 
             {/* ── Upagrahas (sub-planets) ─────────────────────────────────── */}
@@ -330,3 +320,98 @@ const navBtn = {
   width:36, height:34, borderRadius:8, cursor:'pointer', fontSize:14,
   border:'1px solid rgba(212,175,55,0.3)', background:'rgba(212,175,55,0.08)', color:GOLD,
 };
+
+// One label/value pair inside a detail card.
+function Field({ label, children }) {
+  return (
+    <div>
+      <p style={{ fontSize:8.5, color:MUTED, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', margin:'0 0 2px' }}>{label}</p>
+      <p style={{ fontSize:12, color:'rgba(245,240,232,0.85)', margin:0, fontVariantNumeric:'tabular-nums' }}>{children}</p>
+    </div>
+  );
+}
+
+// Full Drik-style detail card for any body (planet, node, outer planet, Lagna).
+function DetailCard({ p, lang }) {
+  const meta = PLANET_META[p.planet] || {};
+  const stateTone = STATE_TONE[p.state?.key] || MUTED;
+  return (
+    <div style={{ border:'1px solid rgba(255,255,255,0.08)', borderRadius:10, padding:'12px 13px', background:'rgba(255,255,255,0.02)' }}>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', gap:10, marginBottom:10, paddingBottom:8, borderBottom:'1px solid rgba(212,175,55,0.14)' }}>
+        <span style={{ display:'flex', alignItems:'center', gap:7, fontSize:14, fontWeight:700, color:'#F5F0E8' }}>
+          <span style={{ color: meta.color, fontSize:17 }}>{meta.icon}</span>
+          {planetName(p.planet, lang)}
+          {p.is_retrograde && <span style={{ fontSize:10, color:'#F59E0B', fontWeight:700 }} title={t(lang,'Retrograde','वक्री')}>℞</span>}
+        </span>
+        <span style={{ fontSize:12, color: meta.color, textAlign:'right' }}>{t(lang, p.rashi_en, p.rashi_hi)} {p.degree_dms}</span>
+      </div>
+
+      {/* Field grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'9px 12px' }}>
+        <Field label={t(lang,'Full Degree','पूर्ण अंश')}>{p.raw_longitude}°</Field>
+        <Field label={t(lang,'Nakshatra','नक्षत्र')}>{t(lang, p.nakshatra_en, p.nakshatra_hi)} · {t(lang,'Pada','पद')} {p.pada}</Field>
+        <Field label={t(lang,'Nakshatra Lord','नक्षत्र स्वामी')}>{planetName(p.nakshatra_lord, lang)}</Field>
+        <Field label={t(lang,'Sub Lord','उप-स्वामी')}>{planetName(p.nakshatra_sub_lord, lang)}</Field>
+        <Field label={t(lang,'Latitude / Shara','अक्षांश / शर')}>{p.latitude_dms}</Field>
+        <Field label={t(lang,'Speed (°/day)','गति (°/दिन)')}>
+          <span style={{ color: p.speed < 0 ? '#F59E0B' : 'inherit' }}>{p.speed > 0 ? '+' : ''}{p.speed}</span>
+        </Field>
+        <Field label={t(lang,'Right Ascension','विषुवांश')}>{p.right_ascension}°</Field>
+        <Field label={t(lang,'Declination','क्रांति')}>{p.declination}°</Field>
+        <Field label={t(lang,'Motion','गति दिशा')}>
+          {p.motion === 'retrograde' ? t(lang,'Retrograde ℞','वक्री ℞') : t(lang,'Forward','मार्गी')}
+        </Field>
+        <Field label={t(lang,'State','अवस्था')}>
+          <span style={{ color: stateTone }}>{p.state ? t(lang, p.state.en, p.state.hi) : '—'}</span>
+        </Field>
+        {p.residing_in && (
+          <Field label={t(lang,'Residing in','स्थित')}>{t(lang, p.residing_in.en, p.residing_in.hi)}</Field>
+        )}
+        {p.location && (
+          <Field label={t(lang,'Reference','संदर्भ')}>{t(lang, p.location.en, p.location.hi)} · {p.computed_at}</Field>
+        )}
+      </div>
+
+      {/* Reading — classical planets only (dignity, effect, transit window) */}
+      {p.effect && (
+        <div style={{ marginTop:10, paddingTop:9, borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center', marginBottom:6 }}>
+            {p.dignity_label && (
+              <span style={{
+                fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:10,
+                color: TONE_COLOR[p.dignity_tone] || MUTED,
+                background:'rgba(255,255,255,0.04)', border:`1px solid ${TONE_COLOR[p.dignity_tone] || MUTED}44`,
+              }}>
+                {t(lang, p.dignity_label.en, p.dignity_label.hi)}
+              </span>
+            )}
+            {p.transit_window?.leaves_on && (
+              <span style={{ fontSize:10, color:MUTED }}>
+                {t(lang,'in this sign until','इस राशि में')} {p.transit_window.leaves_on}
+                {p.transit_window.days_remaining != null && (
+                  <> · {p.transit_window.days_remaining} {
+                    lang === 'hi' ? 'दिन शेष' : (p.transit_window.days_remaining === 1 ? 'day left' : 'days left')
+                  }</>
+                )}
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize:12, color:'rgba(245,240,232,0.72)', lineHeight:1.7, margin:0 }}>
+            {t(lang, p.effect.en, p.effect.hi)}
+          </p>
+          {p.retrograde_note && (
+            <p style={{ fontSize:11.5, color:'rgba(249,115,22,0.8)', lineHeight:1.65, margin:'6px 0 0' }}>
+              ℞ {t(lang, p.retrograde_note.en, p.retrograde_note.hi)}
+            </p>
+          )}
+          {p.combust_note && (
+            <p style={{ fontSize:11.5, color:'rgba(245,158,11,0.8)', lineHeight:1.65, margin:'6px 0 0' }}>
+              {t(lang, p.combust_note.en, p.combust_note.hi)}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

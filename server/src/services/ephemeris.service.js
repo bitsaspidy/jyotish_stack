@@ -95,6 +95,11 @@ const _PLANET_BODY = {
   mars:    Astronomy.Body.Mars,
   jupiter: Astronomy.Body.Jupiter,
   saturn:  Astronomy.Body.Saturn,
+  // Outer planets — not part of classical navagraha, but Drik-style position pages
+  // list them. astronomy-engine carries VSOP87/Pluto ephemerides for all three.
+  uranus:  Astronomy.Body.Uranus,
+  neptune: Astronomy.Body.Neptune,
+  pluto:   Astronomy.Body.Pluto,
 };
 
 function planetTropicalLongitude(planet, JD) {
@@ -102,6 +107,40 @@ function planetTropicalLongitude(planet, JD) {
   if (!body) throw new Error(`Unknown planet: ${planet}`);
   const gv = Astronomy.GeoVector(body, jdToDate(JD), true);
   return norm(Astronomy.Ecliptic(gv).elon);
+}
+
+// ─── Geocentric equatorial coordinates + ecliptic latitude (Shara) ───────────
+// For a real body: RA/Dec are apparent, of-date, geocentric (the convention Drik
+// Panchang prints). We take the aberration-corrected J2000 geo vector, read its
+// J2000 ecliptic latitude (β / Shara — unchanged to the arc-second between J2000
+// and of-date), then precess the vector to the equinox of date for RA/Dec.
+const _GEO_BODY = {
+  Sun: Astronomy.Body.Sun, Moon: Astronomy.Body.Moon, Mars: Astronomy.Body.Mars,
+  Mercury: Astronomy.Body.Mercury, Jupiter: Astronomy.Body.Jupiter, Venus: Astronomy.Body.Venus,
+  Saturn: Astronomy.Body.Saturn, Uranus: Astronomy.Body.Uranus, Neptune: Astronomy.Body.Neptune,
+  Pluto: Astronomy.Body.Pluto,
+};
+
+function bodyEquatorial(name, JD) {
+  const body = _GEO_BODY[name];
+  if (!body) throw new Error(`Unknown body: ${name}`);
+  const date = jdToDate(JD);
+  const gv  = Astronomy.GeoVector(body, date, true);   // aberration-corrected, J2000 equatorial
+  const ecl = Astronomy.Ecliptic(gv);                  // J2000 ecliptic lon/lat
+  const eqd = Astronomy.RotateVector(Astronomy.Rotation_EQJ_EQD(date), gv); // → equinox of date
+  const eq  = Astronomy.EquatorFromVector(eqd);        // ra in sidereal hours, dec in degrees
+  return { latitude: ecl.elat, ra: norm(eq.ra * 15), dec: eq.dec };
+}
+
+// Convert an ecliptic position (tropical longitude, latitude, both of-date) to
+// equatorial RA/Dec. Used for the mean lunar nodes, which have no physical body
+// but lie exactly on the ecliptic (β = 0).
+function eclipticToEquatorial(lonDeg, latDeg, JD) {
+  const eps = rad(obliquity(JD));
+  const lam = rad(lonDeg), bet = rad(latDeg);
+  const dec = Math.asin(Math.sin(bet) * Math.cos(eps) + Math.cos(bet) * Math.sin(eps) * Math.sin(lam));
+  const ra  = Math.atan2(Math.sin(lam) * Math.cos(eps) - Math.tan(bet) * Math.sin(eps), Math.cos(lam));
+  return { ra: norm(deg(ra)), dec: deg(dec) };
 }
 
 // ─── Ascendant  (LST + Meeus obliquity) ──────────────────────────────────────
@@ -165,6 +204,8 @@ module.exports = {
   moonTropicalLongitude,
   rahuTropicalLongitude,
   planetTropicalLongitude,
+  bodyEquatorial,
+  eclipticToEquatorial,
   tropicalAscendant,
   sunriseSunset,
   norm,
