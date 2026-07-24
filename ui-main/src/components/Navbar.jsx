@@ -28,6 +28,7 @@ const NAV = [
       { href: '/predictions',         en: 'Predictions',           hi: 'भविष्यवाणी'    },
       { href: '/prashna',             en: 'Prashna Jyotish',       hi: 'प्रश्न ज्योतिष'  },
       { href: '/planetary-positions', en: 'Planetary Positions',   hi: 'ग्रह स्थिति'   },
+      { href: '/planet-transit',      en: 'Planet Transit',        hi: 'ग्रह गोचर'     },
     ],
   },
   {

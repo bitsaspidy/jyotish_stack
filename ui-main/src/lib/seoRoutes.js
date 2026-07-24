@@ -64,6 +64,14 @@ export const SITEMAP_ROUTES = [
   { path: '/panchang-muhurat', label: 'Panchang & Muhurat', group: 'panchang', priority: 0.8, changeFrequency: 'daily' },
   { path: '/festivals', label: 'Festival calendar', group: 'panchang', priority: 0.85, changeFrequency: 'weekly' },
   { path: '/planetary-positions', label: 'Planetary positions', group: 'panchang', priority: 0.8, changeFrequency: 'daily' },
+  { path: '/planet-transit', label: 'Planet transit', group: 'panchang', priority: 0.8, changeFrequency: 'weekly' },
+  ...['sun', 'moon', 'mars', 'mercury', 'jupiter', 'venus', 'saturn', 'rahu', 'ketu'].map((p) => ({
+    path: `/planet-transit/${p}`,
+    label: `${p[0].toUpperCase()}${p.slice(1)} transit`,
+    group: 'panchang',
+    priority: 0.65,
+    changeFrequency: 'weekly',
+  })),
   // NOTE: /muhurat is deliberately absent. It is not a page — it redirects to
   // /muhurat/marriage. Listing a redirect in a sitemap earns a "Page with
   // redirect" exclusion in Search Console, so the destination is listed instead.

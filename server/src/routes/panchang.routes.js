@@ -153,4 +153,40 @@ router.get('/planet-positions', async (req, res) => {
   }
 });
 
+// ─── Planet transit calendar (ingress dates per year) ────────────────────────
+const { signIngresses, nakshatraIngresses, currentSign } = require('../services/helpers/planet-transits');
+const TRANSIT_PLANETS = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+const ptCache = new Map();
+
+// GET /api/panchang/planet-transits?planet=Sun&year=2026&type=rashi|nakshatra&tz=5.5
+router.get('/planet-transits', async (req, res) => {
+  try {
+    const planet = String(req.query.planet || 'Sun');
+    if (!TRANSIT_PLANETS.includes(planet)) return fail(res, 'Unknown planet', 400);
+
+    const nowY = new Date().getUTCFullYear();
+    let year = parseInt(req.query.year, 10);
+    if (!Number.isInteger(year) || year < 1900 || year > 2100) year = nowY;
+
+    const type = req.query.type === 'nakshatra' ? 'nakshatra' : 'rashi';
+    const tzN = parseFloat(req.query.tz);
+    const tz = Number.isFinite(tzN) && tzN >= -14 && tzN <= 14 ? tzN : 5.5;
+
+    const cacheKey = `${planet}:${year}:${type}:${tz}`;
+    let data = ptCache.get(cacheKey);
+    if (!data) {
+      const ingresses = type === 'nakshatra'
+        ? nakshatraIngresses(planet, year, tz)
+        : signIngresses(planet, year, tz);
+      data = { planet, year, type, tz, ingresses, current: currentSign(planet), computed_utc: new Date().toISOString() };
+      if (ptCache.size > 120) ptCache.clear();
+      ptCache.set(cacheKey, data);
+    }
+    return ok(res, data);
+  } catch (e) {
+    console.error('[PanchangRoute:planet-transits]', e.message);
+    return fail(res, 'Unable to compute planet transits', 500);
+  }
+});
+
 module.exports = router;
